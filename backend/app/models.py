@@ -1,0 +1,151 @@
+from sqlalchemy import (
+    Column, Integer, String, Boolean, DateTime, Text,
+    ForeignKey, BigInteger, Index
+)
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from app.database import Base
+
+
+class Usuario(Base):
+    __tablename__ = "usuarios"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    full_name = Column(String(120), nullable=False)
+    email = Column(String(120), unique=True, nullable=True)
+    role = Column(String(20), nullable=False, default="operador")  # admin | operador
+    indicativo = Column(String(20), nullable=True)
+    is_active = Column(Boolean, default=True)
+    must_change_password = Column(Boolean, default=True)
+    failed_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime(timezone=True), nullable=True)
+    last_login = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    reportes = relationship("Reporte", back_populates="capturado_por_usuario", foreign_keys="Reporte.capturado_por")
+    audit_logs = relationship("AuditLog", back_populates="usuario")
+
+
+class Evento(Base):
+    __tablename__ = "eventos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tipo = Column(String(80), nullable=False, unique=True)
+    descripcion = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class Estacion(Base):
+    __tablename__ = "estaciones"
+
+    id = Column(Integer, primary_key=True, index=True)
+    qrz = Column(String(20), unique=True, nullable=False, index=True)
+    descripcion = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class Zona(Base):
+    __tablename__ = "zonas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    codigo = Column(String(20), unique=True, nullable=False)
+    nombre = Column(String(80), nullable=False)
+    is_active = Column(Boolean, default=True)
+
+
+class Sistema(Base):
+    __tablename__ = "sistemas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    codigo = Column(String(20), unique=True, nullable=False)
+    nombre = Column(String(80), nullable=False)
+    is_active = Column(Boolean, default=True)
+
+
+class Estado(Base):
+    __tablename__ = "estados"
+
+    id = Column(Integer, primary_key=True, index=True)
+    abreviatura = Column(String(10), unique=True, nullable=False)
+    nombre = Column(String(80), nullable=False)
+    lat = Column(String(20), nullable=True)
+    lng = Column(String(20), nullable=True)
+
+
+class Reporte(Base):
+    __tablename__ = "reportes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    indicativo = Column(String(20), nullable=False, index=True)
+    operador = Column(String(120), nullable=True)
+    senal = Column(Integer, default=59)
+    estado = Column(String(80), nullable=True, index=True)
+    ciudad = Column(String(80), nullable=True)
+    zona = Column(String(20), nullable=True, index=True)
+    sistema = Column(String(20), nullable=True, index=True)
+    tipo_reporte = Column(String(80), nullable=True, index=True)
+    qrz_station = Column(String(20), nullable=True)
+    capturado_por = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    fecha_reporte = Column(DateTime(timezone=True), nullable=False, index=True)
+    observaciones = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    capturado_por_usuario = relationship("Usuario", back_populates="reportes", foreign_keys=[capturado_por])
+
+    __table_args__ = (
+        Index("ix_reportes_fecha_tipo", "fecha_reporte", "tipo_reporte"),
+        Index("ix_reportes_fecha_sistema", "fecha_reporte", "sistema"),
+        Index("ix_reportes_indicativo_fecha", "indicativo", "fecha_reporte"),
+    )
+
+
+class PlataformaRS(Base):
+    __tablename__ = "plataformas_rs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(80), unique=True, nullable=False)
+    descripcion = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    estadisticas = relationship("EstadisticaRS", back_populates="plataforma")
+
+
+class EstadisticaRS(Base):
+    __tablename__ = "estadisticas_rs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plataforma_id = Column(Integer, ForeignKey("plataformas_rs.id"), nullable=False, index=True)
+    me_gusta = Column(BigInteger, default=0)
+    comentarios = Column(BigInteger, default=0)
+    compartidos = Column(BigInteger, default=0)
+    reproducciones = Column(BigInteger, default=0)
+    fecha_reporte = Column(DateTime(timezone=True), nullable=False, index=True)
+    capturado_por = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    observaciones = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    plataforma = relationship("PlataformaRS", back_populates="estadisticas")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    accion = Column(String(50), nullable=False)   # CREATE | UPDATE | DELETE | LOGIN | LOGOUT
+    tabla = Column(String(50), nullable=True)
+    registro_id = Column(Integer, nullable=True)
+    descripcion = Column(Text, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    usuario = relationship("Usuario", back_populates="audit_logs")

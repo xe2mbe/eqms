@@ -1,0 +1,17 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif;
+  background: #f0f2f5;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f0f2f5; }
+::-webkit-scrollbar-thumb { background: #1A569E55; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #1A569E; }
+
+/* Utilitarios */
+.page-container { padding: 24px; }
+.card-shadow { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
