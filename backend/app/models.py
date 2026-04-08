@@ -17,6 +17,7 @@ class Usuario(Base):
     email = Column(String(120), unique=True, nullable=True)
     role = Column(String(20), nullable=False, default="operador")  # admin | operador
     indicativo = Column(String(20), nullable=True)
+    telefono = Column(String(30), nullable=True)
     is_active = Column(Boolean, default=True)
     must_change_password = Column(Boolean, default=True)
     failed_attempts = Column(Integer, default=0)
@@ -57,6 +58,7 @@ class Zona(Base):
     id = Column(Integer, primary_key=True, index=True)
     codigo = Column(String(20), unique=True, nullable=False)
     nombre = Column(String(80), nullable=False)
+    color = Column(String(20), nullable=True, default="#1677ff")
     is_active = Column(Boolean, default=True)
 
 
@@ -75,6 +77,7 @@ class Estado(Base):
     id = Column(Integer, primary_key=True, index=True)
     abreviatura = Column(String(10), unique=True, nullable=False)
     nombre = Column(String(80), nullable=False)
+    zona = Column(String(20), nullable=True)   # XE1 | XE2 | XE3 | XE4 | XE5
     lat = Column(String(20), nullable=True)
     lng = Column(String(20), nullable=True)
 
@@ -134,6 +137,62 @@ class EstadisticaRS(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     plataforma = relationship("PlataformaRS", back_populates="estadisticas")
+
+
+class Radioexperimentador(Base):
+    __tablename__ = "radioexperimentadores"
+
+    id = Column(Integer, primary_key=True, index=True)
+    indicativo = Column(String(20), unique=True, nullable=False, index=True)
+    nombre_completo = Column(String(150), nullable=True)
+    municipio = Column(String(100), nullable=True)
+    estado = Column(String(100), nullable=True)
+    pais = Column(String(80), nullable=True, default="México")
+    tipo_licencia = Column(String(20), nullable=True)
+    tipo_ham = Column(String(20), nullable=True)
+    activo = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class ConfiguracionSistema(Base):
+    """Almacén clave-valor para configuración del sistema."""
+    __tablename__ = "configuracion_sistema"
+
+    id = Column(Integer, primary_key=True, index=True)
+    clave = Column(String(80), unique=True, nullable=False, index=True)
+    valor = Column(Text, nullable=True)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class PrefijoPais(Base):
+    """Tabla de prefijos de indicativos de radioaficionados y su país/zona."""
+    __tablename__ = "prefijos_pais"
+
+    id = Column(Integer, primary_key=True, index=True)
+    prefijo = Column(String(10), unique=True, nullable=False, index=True)
+    pais = Column(String(80), nullable=False)
+    zona_codigo = Column(String(20), nullable=True)   # ej. XE1, XE2 — NULL = Extranjero
+
+
+class LibretaConfigUsuario(Base):
+    """Configuración de libreta guardada por usuario."""
+    __tablename__ = "libreta_config_usuario"
+
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), unique=True, nullable=False)
+    tipo_evento = Column(String(80), nullable=True)
+    estacion = Column(String(20), nullable=True)
+    sistema_default = Column(String(20), nullable=True)
+    considerar_swl = Column(Boolean, default=False)
+    estado_default = Column(String(80), nullable=True)
+    ciudad_default = Column(String(80), nullable=True)
+    rst_default = Column(String(3), nullable=True, default="59")
+    anunciar_primera_vez = Column(Boolean, default=False)
+    anunciar_reaparicion = Column(Boolean, default=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    usuario = relationship("Usuario", backref="libreta_config")
 
 
 class AuditLog(Base):

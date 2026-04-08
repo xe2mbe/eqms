@@ -96,7 +96,7 @@ def por_sistema(
 def tendencia(
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
-    granularidad: str = Query("dia", regex="^(dia|semana|mes)$"),
+    granularidad: str = Query("dia", pattern="^(dia|semana|mes)$"),
     db: Session = Depends(get_db),
 ):
     if granularidad == "mes":

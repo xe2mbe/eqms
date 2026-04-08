@@ -4,7 +4,9 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined, FileTextOutlined, BarChartOutlined,
   UserOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
-  PlusCircleOutlined, TeamOutlined,
+  PlusCircleOutlined, TeamOutlined, BookOutlined, SettingOutlined,
+  AppstoreOutlined, CalendarOutlined, RadarChartOutlined,
+  WifiOutlined, ShareAltOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
 
@@ -12,6 +14,11 @@ const { Sider, Header, Content, Footer } = Layout
 
 const menuItems = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
+  { key: '/toma-reportes', icon: <BookOutlined />, label: 'Toma de Reportes',
+    children: [
+      { key: '/libreta', icon: <BookOutlined />, label: 'Libreta' },
+    ],
+  },
   { key: '/reportes', icon: <FileTextOutlined />, label: 'Reportes',
     children: [
       { key: '/reportes', icon: <FileTextOutlined />, label: 'Lista de Reportes' },
@@ -19,7 +26,18 @@ const menuItems = [
     ],
   },
   { key: '/estadisticas', icon: <BarChartOutlined />, label: 'Estadísticas' },
-  { key: '/usuarios', icon: <TeamOutlined />, label: 'Usuarios' },
+  {
+    key: '/gestion', icon: <AppstoreOutlined />, label: 'Gestión',
+    children: [
+      { key: '/gestion/usuarios',      icon: <TeamOutlined />,      label: 'Usuarios' },
+      { key: '/gestion/eventos',       icon: <CalendarOutlined />,  label: 'Eventos' },
+      { key: '/gestion/zonas',         icon: <RadarChartOutlined />,label: 'Zonas' },
+      { key: '/gestion/sistemas',      icon: <WifiOutlined />,      label: 'Sistemas' },
+      { key: '/gestion/estaciones',    icon: <BookOutlined />,      label: 'Estaciones' },
+      { key: '/gestion/redes-sociales',icon: <ShareAltOutlined />,  label: 'Redes Sociales' },
+    ],
+  },
+  { key: '/configuracion', icon: <SettingOutlined />, label: 'Configuración' },
 ]
 
 export default function AppLayout() {
@@ -60,7 +78,7 @@ export default function AppLayout() {
           theme="dark"
           mode="inline"
           selectedKeys={[location.pathname]}
-          defaultOpenKeys={['/reportes']}
+          defaultOpenKeys={['/reportes', '/toma-reportes', '/gestion']}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
           style={{ borderRight: 0 }}

@@ -12,7 +12,7 @@ from app.auth import get_current_user
 router = APIRouter()
 
 
-@router.get("/", response_model=schemas.PaginatedReportes)
+@router.get("", response_model=schemas.PaginatedReportes)
 def list_reportes(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
@@ -51,8 +51,21 @@ def list_reportes(
         .all()
     )
 
+    # Enrich with capturado_por_nombre
+    usuario_ids = {r.capturado_por for r in items if r.capturado_por}
+    usuarios = {}
+    if usuario_ids:
+        for u in db.query(models.Usuario).filter(models.Usuario.id.in_(usuario_ids)).all():
+            usuarios[u.id] = u.full_name
+
+    out_items = []
+    for r in items:
+        d = schemas.ReporteOut.model_validate(r)
+        d.capturado_por_nombre = usuarios.get(r.capturado_por) if r.capturado_por else None
+        out_items.append(d)
+
     return schemas.PaginatedReportes(
-        items=items,
+        items=out_items,
         total=total,
         page=page,
         page_size=page_size,
@@ -60,7 +73,7 @@ def list_reportes(
     )
 
 
-@router.post("/", response_model=schemas.ReporteOut, status_code=201)
+@router.post("", response_model=schemas.ReporteOut, status_code=201)
 def create_reporte(
     body: schemas.ReporteCreate,
     db: Session = Depends(get_db),

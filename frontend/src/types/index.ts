@@ -3,6 +3,7 @@ export interface Usuario {
   username: string
   full_name: string
   email?: string
+  telefono?: string
   role: 'admin' | 'operador'
   indicativo?: string
   is_active: boolean
@@ -32,6 +33,8 @@ export interface Reporte {
   fecha_reporte: string
   observaciones?: string
   created_at: string
+  capturado_por?: number
+  capturado_por_nombre?: string
 }
 
 export interface PaginatedReportes {
@@ -72,6 +75,7 @@ export interface Zona {
   id: number
   codigo: string
   nombre: string
+  color?: string
   is_active: boolean
 }
 
@@ -86,6 +90,7 @@ export interface Estado {
   id: number
   abreviatura: string
   nombre: string
+  zona?: string
   lat?: string
   lng?: string
 }

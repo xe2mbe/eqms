@@ -6,7 +6,9 @@ import logging
 
 from app.config import settings
 from app.database import Base, engine
-from app.routers import auth, reportes, usuarios, catalogos, estadisticas
+from app.routers import auth, reportes, usuarios, catalogos, estadisticas, operadores, configuracion, libreta
+from app.seeds import seed_prefijos
+from app.database import SessionLocal
 
 logging.basicConfig(
     level=logging.DEBUG if settings.DEBUG else logging.INFO,
@@ -19,6 +21,11 @@ logger = logging.getLogger("qms")
 async def lifespan(app: FastAPI):
     logger.info(f"Iniciando {settings.APP_NAME} v{settings.APP_VERSION}")
     Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        seed_prefijos(db)
+    finally:
+        db.close()
     yield
     logger.info("Servidor detenido.")
 
@@ -47,6 +54,9 @@ app.include_router(reportes.router,     prefix="/api/reportes",     tags=["Repor
 app.include_router(usuarios.router,     prefix="/api/usuarios",     tags=["Usuarios"])
 app.include_router(catalogos.router,    prefix="/api/catalogos",    tags=["Catálogos"])
 app.include_router(estadisticas.router, prefix="/api/estadisticas", tags=["Estadísticas"])
+app.include_router(operadores.router,     prefix="/api/operadores",     tags=["Operadores"])
+app.include_router(configuracion.router, prefix="/api/configuracion", tags=["Configuración"])
+app.include_router(libreta.router,      prefix="/api/libreta",      tags=["Libreta"])
 
 
 @app.get("/api/health", tags=["Sistema"])

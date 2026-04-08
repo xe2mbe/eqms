@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  Form, Input, Select, DatePicker, InputNumber,
+  Form, Input, Select, DatePicker,
   Button, Card, Typography, Space, message, Spin,
 } from 'antd'
 import { SaveOutlined, ArrowLeftOutlined, CheckCircleOutlined } from '@ant-design/icons'

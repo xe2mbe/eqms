@@ -34,21 +34,34 @@ class UsuarioCreate(BaseModel):
     password: str
     full_name: str
     email: Optional[EmailStr] = None
+    telefono: Optional[str] = None
     role: str = "operador"
     indicativo: Optional[str] = None
+
+    @field_validator("email", "telefono", "indicativo", mode="before")
+    @classmethod
+    def empty_to_none(cls, v):
+        return None if v == "" else v
 
 class UsuarioUpdate(BaseModel):
     full_name: Optional[str] = None
     email: Optional[EmailStr] = None
+    telefono: Optional[str] = None
     role: Optional[str] = None
     indicativo: Optional[str] = None
     is_active: Optional[bool] = None
+
+    @field_validator("email", "telefono", "indicativo", mode="before")
+    @classmethod
+    def empty_to_none(cls, v):
+        return None if v == "" else v
 
 class UsuarioOut(BaseModel):
     id: int
     username: str
     full_name: str
     email: Optional[str] = None
+    telefono: Optional[str] = None
     role: str
     indicativo: Optional[str] = None
     is_active: bool
@@ -90,6 +103,7 @@ class ZonaOut(BaseModel):
     id: int
     codigo: str
     nombre: str
+    color: Optional[str] = "#1677ff"
     is_active: bool
     class Config:
         from_attributes = True
@@ -106,6 +120,7 @@ class EstadoOut(BaseModel):
     id: int
     abreviatura: str
     nombre: str
+    zona: Optional[str] = None
     lat: Optional[str] = None
     lng: Optional[str] = None
     class Config:
@@ -154,6 +169,8 @@ class ReporteOut(BaseModel):
     fecha_reporte: datetime
     observaciones: Optional[str] = None
     created_at: datetime
+    capturado_por: Optional[int] = None
+    capturado_por_nombre: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -214,6 +231,57 @@ class EstadisticaResumen(BaseModel):
     total_operadores: int
     estados: List[EstadisticaEstado]
     sistemas: List[EstadisticaSistema]
+
+
+# ─── Libreta config ──────────────────────────────────────────────────────────
+
+class LibretaConfigOut(BaseModel):
+    tipo_evento: Optional[str] = None
+    estacion: Optional[str] = None
+    sistema_default: Optional[str] = None
+    considerar_swl: bool = False
+    estado_default: Optional[str] = None
+    ciudad_default: Optional[str] = None
+    rst_default: Optional[str] = "59"
+    anunciar_primera_vez: bool = False
+    anunciar_reaparicion: bool = False
+    class Config:
+        from_attributes = True
+
+class LibretaConfigUpdate(BaseModel):
+    tipo_evento: Optional[str] = None
+    estacion: Optional[str] = None
+    sistema_default: Optional[str] = None
+    considerar_swl: bool = False
+    estado_default: Optional[str] = None
+    ciudad_default: Optional[str] = None
+    rst_default: Optional[str] = "59"
+    anunciar_primera_vez: bool = False
+    anunciar_reaparicion: bool = False
+
+class NuevoHamCreate(BaseModel):
+    indicativo: str
+    nombre_completo: Optional[str] = None
+    municipio: Optional[str] = None
+    estado: Optional[str] = None
+
+class RecordatorioConfig(BaseModel):
+    dias_reaparicion: int = 30
+
+
+# ─── Configuración ───────────────────────────────────────────────────────────
+
+class SmtpConfig(BaseModel):
+    host: str = ""
+    port: int = 587
+    usuario: str = ""
+    password: str = ""
+    remitente: str = ""
+    ssl: bool = False          # True = SSL/TLS puro (465), False = STARTTLS (587)
+    habilitado: bool = False
+
+class SmtpTestRequest(BaseModel):
+    destinatario: str
 
 
 # ─── Audit ───────────────────────────────────────────────────────────────────
