@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import {
   Table, Button, Space, Tag, Modal, Form, Input,
-  Typography, Card, Popconfirm, message, Switch,
+  Typography, Card, Popconfirm, message, Switch, ColorPicker,
 } from 'antd'
+import type { Color } from 'antd/es/color-picker'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import client from '@/api/client'
 import type { Sistema } from '@/types'
@@ -14,6 +15,7 @@ export default function SistemasPage() {
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editItem, setEditItem] = useState<Sistema | null>(null)
+  const [formColor, setFormColor] = useState('#1677ff')
   const [form] = Form.useForm()
 
   useEffect(() => { fetchData() }, [])
@@ -26,17 +28,29 @@ export default function SistemasPage() {
     } finally { setLoading(false) }
   }
 
-  const openCreate = () => { setEditItem(null); form.resetFields(); setModalOpen(true) }
-  const openEdit = (item: Sistema) => { setEditItem(item); form.setFieldsValue(item); setModalOpen(true) }
+  const openCreate = () => {
+    setEditItem(null)
+    form.resetFields()
+    setFormColor('#1677ff')
+    setModalOpen(true)
+  }
+
+  const openEdit = (item: Sistema) => {
+    setEditItem(item)
+    form.setFieldsValue(item)
+    setFormColor(item.color ?? '#1677ff')
+    setModalOpen(true)
+  }
 
   const handleSave = async () => {
     const values = await form.validateFields()
+    const payload = { ...values, color: formColor }
     try {
       if (editItem) {
-        await client.put(`/catalogos/sistemas/${editItem.id}`, values)
+        await client.put(`/catalogos/sistemas/${editItem.id}`, payload)
         message.success('Sistema actualizado')
       } else {
-        await client.post('/catalogos/sistemas', values)
+        await client.post('/catalogos/sistemas', payload)
         message.success('Sistema creado')
       }
       setModalOpen(false); fetchData()
@@ -54,11 +68,22 @@ export default function SistemasPage() {
   }
 
   const columns = [
-    { title: 'Código', dataIndex: 'codigo', key: 'codigo',
-      render: (v: string) => <Tag color="blue"><strong>{v}</strong></Tag> },
+    {
+      title: 'Código', dataIndex: 'codigo', key: 'codigo', width: 140,
+      render: (v: string, r: Sistema) => {
+        const c = r.color ?? '#1677ff'
+        return (
+          <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 700, fontSize: 13 }}>
+            {v}
+          </Tag>
+        )
+      },
+    },
     { title: 'Nombre', dataIndex: 'nombre', key: 'nombre' },
-    { title: 'Estado', dataIndex: 'is_active', key: 'is_active',
-      render: (v: boolean) => <Tag color={v ? 'green' : 'default'}>{v ? 'Activo' : 'Inactivo'}</Tag> },
+    {
+      title: 'Estado', dataIndex: 'is_active', key: 'is_active', width: 100,
+      render: (v: boolean) => <Tag color={v ? 'green' : 'default'}>{v ? 'Activo' : 'Inactivo'}</Tag>,
+    },
     {
       title: 'Acciones', key: 'actions', width: 100,
       render: (_: unknown, r: Sistema) => (
@@ -81,14 +106,43 @@ export default function SistemasPage() {
       <Card className="card-shadow">
         <Table dataSource={data} columns={columns} rowKey="id" loading={loading} size="small" />
       </Card>
-      <Modal title={editItem ? 'Editar Sistema' : 'Nuevo Sistema'} open={modalOpen}
-        onOk={handleSave} onCancel={() => setModalOpen(false)} okText="Guardar" cancelText="Cancelar">
+
+      <Modal
+        title={editItem ? 'Editar Sistema' : 'Nuevo Sistema'}
+        open={modalOpen}
+        onOk={handleSave}
+        onCancel={() => setModalOpen(false)}
+        okText="Guardar" cancelText="Cancelar"
+      >
         <Form form={form} layout="vertical" initialValues={{ is_active: true }}>
           <Form.Item label="Código (ej. DMR-1)" name="codigo" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
           <Form.Item label="Nombre" name="nombre" rules={[{ required: true }]}>
             <Input placeholder="Red DMR Nacional" />
+          </Form.Item>
+          <Form.Item label="Color del sistema">
+            <Space align="center">
+              <ColorPicker
+                value={formColor}
+                onChange={(c: Color) => setFormColor(c.toHexString())}
+                showText
+                presets={[{
+                  label: 'Sugeridos',
+                  colors: [
+                    '#1677ff', '#52c41a', '#fa8c16', '#722ed1',
+                    '#eb2f96', '#f5222d', '#13c2c2', '#faad14',
+                    '#2f54eb', '#389e0d', '#d46b08', '#531dab',
+                  ],
+                }]}
+              />
+              <Tag style={{
+                backgroundColor: formColor, borderColor: formColor,
+                color: '#fff', fontWeight: 700, fontSize: 13,
+              }}>
+                {form.getFieldValue('codigo') || 'SIS'}
+              </Tag>
+            </Space>
           </Form.Item>
           <Form.Item label="Activo" name="is_active" valuePropName="checked">
             <Switch />

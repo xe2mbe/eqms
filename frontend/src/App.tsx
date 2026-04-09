@@ -19,6 +19,7 @@ import SistemasPage from '@/pages/gestion/Sistemas'
 import EstacionesPage from '@/pages/gestion/Estaciones'
 import RedesSocialesPage from '@/pages/gestion/RedesSociales'
 import RadioexperimentadoresPage from '@/pages/gestion/Radioexperimentadores'
+import PerfilPage from '@/pages/Perfil'
 
 export default function App() {
   const { checkAuth, isLoading } = useAuthStore()
@@ -56,6 +57,7 @@ export default function App() {
             <Route path="/gestion/redes-sociales" element={<RedesSocialesPage />} />
             <Route path="/gestion/radioexperimentadores" element={<RadioexperimentadoresPage />} />
             <Route path="/configuracion" element={<ConfiguracionPage />} />
+            <Route path="/perfil" element={<PerfilPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

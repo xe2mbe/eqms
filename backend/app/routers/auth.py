@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
+import os, uuid
 
 from app.database import get_db
 from app import models, schemas
@@ -127,4 +128,56 @@ def logout(
 
 @router.get("/me", response_model=schemas.UsuarioOut)
 def me(current_user: models.Usuario = Depends(get_current_user)):
+    return current_user
+
+
+@router.put("/me", response_model=schemas.UsuarioOut)
+def update_me(
+    body: schemas.UsuarioProfileUpdate,
+    current_user: models.Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(current_user, field, value)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+UPLOADS_DIR = "/app/uploads/avatars"
+ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+MAX_SIZE = 2 * 1024 * 1024  # 2 MB
+
+
+@router.post("/me/avatar", response_model=schemas.UsuarioOut)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: models.Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail="Formato no permitido. Usa JPG, PNG o WebP.")
+
+    contents = await file.read()
+    if len(contents) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="La imagen no debe superar 2 MB.")
+
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+
+    # Delete old avatar file if it exists
+    if current_user.avatar:
+        old_path = f"/app{current_user.avatar}"
+        if os.path.isfile(old_path):
+            os.remove(old_path)
+
+    ext = os.path.splitext(file.filename or "avatar.jpg")[1] or ".jpg"
+    filename = f"{current_user.id}_{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(UPLOADS_DIR, filename)
+
+    with open(filepath, "wb") as f:
+        f.write(contents)
+
+    current_user.avatar = f"/uploads/avatars/{filename}"
+    db.commit()
+    db.refresh(current_user)
     return current_user

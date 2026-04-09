@@ -5,6 +5,7 @@ export interface Operador {
   nombre_completo?: string
   municipio?: string
   estado?: string
+  pais?: string
   tipo_licencia?: string
   tipo_ham?: string
   activo: boolean
@@ -17,6 +18,6 @@ export const operadoresApi = {
   autocomplete: (q: string) =>
     client.get<Operador[]>('/operadores/autocomplete', { params: { q } }),
 
-  update: (indicativo: string, data: { nombre_completo?: string; municipio?: string; estado?: string }) =>
+  update: (indicativo: string, data: Partial<Omit<Operador, 'indicativo'>>) =>
     client.put<Operador>(`/operadores/${indicativo}`, data),
 }

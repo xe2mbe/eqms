@@ -121,6 +121,7 @@ function TabCorreo() {
               icon={<SaveOutlined />}
               loading={guardando}
               onClick={guardar}
+              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
             >
               Guardar configuración
             </Button>
@@ -275,7 +276,8 @@ function TabRecordatorio() {
             <InputNumber min={1} max={3650} style={{ width: '100%' }} addonAfter="días" />
           </Form.Item>
           <Divider />
-          <Button type="primary" icon={<SaveOutlined />} loading={guardando} onClick={guardar}>
+          <Button type="primary" icon={<SaveOutlined />} loading={guardando} onClick={guardar}
+            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}>
             Guardar
           </Button>
         </Form>

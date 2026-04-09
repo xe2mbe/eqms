@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   Form, Input, Select, DatePicker,
-  Button, Card, Typography, Space, message, Spin,
+  Button, Card, Typography, Space, Tag, message, Spin,
 } from 'antd'
 import { SaveOutlined, ArrowLeftOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -139,7 +139,15 @@ export default function NuevoReportePage() {
             <Form.Item label="Tipo de Evento" name="tipo_reporte" rules={[{ required: true, message: 'Requerido' }]}>
               <Select
                 placeholder="Selecciona el evento"
-                options={eventos.map(e => ({ value: e.tipo, label: e.tipo }))}
+                labelRender={({ value }) => {
+                  const ev = eventos.find(e => e.tipo === value)
+                  const c = ev?.color ?? '#1677ff'
+                  return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{String(value)}</Tag>
+                }}
+                options={eventos.map(e => {
+                  const c = e.color ?? '#1677ff'
+                  return { value: e.tipo, label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{e.tipo}</Tag> }
+                })}
               />
             </Form.Item>
 
@@ -147,7 +155,20 @@ export default function NuevoReportePage() {
               <Select
                 placeholder="Sistema de comunicación"
                 allowClear
-                options={sistemas.map(s => ({ value: s.codigo, label: `${s.codigo} – ${s.nombre}` }))}
+                options={sistemas.map(s => {
+                  const c = s.color ?? '#1677ff'
+                  return {
+                    value: s.codigo,
+                    label: (
+                      <Space size={6}>
+                        <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>
+                          {s.codigo}
+                        </Tag>
+                        {s.nombre}
+                      </Space>
+                    ),
+                  }
+                })}
               />
             </Form.Item>
 
@@ -170,7 +191,24 @@ export default function NuevoReportePage() {
               <Select
                 placeholder="Zona FMRE"
                 allowClear
-                options={zonas.map(z => ({ value: z.codigo, label: `${z.codigo} – ${z.nombre}` }))}
+                labelRender={({ value }) => {
+                  const z = zonas.find(z => z.codigo === value)
+                  if (!z) return <span>{String(value)}</span>
+                  const c = z.color ?? '#1677ff'
+                  return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{z.codigo}</Tag>
+                }}
+                options={zonas.map(z => {
+                  const c = z.color ?? '#1677ff'
+                  return {
+                    value: z.codigo,
+                    label: (
+                      <Space size={6}>
+                        <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{z.codigo}</Tag>
+                        {z.nombre}
+                      </Space>
+                    ),
+                  }
+                })}
               />
             </Form.Item>
 
@@ -178,7 +216,23 @@ export default function NuevoReportePage() {
               <Select
                 placeholder="QRZ de la estación"
                 allowClear
-                options={estaciones.map(e => ({ value: e.qrz, label: `${e.qrz} – ${e.descripcion}` }))}
+                labelRender={({ value }) => {
+                  const est = estaciones.find(e => e.qrz === value)
+                  const c = est?.color ?? '#1677ff'
+                  return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{String(value)}</Tag>
+                }}
+                options={estaciones.map(e => {
+                  const c = e.color ?? '#1677ff'
+                  return {
+                    value: e.qrz,
+                    label: (
+                      <Space size={6}>
+                        <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{e.qrz}</Tag>
+                        {e.descripcion}
+                      </Space>
+                    ),
+                  }
+                })}
               />
             </Form.Item>
 
@@ -192,7 +246,8 @@ export default function NuevoReportePage() {
 
             <Form.Item style={{ marginBottom: 0 }}>
               <Space>
-                <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving}>
+                <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving}
+                  style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}>
                   {isEdit ? 'Actualizar Reporte' : 'Guardar Reporte'}
                 </Button>
                 {!isEdit && (

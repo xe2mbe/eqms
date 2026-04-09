@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 from app.database import get_db
@@ -50,6 +50,14 @@ def create_estacion(body: schemas.EstacionCreate, db: Session = Depends(get_db),
     db.add(e); db.commit(); db.refresh(e)
     return e
 
+@router.put("/estaciones/{est_id}", response_model=schemas.EstacionOut)
+def update_estacion(est_id: int, body: schemas.EstacionCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
+    e = db.query(models.Estacion).filter(models.Estacion.id == est_id).first()
+    if not e: raise HTTPException(404, "Estación no encontrada")
+    for k, v in body.model_dump().items(): setattr(e, k, v)
+    db.commit(); db.refresh(e)
+    return e
+
 @router.delete("/estaciones/{est_id}", status_code=204)
 def delete_estacion(est_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
     e = db.query(models.Estacion).filter(models.Estacion.id == est_id).first()
@@ -95,6 +103,7 @@ def delete_zona(zona_id: int, db: Session = Depends(get_db), _=Depends(require_a
 class SistemaCreate(BaseModel):
     codigo: str
     nombre: str
+    color: Optional[str] = "#1677ff"
     is_active: bool = True
 
 @router.get("/sistemas", response_model=List[schemas.SistemaOut])

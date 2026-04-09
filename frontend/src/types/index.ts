@@ -6,6 +6,7 @@ export interface Usuario {
   telefono?: string
   role: 'admin' | 'operador'
   indicativo?: string
+  avatar?: string
   is_active: boolean
   must_change_password: boolean
   last_login?: string
@@ -61,6 +62,7 @@ export interface Evento {
   id: number
   tipo: string
   descripcion?: string
+  color?: string
   is_active: boolean
 }
 
@@ -68,6 +70,7 @@ export interface Estacion {
   id: number
   qrz: string
   descripcion?: string
+  color?: string
   is_active: boolean
 }
 
@@ -83,6 +86,7 @@ export interface Sistema {
   id: number
   codigo: string
   nombre: string
+  color?: string
   is_active: boolean
 }
 

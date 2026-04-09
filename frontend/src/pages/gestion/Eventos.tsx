@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import {
   Table, Button, Space, Tag, Modal, Form, Input,
-  Typography, Card, Popconfirm, message, Switch,
+  Typography, Card, Popconfirm, message, Switch, ColorPicker,
 } from 'antd'
+import type { Color } from 'antd/es/color-picker'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import client from '@/api/client'
 import type { Evento } from '@/types'
@@ -14,6 +15,7 @@ export default function EventosPage() {
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editItem, setEditItem] = useState<Evento | null>(null)
+  const [formColor, setFormColor] = useState('#1677ff')
   const [form] = Form.useForm()
 
   useEffect(() => { fetchData() }, [])
@@ -26,17 +28,25 @@ export default function EventosPage() {
     } finally { setLoading(false) }
   }
 
-  const openCreate = () => { setEditItem(null); form.resetFields(); setModalOpen(true) }
-  const openEdit = (item: Evento) => { setEditItem(item); form.setFieldsValue(item); setModalOpen(true) }
+  const openCreate = () => {
+    setEditItem(null); form.resetFields()
+    setFormColor('#1677ff'); setModalOpen(true)
+  }
+
+  const openEdit = (item: Evento) => {
+    setEditItem(item); form.setFieldsValue(item)
+    setFormColor(item.color ?? '#1677ff'); setModalOpen(true)
+  }
 
   const handleSave = async () => {
     const values = await form.validateFields()
+    const payload = { ...values, color: formColor }
     try {
       if (editItem) {
-        await client.put(`/catalogos/eventos/${editItem.id}`, values)
+        await client.put(`/catalogos/eventos/${editItem.id}`, payload)
         message.success('Evento actualizado')
       } else {
-        await client.post('/catalogos/eventos', values)
+        await client.post('/catalogos/eventos', payload)
         message.success('Evento creado')
       }
       setModalOpen(false); fetchData()
@@ -54,11 +64,18 @@ export default function EventosPage() {
   }
 
   const columns = [
-    { title: 'Tipo / Nombre', dataIndex: 'tipo', key: 'tipo',
-      render: (v: string) => <strong>{v}</strong> },
+    {
+      title: 'Tipo / Nombre', dataIndex: 'tipo', key: 'tipo', width: 200,
+      render: (v: string, r: Evento) => {
+        const c = r.color ?? '#1677ff'
+        return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 700, fontSize: 13 }}>{v}</Tag>
+      },
+    },
     { title: 'Descripción', dataIndex: 'descripcion', key: 'descripcion' },
-    { title: 'Estado', dataIndex: 'is_active', key: 'is_active',
-      render: (v: boolean) => <Tag color={v ? 'green' : 'default'}>{v ? 'Activo' : 'Inactivo'}</Tag> },
+    {
+      title: 'Estado', dataIndex: 'is_active', key: 'is_active', width: 100,
+      render: (v: boolean) => <Tag color={v ? 'green' : 'default'}>{v ? 'Activo' : 'Inactivo'}</Tag>,
+    },
     {
       title: 'Acciones', key: 'actions', width: 100,
       render: (_: unknown, r: Evento) => (
@@ -81,6 +98,7 @@ export default function EventosPage() {
       <Card className="card-shadow">
         <Table dataSource={data} columns={columns} rowKey="id" loading={loading} size="small" />
       </Card>
+
       <Modal title={editItem ? 'Editar Evento' : 'Nuevo Evento'} open={modalOpen}
         onOk={handleSave} onCancel={() => setModalOpen(false)} okText="Guardar" cancelText="Cancelar">
         <Form form={form} layout="vertical" initialValues={{ is_active: true }}>
@@ -89,6 +107,29 @@ export default function EventosPage() {
           </Form.Item>
           <Form.Item label="Descripción" name="descripcion">
             <Input.TextArea rows={3} />
+          </Form.Item>
+          <Form.Item label="Color del evento">
+            <Space align="center">
+              <ColorPicker
+                value={formColor}
+                onChange={(c: Color) => setFormColor(c.toHexString())}
+                showText
+                presets={[{
+                  label: 'Sugeridos',
+                  colors: [
+                    '#1677ff', '#52c41a', '#fa8c16', '#722ed1',
+                    '#eb2f96', '#f5222d', '#13c2c2', '#faad14',
+                    '#2f54eb', '#389e0d', '#d46b08', '#531dab',
+                  ],
+                }]}
+              />
+              <Tag style={{
+                backgroundColor: formColor, borderColor: formColor,
+                color: '#fff', fontWeight: 700, fontSize: 13,
+              }}>
+                {form.getFieldValue('tipo') || 'Evento'}
+              </Tag>
+            </Space>
           </Form.Item>
           <Form.Item label="Activo" name="is_active" valuePropName="checked">
             <Switch />

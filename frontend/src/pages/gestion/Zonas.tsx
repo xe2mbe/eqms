@@ -300,6 +300,7 @@ export default function ZonasPage() {
               loading={guardando}
               disabled={dirtyCount === 0}
               onClick={guardarAsignaciones}
+              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
             >
               Guardar {dirtyCount > 0 ? `(${dirtyCount})` : ''}
             </Button>

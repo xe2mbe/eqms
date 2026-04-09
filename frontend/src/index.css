@@ -15,3 +15,41 @@ body {
 /* Utilitarios */
 .page-container { padding: 24px; }
 .card-shadow { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+
+/* ── Guardar (verde) ── */
+.ant-modal-footer .ant-btn-primary:not(.ant-btn-dangerous),
+.ant-modal-footer .ant-btn-primary:not(.ant-btn-dangerous):focus {
+  background-color: #52c41a !important;
+  border-color: #52c41a !important;
+}
+.ant-modal-footer .ant-btn-primary:not(.ant-btn-dangerous):hover {
+  background-color: #389e0d !important;
+  border-color: #389e0d !important;
+}
+
+/* ── Cancelar en modal (rojo) ── */
+.ant-modal-footer .ant-btn-default:not(.ant-btn-dangerous) {
+  color: #ff4d4f !important;
+  border-color: #ff4d4f !important;
+}
+.ant-modal-footer .ant-btn-default:not(.ant-btn-dangerous):hover {
+  color: #ff7875 !important;
+  border-color: #ff7875 !important;
+  background: #fff2f0 !important;
+}
+
+/* ── Botones con ícono de edición (lápiz) → verde ── */
+.ant-btn:has(.anticon-edit) {
+  color: #52c41a !important;
+  border-color: #52c41a !important;
+}
+.ant-btn:has(.anticon-edit):hover {
+  color: #389e0d !important;
+  border-color: #389e0d !important;
+}
+/* Evitar que el lápiz afecte botones primarios y de peligro */
+.ant-btn-primary:has(.anticon-edit),
+.ant-btn-dangerous:has(.anticon-edit) {
+  color: inherit !important;
+  border-color: inherit !important;
+}

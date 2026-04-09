@@ -56,6 +56,17 @@ class UsuarioUpdate(BaseModel):
     def empty_to_none(cls, v):
         return None if v == "" else v
 
+class UsuarioProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    telefono: Optional[str] = None
+    indicativo: Optional[str] = None
+
+    @field_validator("email", "telefono", "indicativo", mode="before")
+    @classmethod
+    def empty_to_none(cls, v):
+        return None if v == "" else v
+
 class UsuarioOut(BaseModel):
     id: int
     username: str
@@ -64,6 +75,7 @@ class UsuarioOut(BaseModel):
     telefono: Optional[str] = None
     role: str
     indicativo: Optional[str] = None
+    avatar: Optional[str] = None
     is_active: bool
     must_change_password: bool
     last_login: Optional[datetime] = None
@@ -79,6 +91,7 @@ class EventoOut(BaseModel):
     id: int
     tipo: str
     descripcion: Optional[str] = None
+    color: Optional[str] = "#1677ff"
     is_active: bool
     class Config:
         from_attributes = True
@@ -86,11 +99,13 @@ class EventoOut(BaseModel):
 class EventoCreate(BaseModel):
     tipo: str
     descripcion: Optional[str] = None
+    color: Optional[str] = "#1677ff"
 
 class EstacionOut(BaseModel):
     id: int
     qrz: str
     descripcion: Optional[str] = None
+    color: Optional[str] = "#1677ff"
     is_active: bool
     class Config:
         from_attributes = True
@@ -98,6 +113,7 @@ class EstacionOut(BaseModel):
 class EstacionCreate(BaseModel):
     qrz: str
     descripcion: Optional[str] = None
+    color: Optional[str] = "#1677ff"
 
 class ZonaOut(BaseModel):
     id: int
@@ -112,6 +128,7 @@ class SistemaOut(BaseModel):
     id: int
     codigo: str
     nombre: str
+    color: Optional[str] = "#1677ff"
     is_active: bool
     class Config:
         from_attributes = True

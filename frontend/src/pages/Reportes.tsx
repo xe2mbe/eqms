@@ -13,7 +13,7 @@ import { reportesApi } from '@/api/reportes'
 import { catalogosApi } from '@/api/catalogos'
 import { useAuthStore } from '@/store/authStore'
 import { useColPrefs } from '@/components/common/ColSettings'
-import type { Reporte, ReporteFilters, Evento, Sistema, Zona } from '@/types'
+import type { Reporte, ReporteFilters, Evento, Sistema, Zona, Estacion } from '@/types'
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
@@ -51,6 +51,7 @@ export default function ReportesPage() {
   const [eventos, setEventos] = useState<Evento[]>([])
   const [sistemas, setSistemas] = useState<Sistema[]>([])
   const [zonas, setZonas] = useState<Zona[]>([])
+  const [estaciones, setEstaciones] = useState<Estacion[]>([])
   const [filters, setFilters] = useState<ReporteFilters>({ page: 1, page_size: 50 })
   const [tempFilters, setTempFilters] = useState<ReporteFilters>({})
   const [selectedKeys, setSelectedKeys] = useState<number[]>([])
@@ -64,6 +65,7 @@ export default function ReportesPage() {
     catalogosApi.eventos().then(r => setEventos(r.data))
     catalogosApi.sistemas().then(r => setSistemas(r.data))
     catalogosApi.zonas().then(r => setZonas(r.data))
+    catalogosApi.estaciones().then(r => setEstaciones(r.data))
   }, [])
 
   useEffect(() => { fetchData() }, [filters])
@@ -136,13 +138,31 @@ export default function ReportesPage() {
     },
     sistema: {
       title: 'Sistema', dataIndex: 'sistema', width: 100,
-      render: (v: string) => v ? <Tag>{v}</Tag> : null,
+      render: (v: string) => {
+        if (!v) return null
+        const s = sistemas.find(s => s.codigo === v)
+        const c = s?.color ?? '#1677ff'
+        return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{v}</Tag>
+      },
     },
     tipo_reporte: {
       title: 'Tipo', dataIndex: 'tipo_reporte', width: 160,
-      render: (v: string) => v ? <Tag color="blue">{v}</Tag> : null,
+      render: (v: string) => {
+        if (!v) return null
+        const ev = eventos.find(e => e.tipo === v)
+        const c = ev?.color ?? '#1677ff'
+        return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{v}</Tag>
+      },
     },
-    qrz_station: { title: 'Estación', dataIndex: 'qrz_station', width: 100 },
+    qrz_station: {
+      title: 'Estación', dataIndex: 'qrz_station', width: 110,
+      render: (v: string) => {
+        if (!v) return null
+        const est = estaciones.find(e => e.qrz === v)
+        const c = est?.color ?? '#1677ff'
+        return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{v}</Tag>
+      },
+    },
     fecha_reporte: {
       title: 'Fecha', dataIndex: 'fecha_reporte', width: 140,
       render: (v: string) => dayjs(v).format('DD/MM/YYYY HH:mm'),
@@ -205,7 +225,15 @@ export default function ReportesPage() {
           <Select
             placeholder="Tipo de evento"
             allowClear style={{ width: 200 }}
-            options={eventos.map(e => ({ value: e.tipo, label: e.tipo }))}
+            labelRender={({ value }) => {
+              const ev = eventos.find(e => e.tipo === value)
+              const c = ev?.color ?? '#1677ff'
+              return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{String(value)}</Tag>
+            }}
+            options={eventos.map(e => {
+              const c = e.color ?? '#1677ff'
+              return { value: e.tipo, label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{e.tipo}</Tag> }
+            })}
             onChange={(v) => setTempFilters(prev => ({ ...prev, tipo_reporte: v }))}
           />
           <Select

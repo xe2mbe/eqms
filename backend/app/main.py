@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
-import logging
+import logging, os
 
 from app.config import settings
 from app.database import Base, engine
@@ -57,6 +57,11 @@ app.include_router(estadisticas.router, prefix="/api/estadisticas", tags=["Estad
 app.include_router(operadores.router,     prefix="/api/operadores",     tags=["Operadores"])
 app.include_router(configuracion.router, prefix="/api/configuracion", tags=["Configuración"])
 app.include_router(libreta.router,      prefix="/api/libreta",      tags=["Libreta"])
+
+
+uploads_path = "/app/uploads"
+os.makedirs(uploads_path, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_path), name="uploads")
 
 
 @app.get("/api/health", tags=["Sistema"])

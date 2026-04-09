@@ -18,6 +18,7 @@ class Usuario(Base):
     role = Column(String(20), nullable=False, default="operador")  # admin | operador
     indicativo = Column(String(20), nullable=True)
     telefono = Column(String(30), nullable=True)
+    avatar = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
     must_change_password = Column(Boolean, default=True)
     failed_attempts = Column(Integer, default=0)
@@ -36,6 +37,7 @@ class Evento(Base):
     id = Column(Integer, primary_key=True, index=True)
     tipo = Column(String(80), nullable=False, unique=True)
     descripcion = Column(Text, nullable=True)
+    color = Column(String(20), nullable=True, default="#1677ff")
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -47,6 +49,7 @@ class Estacion(Base):
     id = Column(Integer, primary_key=True, index=True)
     qrz = Column(String(20), unique=True, nullable=False, index=True)
     descripcion = Column(Text, nullable=True)
+    color = Column(String(20), nullable=True, default="#1677ff")
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -68,6 +71,7 @@ class Sistema(Base):
     id = Column(Integer, primary_key=True, index=True)
     codigo = Column(String(20), unique=True, nullable=False)
     nombre = Column(String(80), nullable=False)
+    color = Column(String(20), nullable=True, default="#1677ff")
     is_active = Column(Boolean, default=True)
 
 

@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import {
-  Card, Form, Select, DatePicker, Button, Table,
+  Card, Form, Select, AutoComplete, DatePicker, Button, Table,
   Typography, Space, Divider, Input, message, Tooltip,
-  Row, Col, Badge, Popconfirm, Checkbox, Modal, Alert, Spin, Collapse, Tag,
+  Row, Col, Badge, Popconfirm, Checkbox, Modal, Alert, Spin, Collapse, Tag, Switch,
 } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import {
@@ -292,12 +292,17 @@ export default function LibretaPage() {
     try {
       const { data: op } = await operadoresApi.buscar(indicativo)
       editOpForm.setFieldsValue({
+        indicativo: op.indicativo,
         nombre_completo: op.nombre_completo || '',
         municipio: op.municipio || '',
         estado: op.estado || '',
+        pais: op.pais || 'México',
+        tipo_licencia: op.tipo_licencia || '',
+        tipo_ham: op.tipo_ham || '',
+        activo: op.activo ?? true,
       })
     } catch {
-      editOpForm.setFieldsValue({ nombre_completo: '', municipio: '', estado: '' })
+      editOpForm.setFieldsValue({ indicativo, nombre_completo: '', municipio: '', estado: '', pais: 'México', tipo_licencia: '', tipo_ham: '', activo: true })
     } finally { setLoadingOp(false) }
   }
 
@@ -678,7 +683,19 @@ export default function LibretaPage() {
       title: 'Sistema', dataIndex: 'sistema', width: 110,
       render: (v: string, row: FilaLibreta) => (
         <Select size="small" value={v || undefined} placeholder="Sistema" allowClear style={{ width: '100%' }}
-          options={sistemas.map(s => ({ value: s.codigo, label: s.codigo }))}
+          labelRender={({ value }) => {
+            const s = sistemas.find(s => s.codigo === value)
+            if (!s) return <span>{String(value)}</span>
+            const c = s.color ?? '#1677ff'
+            return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{s.codigo}</Tag>
+          }}
+          options={sistemas.map(s => {
+            const c = s.color ?? '#1677ff'
+            return {
+              value: s.codigo,
+              label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{s.codigo}</Tag>,
+            }
+          })}
           onChange={val => actualizarFila(row.key, 'sistema', val)} />
       ),
     },
@@ -867,19 +884,47 @@ export default function LibretaPage() {
                   <Col xs={24} sm={12} md={6}>
                     <Form.Item label="Evento" name="tipo_evento" rules={[{ required: true, message: 'Requerido' }]}>
                       <Select placeholder="Tipo de evento" disabled={sesionActiva}
-                        options={eventos.map(e => ({ value: e.tipo, label: e.tipo }))} />
+                        labelRender={({ value }) => {
+                          const ev = eventos.find(e => e.tipo === value)
+                          const c = ev?.color ?? '#1677ff'
+                          return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{String(value)}</Tag>
+                        }}
+                        options={eventos.map(e => {
+                          const c = e.color ?? '#1677ff'
+                          return { value: e.tipo, label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{e.tipo}</Tag> }
+                        })} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} sm={12} md={5}>
                     <Form.Item label="Estación" name="estacion">
                       <Select placeholder="QRZ operando" disabled={sesionActiva} allowClear
-                        options={estaciones.map(e => ({ value: e.qrz, label: e.qrz }))} />
+                        labelRender={({ value }) => {
+                          const est = estaciones.find(e => e.qrz === value)
+                          const c = est?.color ?? '#1677ff'
+                          return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{String(value)}</Tag>
+                        }}
+                        options={estaciones.map(e => {
+                          const c = e.color ?? '#1677ff'
+                          return { value: e.qrz, label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{e.qrz}</Tag> }
+                        })} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} sm={12} md={5}>
                     <Form.Item label="Sistema preferido" name="sistema_default">
                       <Select placeholder="Sistema" disabled={sesionActiva} allowClear
-                        options={sistemas.map(s => ({ value: s.codigo, label: s.codigo }))} />
+                        labelRender={({ value }) => {
+                          const s = sistemas.find(s => s.codigo === value)
+                          if (!s) return <span>{String(value)}</span>
+                          const c = s.color ?? '#1677ff'
+                          return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{s.codigo}</Tag>
+                        }}
+                        options={sistemas.map(s => {
+                          const c = s.color ?? '#1677ff'
+                          return {
+                            value: s.codigo,
+                            label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{s.codigo}</Tag>,
+                          }
+                        })} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} sm={12} md={5}>
@@ -1013,7 +1058,19 @@ export default function LibretaPage() {
             <Col>
               <Select value={inputSistema} onChange={setInputSistema} placeholder="Sistema"
                 style={{ width: 130 }} allowClear
-                options={sistemas.map(s => ({ value: s.codigo, label: s.codigo }))} />
+                labelRender={({ value }) => {
+                  const s = sistemas.find(s => s.codigo === value)
+                  if (!s) return <span>{String(value)}</span>
+                  const c = s.color ?? '#1677ff'
+                  return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{s.codigo}</Tag>
+                }}
+                options={sistemas.map(s => {
+                  const c = s.color ?? '#1677ff'
+                  return {
+                    value: s.codigo,
+                    label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{s.codigo}</Tag>,
+                  }
+                })} />
             </Col>
             <Col>
               <Button type="primary" icon={<PlusOutlined />} onClick={buscarYAgregar} loading={buscando}>
@@ -1147,8 +1204,15 @@ export default function LibretaPage() {
                     : <Text type="secondary">—</Text>
                 },
               },
-              sistema: { title: 'Sistema', dataIndex: 'sistema', width: 85,
-                render: (v: string) => v || <Text type="secondary">—</Text> },
+              sistema: {
+                title: 'Sistema', dataIndex: 'sistema', width: 85,
+                render: (v: string) => {
+                  if (!v) return <Text type="secondary">—</Text>
+                  const s = sistemas.find(s => s.codigo === v)
+                  const c = s?.color ?? '#1677ff'
+                  return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{v}</Tag>
+                },
+              },
               senal: { title: 'RST', dataIndex: 'senal', width: 55, align: 'center' as const,
                 render: (v: number) => <strong>{v}</strong> },
               capturado_por_nombre: {
@@ -1237,13 +1301,37 @@ export default function LibretaPage() {
             <Col span={12}>
               <Form.Item label="Zona" name="zona">
                 <Select placeholder="Zona" allowClear
-                  options={zonas.map(z => ({ value: z.codigo, label: z.codigo }))} />
+                  labelRender={({ value }) => {
+                    const z = zonas.find(z => z.codigo === value)
+                    if (!z) return <span>{String(value)}</span>
+                    const c = z.color ?? '#1677ff'
+                    return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{z.codigo}</Tag>
+                  }}
+                  options={zonas.map(z => {
+                    const c = z.color ?? '#1677ff'
+                    return {
+                      value: z.codigo,
+                      label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{z.codigo}</Tag>,
+                    }
+                  })} />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item label="Sistema" name="sistema">
                 <Select placeholder="Sistema" allowClear
-                  options={sistemas.map(s => ({ value: s.codigo, label: s.codigo }))} />
+                  labelRender={({ value }) => {
+                    const s = sistemas.find(s => s.codigo === value)
+                    if (!s) return <span>{String(value)}</span>
+                    const c = s.color ?? '#1677ff'
+                    return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{s.codigo}</Tag>
+                  }}
+                  options={sistemas.map(s => {
+                    const c = s.color ?? '#1677ff'
+                    return {
+                      value: s.codigo,
+                      label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{s.codigo}</Tag>,
+                    }
+                  })} />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -1262,20 +1350,27 @@ export default function LibretaPage() {
 
       {/* Modal: editar operador (click en indicativo) */}
       <Modal
-        title={<><UserOutlined style={{ marginRight: 8 }} />Editar Operador — {editOpIndicativo}</>}
+        title={<><UserOutlined style={{ marginRight: 8 }} />Editar Radioexperimentador — {editOpIndicativo}</>}
         open={editOpModal}
         onOk={handleSaveOp}
         onCancel={() => setEditOpModal(false)}
         okText="Guardar" cancelText="Cancelar"
         confirmLoading={savingOp}
-        width={420}
+        width={560}
       >
         <Spin spinning={loadingOp}>
           <Form form={editOpForm} layout="vertical" style={{ marginTop: 16 }}>
-            <Form.Item label="Nombre completo" name="nombre_completo">
-              <Input placeholder="Nombre del radioaficionado" />
-            </Form.Item>
             <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item label="Indicativo" name="indicativo">
+                  <Input disabled style={{ fontWeight: 700, color: '#1A569E' }} />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="Nombre completo" name="nombre_completo">
+                  <Input placeholder="Nombre del operador" />
+                </Form.Item>
+              </Col>
               <Col span={12}>
                 <Form.Item label="Ciudad / Municipio" name="municipio">
                   <Input placeholder="Ciudad" />
@@ -1285,6 +1380,33 @@ export default function LibretaPage() {
                 <Form.Item label="Estado" name="estado">
                   <Select placeholder="Estado" allowClear showSearch optionFilterProp="label"
                     options={estados.map(e => ({ value: e.nombre, label: e.nombre }))} />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="País" name="pais">
+                  <AutoComplete
+                    placeholder="México"
+                    allowClear
+                    options={paises.map(p => ({ value: p }))}
+                    filterOption={(input, opt) =>
+                      (opt?.value ?? '').toLowerCase().includes(input.toLowerCase())
+                    }
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="Tipo de licencia" name="tipo_licencia">
+                  <Input placeholder="Ej: Novato, General, Extra" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="Tipo HAM" name="tipo_ham">
+                  <Input placeholder="Ej: Fijo, Móvil" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="Activo" name="activo" valuePropName="checked">
+                  <Switch checkedChildren="Sí" unCheckedChildren="No" />
                 </Form.Item>
               </Col>
             </Row>
