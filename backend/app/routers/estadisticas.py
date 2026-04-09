@@ -17,16 +17,22 @@ def resumen(
     tipo_reporte: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
+    from datetime import timedelta
     q = db.query(models.Reporte)
     if fecha_inicio:
         q = q.filter(models.Reporte.fecha_reporte >= fecha_inicio)
     if fecha_fin:
-        q = q.filter(models.Reporte.fecha_reporte <= fecha_fin)
+        # Si llega solo fecha (sin hora), incluir todo ese día
+        fin = fecha_fin if fecha_fin.hour or fecha_fin.minute else fecha_fin.replace(hour=23, minute=59, second=59)
+        q = q.filter(models.Reporte.fecha_reporte <= fin)
     if tipo_reporte:
         q = q.filter(models.Reporte.tipo_reporte == tipo_reporte)
 
     total = q.count()
-    operadores = q.with_entities(func.count(func.distinct(models.Reporte.indicativo))).scalar() or 0
+    # Operadores = usuarios del sistema que capturaron reportes
+    operadores = q.with_entities(func.count(func.distinct(models.Reporte.capturado_por))).scalar() or 0
+    # Estaciones = indicativos distintos reportados
+    estaciones = q.with_entities(func.count(func.distinct(models.Reporte.indicativo))).scalar() or 0
 
     estados = (
         q.with_entities(models.Reporte.estado, func.count().label("total"))
@@ -44,11 +50,21 @@ def resumen(
         .all()
     )
 
+    eventos = (
+        q.with_entities(models.Reporte.tipo_reporte, func.count().label("total"))
+        .filter(models.Reporte.tipo_reporte != None)
+        .group_by(models.Reporte.tipo_reporte)
+        .order_by(func.count().desc())
+        .all()
+    )
+
     return schemas.EstadisticaResumen(
         total_reportes=total,
         total_operadores=operadores,
+        total_estaciones=estaciones,
         estados=[{"estado": e, "total": t} for e, t in estados if e],
         sistemas=[{"sistema": s, "total": t} for s, t in sistemas if s],
+        eventos=[{"evento": ev, "total": t} for ev, t in eventos if ev],
     )
 
 

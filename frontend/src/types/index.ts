@@ -113,6 +113,8 @@ export interface EstadisticaRS {
 export interface EstadisticaResumen {
   total_reportes: number
   total_operadores: number
+  total_estaciones: number
   estados: { estado: string; total: number }[]
   sistemas: { sistema: string; total: number }[]
+  eventos: { evento: string; total: number }[]
 }

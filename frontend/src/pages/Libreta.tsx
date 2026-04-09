@@ -9,12 +9,15 @@ import {
   SaveOutlined, DeleteOutlined, PlusOutlined,
   CheckCircleOutlined, WarningOutlined,
   SettingOutlined, CalendarOutlined, BellOutlined,
+  EditOutlined, UserOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { reportesApi } from '@/api/reportes'
 import { catalogosApi } from '@/api/catalogos'
 import { operadoresApi, type Operador } from '@/api/operadores'
 import { libretaApi, type CheckIndicativoResult } from '@/api/libreta'
+import { useAuthStore } from '@/store/authStore'
+import { useColPrefs } from '@/components/common/ColSettings'
 import type { Evento, Sistema, Estacion, Estado, Zona, Reporte } from '@/types'
 import { useResizableColumns } from '@/hooks/useResizableColumns'
 
@@ -25,9 +28,14 @@ const { Panel } = Collapse
 // Formato: prefijo (1-3 alfanuméricos, al menos una letra) + 1 dígito + sufijo (1-3 letras)
 // Ej válidos: XE2MBE, W1AW, EA8EE, XF2MC, K0RCA, JA1ABC
 // Ej inválidos: XE2EEEE (sufijo 4 letras), 123ABC (sin letra en prefijo), XE (sin dígito+sufijo)
+// SWL válidos: SWL, SWL001, SWL-XE2-001, SWL/XE2MBE, XE2-SWL-1234
 const INDICATIVO_RE = /^[A-Z0-9]{1,3}[0-9][A-Z]{1,3}$/
 function validarIndicativo(ind: string): boolean {
-  return INDICATIVO_RE.test(ind.trim().toUpperCase())
+  const cs = ind.trim().toUpperCase()
+  return cs === 'SWL' || INDICATIVO_RE.test(cs)
+}
+function esSWL(ind: string): boolean {
+  return ind.trim().toUpperCase() === 'SWL'
 }
 
 // ─── Validación RST ──────────────────────────────────────────────────────────
@@ -54,9 +62,37 @@ interface FilaLibreta {
   ultimaAparicion?: string | null
 }
 
+// ─── Resumen table column config ─────────────────────────────────────────────
+
+const RESUMEN_COL_KEYS = [
+  'indicativo', 'operador', 'ciudad', 'estado', 'zona',
+  'sistema', 'senal', 'capturado_por_nombre', 'created_at',
+] as const
+type ResumenColKey = typeof RESUMEN_COL_KEYS[number]
+
+const RESUMEN_COL_LABELS: Record<ResumenColKey, string> = {
+  indicativo: 'Indicativo',
+  operador: 'Operador',
+  ciudad: 'Ciudad',
+  estado: 'Estado',
+  zona: 'Zona',
+  sistema: 'Sistema',
+  senal: 'RST',
+  capturado_por_nombre: 'Capturado por',
+  created_at: 'Hora',
+}
+
+const RESUMEN_LOCKED: ResumenColKey[] = ['indicativo']
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export default function LibretaPage() {
+  const { user } = useAuthStore()
   const [sesionForm] = Form.useForm()
   const [nuevoHamForm] = Form.useForm()
+
+  const { colOrder: resColOrder, colVisible: resColVisible, colSettingsButton: resColSettingsBtn } =
+    useColPrefs('libreta_resumen', user?.id, RESUMEN_COL_KEYS, RESUMEN_LOCKED, RESUMEN_COL_LABELS)
 
   const [filas, setFilas] = useState<FilaLibreta[]>([])
   const [eventos, setEventos] = useState<Evento[]>([])
@@ -90,6 +126,7 @@ export default function LibretaPage() {
 
   const [anunciarPrimeraVez, setAnunciarPrimeraVez] = useState(false)
   const [anunciarReaparicion, setAnunciarReaparicion] = useState(false)
+  const [zonaSwlDefault, setZonaSwlDefault] = useState<string | undefined>()
 
   const [inputRst, setInputRst] = useState('59')
   const [inputSistema, setInputSistema] = useState<string | undefined>()
@@ -100,6 +137,7 @@ export default function LibretaPage() {
   const [sesionConfig, setSesionConfig] = useState<{
     tipo_evento: string; estacion?: string
     sistema_default?: string; rst_default: string; fecha: string
+    estado_default?: string; ciudad_default?: string; zona_swl_default?: string
   } | null>(null)
 
   // Tabla resumen de reportes guardados
@@ -121,6 +159,23 @@ export default function LibretaPage() {
   const [reaparicionModal, setReaparicionModal] = useState(false)
   const [reaparicionInfo, setReaparicionInfo] = useState<CheckIndicativoResult | null>(null)
   const [reaparicionIndicativo, setReaparicionIndicativo] = useState('')
+
+  // Tabla resumen — selección y acciones
+  const [resumenSelectedKeys, setResumenSelectedKeys] = useState<number[]>([])
+  const [deletingResumen, setDeletingResumen] = useState(false)
+
+  // Modal editar reporte (resumen)
+  const [editReporteModal, setEditReporteModal] = useState(false)
+  const [editReporteRecord, setEditReporteRecord] = useState<Reporte | null>(null)
+  const [editReporteForm] = Form.useForm()
+  const [savingReporte, setSavingReporte] = useState(false)
+
+  // Modal editar operador (click en indicativo)
+  const [editOpModal, setEditOpModal] = useState(false)
+  const [editOpIndicativo, setEditOpIndicativo] = useState('')
+  const [editOpForm] = Form.useForm()
+  const [savingOp, setSavingOp] = useState(false)
+  const [loadingOp, setLoadingOp] = useState(false)
 
   // ── Cargar catálogos + config ─────────────────────────────────────────────
   useEffect(() => {
@@ -146,6 +201,7 @@ export default function LibretaPage() {
           if (cfg.rst_default) setInputRst(cfg.rst_default)
           if (cfg.anunciar_primera_vez) setAnunciarPrimeraVez(true)
           if (cfg.anunciar_reaparicion) setAnunciarReaparicion(true)
+          if (cfg.zona_swl_default) setZonaSwlDefault(cfg.zona_swl_default)
         }
       }).finally(() => setLoadingConfig(false))
     })
@@ -181,6 +237,81 @@ export default function LibretaPage() {
     return () => { if (resumenIntervalRef.current) clearInterval(resumenIntervalRef.current) }
   }, [sesionConfig, fetchResumen])
 
+  // ── Acciones tabla resumen ───────────────────────────────────────────────
+  const handleDeleteResumenSelected = async () => {
+    setDeletingResumen(true)
+    try {
+      await Promise.all(resumenSelectedKeys.map(id => reportesApi.delete(id)))
+      message.success(`${resumenSelectedKeys.length} reporte(s) eliminados`)
+      setResumenSelectedKeys([])
+      if (sesionConfig) fetchResumen(sesionConfig)
+    } catch {
+      message.error('Error al eliminar reportes')
+    } finally { setDeletingResumen(false) }
+  }
+
+  const handleDeleteResumenOne = async (id: number) => {
+    try {
+      await reportesApi.delete(id)
+      message.success('Reporte eliminado')
+      if (sesionConfig) fetchResumen(sesionConfig)
+    } catch { message.error('Error al eliminar') }
+  }
+
+  const handleEditReporte = (record: Reporte) => {
+    setEditReporteRecord(record)
+    editReporteForm.setFieldsValue({
+      indicativo: record.indicativo,
+      operador: record.operador,
+      ciudad: record.ciudad,
+      estado: record.estado,
+      zona: record.zona,
+      sistema: record.sistema,
+      senal: record.senal,
+      observaciones: record.observaciones,
+    })
+    setEditReporteModal(true)
+  }
+
+  const handleSaveReporte = async () => {
+    if (!editReporteRecord) return
+    setSavingReporte(true)
+    try {
+      await reportesApi.update(editReporteRecord.id, editReporteForm.getFieldsValue())
+      message.success('Reporte actualizado')
+      setEditReporteModal(false)
+      if (sesionConfig) fetchResumen(sesionConfig)
+    } catch { message.error('Error al guardar') }
+    finally { setSavingReporte(false) }
+  }
+
+  const handleOpenEditOp = async (indicativo: string) => {
+    setEditOpIndicativo(indicativo)
+    setEditOpModal(true)
+    setLoadingOp(true)
+    try {
+      const { data: op } = await operadoresApi.buscar(indicativo)
+      editOpForm.setFieldsValue({
+        nombre_completo: op.nombre_completo || '',
+        municipio: op.municipio || '',
+        estado: op.estado || '',
+      })
+    } catch {
+      editOpForm.setFieldsValue({ nombre_completo: '', municipio: '', estado: '' })
+    } finally { setLoadingOp(false) }
+  }
+
+  const handleSaveOp = async () => {
+    setSavingOp(true)
+    try {
+      await operadoresApi.update(editOpIndicativo, editOpForm.getFieldsValue())
+      message.success(`${editOpIndicativo} actualizado`)
+      setEditOpModal(false)
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || 'Error al guardar operador')
+    } finally { setSavingOp(false) }
+  }
+
   // Refrescar después de guardar
   const guardarTodoYRefrescar = async () => {
     await guardarTodo()
@@ -210,6 +341,7 @@ export default function LibretaPage() {
         rst_default: inputRst || '59',
         anunciar_primera_vez: anunciarPrimeraVez,
         anunciar_reaparicion: anunciarReaparicion,
+        zona_swl_default: zonaSwlDefault ?? null,
       })
     } catch { /* non-critical */ }
     if (vals.sistema_default) setInputSistema(vals.sistema_default)
@@ -219,6 +351,9 @@ export default function LibretaPage() {
       sistema_default: vals.sistema_default,
       rst_default: inputRst || '59',
       fecha: fechaISO,
+      estado_default: vals.estado_default || undefined,
+      ciudad_default: vals.ciudad_default || undefined,
+      zona_swl_default: zonaSwlDefault || undefined,
     })
     setSesionActiva(true); setConfigVisible(false); setFilas([])
     setTimeout(() => inputRef.current?.focus(), 100)
@@ -246,16 +381,19 @@ export default function LibretaPage() {
     const cs = inputIndicativo.trim().toUpperCase()
     if (!cs) return
     if (!validarIndicativo(cs)) {
-      message.error(`"${cs}" no es un indicativo válido. Formato esperado: prefijo + dígito + sufijo (1-3 letras). Ej: XE2MBE, W1AW`)
+      message.error(`"${cs}" no es un indicativo válido. Formatos aceptados: ITU (XE2MBE, W1AW) o SWL (SWL, SWL-XE2-001)`)
       return
     }
-    if (filas.some(f => f.indicativo === cs)) { message.warning(`${cs} ya está en esta sesión`); return }
+    // SWL puede repetirse; para indicativos normales no permitir duplicados
+    if (!esSWL(cs) && filas.some(f => f.indicativo === cs)) { message.warning(`${cs} ya está en esta sesión`); return }
     setBuscando(true)
 
-    // Llamadas en paralelo
+    const swl = esSWL(cs)
+
+    // SWL: solo buscar operador y prefijo, omitir check de primera vez/reaparición
     const [opRes, checkRes, prefixRes] = await Promise.allSettled([
       operadoresApi.buscar(cs),
-      libretaApi.checkIndicativo(cs),
+      swl ? Promise.resolve({ data: null }) : libretaApi.checkIndicativo(cs),
       catalogosApi.lookupPrefijo(cs),
     ])
 
@@ -264,12 +402,12 @@ export default function LibretaPage() {
     setTimeout(() => inputRef.current?.focus(), 50)
 
     const op = opRes.status === 'fulfilled' ? opRes.value.data : null
-    const check = checkRes.status === 'fulfilled' ? checkRes.value.data : null
+    const check = (!swl && checkRes.status === 'fulfilled') ? (checkRes.value as any).data : null
     const prefix = prefixRes.status === 'fulfilled' ? prefixRes.value.data : null
 
-    // Estimar zona y país desde prefijo
+    // Estimar zona y país desde prefijo (SWL siempre México)
     let zona = zonaExtranjero
-    let pais = prefix?.pais || 'Desconocido'
+    let pais = swl ? 'México' : (prefix?.pais || 'Desconocido')
     let zonaEsNacional = false
 
     if (prefix?.zona_codigo) {
@@ -280,8 +418,8 @@ export default function LibretaPage() {
 
     const ultimaAparicion = check?.ultima_aparicion ?? null
 
-    // Modales de recordatorio
-    if (anunciarPrimeraVez && check?.es_primera_vez) {
+    // Modales de recordatorio — nunca para SWL
+    if (!swl && anunciarPrimeraVez && check?.es_primera_vez) {
       pendienteRef.current = { indicativo: cs, op, pais, zona, zonaEsNacional, ultimaAparicion }
       setPrimeraVezIndicativo(cs)
       nuevoHamForm.setFieldsValue({
@@ -292,7 +430,7 @@ export default function LibretaPage() {
       setPrimeraVezModal(true)
       return
     }
-    if (anunciarReaparicion && check?.es_reaparicion) {
+    if (!swl && anunciarReaparicion && check?.es_reaparicion) {
       pendienteRef.current = { indicativo: cs, op, pais, zona, zonaEsNacional, ultimaAparicion }
       setReaparicionInfo(check)
       setReaparicionIndicativo(cs)
@@ -301,7 +439,12 @@ export default function LibretaPage() {
     }
 
     agregarFilaDirecta(cs, op, pais, zona, zonaEsNacional, ultimaAparicion)
-    if (!op) message.info(`${cs} no está en el catálogo. Registrado sin datos.`)
+    if (!op) {
+      const msg = swl
+        ? `${cs} agregado como SWL. Puedes editar nombre, ciudad y estado en la tabla.`
+        : `${cs} no está en el catálogo. Registrado sin datos.`
+      message.info(msg)
+    }
   }
 
   const agregarFilaDirecta = (
@@ -313,14 +456,30 @@ export default function LibretaPage() {
     ultimaAparicion: string | null
   ) => {
     if (!sesionConfig) return
-    const formVals = sesionForm.getFieldsValue()
 
-    const estadoVal = op?.estado || (considerarSwl ? formVals.estado_default || '' : '')
-    const municipioVal = op?.municipio || (considerarSwl ? formVals.ciudad_default || '' : '')
+    const swl = esSWL(indicativo)
 
-    // Solo override de zona por estado si el prefijo es nacional (zona_codigo conocida)
+    // Para SWL: siempre usar defaults si considerarSwl activo
+    // Para Ham: usar datos del operador, luego defaults si considerarSwl activo
+    const estadoVal = op?.estado
+      || (considerarSwl ? sesionConfig.estado_default || '' : '')
+    const municipioVal = op?.municipio
+      || (considerarSwl ? sesionConfig.ciudad_default || '' : '')
+
+    // Calcular zona:
+    // - SWL: usar zona_swl_default si está configurada; si hay estado, derivar de él
+    // - Ham nacional: derivar del estado si está disponible
     let zona = zonaEstimada
-    if (zonaEsNacional && estadoVal) {
+    if (swl) {
+      zona = sesionConfig.zona_swl_default || zonaEstimada
+      if (estadoVal) {
+        const estDB = estados.find(e => e.nombre === estadoVal)
+        if (estDB?.zona) {
+          const zonaDB = zonas.find(z => z.codigo === estDB.zona)
+          if (zonaDB) zona = zonaDB.codigo
+        }
+      }
+    } else if (zonaEsNacional && estadoVal) {
       const estDB = estados.find(e => e.nombre === estadoVal)
       if (estDB?.zona) {
         const zonaDB = zonas.find(z => z.codigo === estDB.zona)
@@ -563,7 +722,8 @@ export default function LibretaPage() {
       <Modal title={<><CalendarOutlined style={{ marginRight: 8 }} />Fecha de captura</>}
         open={dateModalOpen} closable={false} maskClosable={false}
         onOk={handleDateConfirm} okText="Continuar"
-        cancelButtonProps={{ style: { display: 'none' } }} width={340}>
+        onCancel={() => setDateModalOpen(false)} cancelText="Cancelar"
+        width={340}>
         <Spin spinning={loadingConfig}>
           <div style={{ padding: '16px 0' }}>
             <DatePicker format="DD/MM/YYYY" value={fechaSeleccionada}
@@ -700,7 +860,7 @@ export default function LibretaPage() {
       {(!sesionActiva || configVisible) && (
         <Card className="card-shadow" style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
           <Form form={sesionForm} layout="vertical" initialValues={{ fecha_hora: dayjs() }}>
-            <Collapse defaultActiveKey={['evento']} ghost style={{ marginBottom: 8 }}>
+            <Collapse defaultActiveKey={['evento', 'estaciones', 'recordatorio']} ghost style={{ marginBottom: 8 }}>
 
               <Panel header={<strong>Evento</strong>} key="evento">
                 <Row gutter={16}>
@@ -746,7 +906,7 @@ export default function LibretaPage() {
                         style={{ width: 80, textAlign: 'center', fontWeight: 700 }} placeholder="59" />
                     </Form.Item>
                   </Col>
-                  <Col xs={24} sm={12} md={6} style={{ paddingBottom: 4 }}>
+                  <Col xs={24} sm={4} style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>
                     <Checkbox checked={considerarSwl} disabled={sesionActiva}
                       onChange={e => {
                         setConsiderarSwl(e.target.checked)
@@ -757,19 +917,20 @@ export default function LibretaPage() {
                   </Col>
                   {considerarSwl && (
                     <>
-                      <Col xs={24} sm={12} md={6}>
+                      <Col xs={24} sm={8}>
                         <Form.Item label="Estado por defecto" name="estado_default" style={{ marginBottom: 0 }}>
                           <Select placeholder="Estado" disabled={sesionActiva} allowClear showSearch
                             optionFilterProp="label"
                             options={estados.map(e => ({ value: e.nombre, label: e.nombre }))} />
                         </Form.Item>
                       </Col>
-                      <Col xs={24} sm={12} md={5}>
+                      <Col xs={24} sm={6}>
                         <Form.Item label="Ciudad por defecto" name="ciudad_default" style={{ marginBottom: 0 }}>
                           <Input placeholder="Ciudad" disabled={sesionActiva} />
                         </Form.Item>
                       </Col>
                     </>
+
                   )}
                 </Row>
               </Panel>
@@ -834,8 +995,8 @@ export default function LibretaPage() {
               <Input ref={inputRef} value={inputIndicativo}
                 onChange={e => setInputIndicativo(e.target.value.toUpperCase())}
                 onPressEnter={buscarYAgregar}
-                placeholder="XE2MBE"
-                maxLength={10}
+                placeholder="XE2MBE / SWL"
+                maxLength={20}
                 status={inputIndicativo && !validarIndicativo(inputIndicativo) ? 'error' : ''}
                 style={{ width: 130, textTransform: 'uppercase', fontWeight: 700, fontSize: 15 }} />
             </Col>
@@ -926,39 +1087,59 @@ export default function LibretaPage() {
             </Space>
           }
           extra={
-            <Tooltip title="Actualizar">
-              <Button
-                size="small"
-                icon={<ReloadOutlined />}
-                loading={loadingResumen}
-                onClick={() => fetchResumen(sesionConfig)}
-              >
-                Actualizar
-              </Button>
-            </Tooltip>
+            <Space size={8}>
+              {resColSettingsBtn}
+              <Tooltip title="Actualizar">
+                <Button
+                  size="small"
+                  icon={<ReloadOutlined />}
+                  loading={loadingResumen}
+                  onClick={() => fetchResumen(sesionConfig)}
+                >
+                  Actualizar
+                </Button>
+              </Tooltip>
+            </Space>
           }
           styles={{ header: { fontWeight: 700 } }}
         >
-          <Table<Reporte>
-            dataSource={resumen}
-            rowKey="id"
-            size="small"
-            pagination={{ pageSize: 20, showTotal: t => `${t} registros`, size: 'small' }}
-            loading={loadingResumen}
-            scroll={{ x: 800 }}
-            columns={[
-              {
-                title: 'Indicativo', dataIndex: 'indicativo', width: 110,
-                render: (v: string) => <strong style={{ color: '#1A569E' }}>{v}</strong>,
+          {resumenSelectedKeys.length > 0 && (
+            <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: '#1A569E', fontWeight: 600 }}>{resumenSelectedKeys.length} seleccionado(s)</span>
+              <Popconfirm
+                title={`¿Eliminar ${resumenSelectedKeys.length} reporte(s)?`}
+                okText="Sí, eliminar" cancelText="Cancelar" okButtonProps={{ danger: true }}
+                onConfirm={handleDeleteResumenSelected}
+              >
+                <Button size="small" danger icon={<DeleteOutlined />} loading={deletingResumen}>
+                  Eliminar seleccionados
+                </Button>
+              </Popconfirm>
+              <Button size="small" onClick={() => setResumenSelectedKeys([])}>Deseleccionar</Button>
+            </div>
+          )}
+          {(() => {
+            const resColDefs: Record<ResumenColKey, object> = {
+              indicativo: {
+                title: 'Indicativo', dataIndex: 'indicativo', width: 120, fixed: 'left' as const,
+                render: (v: string) => (
+                  <Tooltip title="Editar operador">
+                    <Button type="link" size="small" icon={<UserOutlined />}
+                      style={{ fontWeight: 700, color: '#1A569E', padding: 0 }}
+                      onClick={() => handleOpenEditOp(v)}>
+                      {v}
+                    </Button>
+                  </Tooltip>
+                ),
               },
-              { title: 'Operador', dataIndex: 'operador', width: 160, ellipsis: true,
+              operador: { title: 'Operador', dataIndex: 'operador', width: 160, ellipsis: true,
                 render: (v: string) => v || <Text type="secondary">—</Text> },
-              { title: 'Ciudad', dataIndex: 'ciudad', width: 130, ellipsis: true,
+              ciudad: { title: 'Ciudad', dataIndex: 'ciudad', width: 120, ellipsis: true,
                 render: (v: string) => v || <Text type="secondary">—</Text> },
-              { title: 'Estado', dataIndex: 'estado', width: 130, ellipsis: true,
+              estado: { title: 'Estado', dataIndex: 'estado', width: 120, ellipsis: true,
                 render: (v: string) => v || <Text type="secondary">—</Text> },
-              {
-                title: 'Zona', dataIndex: 'zona', width: 90,
+              zona: {
+                title: 'Zona', dataIndex: 'zona', width: 80,
                 render: (v: string) => {
                   const color = zonaColor(v)
                   return v
@@ -966,24 +1147,150 @@ export default function LibretaPage() {
                     : <Text type="secondary">—</Text>
                 },
               },
-              { title: 'Sistema', dataIndex: 'sistema', width: 90,
+              sistema: { title: 'Sistema', dataIndex: 'sistema', width: 85,
                 render: (v: string) => v || <Text type="secondary">—</Text> },
-              { title: 'RST', dataIndex: 'senal', width: 60, align: 'center' as const,
+              senal: { title: 'RST', dataIndex: 'senal', width: 55, align: 'center' as const,
                 render: (v: number) => <strong>{v}</strong> },
-              {
-                title: 'Capturado por', dataIndex: 'capturado_por_nombre', width: 140,
-                render: (v: string) => v
-                  ? <Tag color="geekblue" icon={<span style={{ marginRight: 4 }}>👤</span>}>{v}</Tag>
-                  : <Text type="secondary">—</Text>,
+              capturado_por_nombre: {
+                title: 'Capturado por', dataIndex: 'capturado_por_nombre', width: 130,
+                render: (v: string) => v ? <Tag color="geekblue">👤 {v}</Tag> : <Text type="secondary">—</Text>,
               },
-              {
-                title: 'Hora', dataIndex: 'created_at', width: 80, align: 'center' as const,
+              created_at: {
+                title: 'Hora', dataIndex: 'created_at', width: 70, align: 'center' as const,
                 render: (v: string) => <Text style={{ fontSize: 11 }}>{dayjs(v).format('HH:mm')}</Text>,
               },
-            ]}
-          />
+            }
+            const resActionCol = {
+              title: '', width: 70, fixed: 'right' as const,
+              render: (_: unknown, record: Reporte) => (
+                <Space size={4}>
+                  <Tooltip title="Editar reporte">
+                    <Button size="small" icon={<EditOutlined />} onClick={() => handleEditReporte(record)} />
+                  </Tooltip>
+                  <Popconfirm
+                    title="¿Eliminar este reporte?" okText="Sí" cancelText="No"
+                    okButtonProps={{ danger: true }}
+                    onConfirm={() => handleDeleteResumenOne(record.id)}
+                  >
+                    <Button size="small" danger icon={<DeleteOutlined />} />
+                  </Popconfirm>
+                </Space>
+              ),
+            }
+            const resColumns = [
+              ...resColOrder.filter(k => resColVisible.includes(k)).map(k => resColDefs[k]),
+              resActionCol,
+            ]
+            return (
+              <Table<Reporte>
+                dataSource={resumen}
+                rowKey="id"
+                size="small"
+                pagination={{ pageSize: 20, showTotal: t => `${t} registros`, size: 'small' }}
+                loading={loadingResumen}
+                scroll={{ x: 'max-content' }}
+                rowSelection={{
+                  selectedRowKeys: resumenSelectedKeys,
+                  onChange: keys => setResumenSelectedKeys(keys as number[]),
+                  selections: [Table.SELECTION_ALL, Table.SELECTION_INVERT, Table.SELECTION_NONE],
+                }}
+                columns={resColumns as any}
+              />
+            )
+          })()}
         </Card>
       )}
+
+      {/* Modal: editar reporte */}
+      <Modal
+        title={<><EditOutlined style={{ marginRight: 8 }} />Editar Reporte — {editReporteRecord?.indicativo}</>}
+        open={editReporteModal}
+        onOk={handleSaveReporte}
+        onCancel={() => setEditReporteModal(false)}
+        okText="Guardar" cancelText="Cancelar"
+        confirmLoading={savingReporte}
+        width={480}
+      >
+        <Form form={editReporteForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="Indicativo" name="indicativo">
+                <Input disabled />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Operador" name="operador">
+                <Input placeholder="Nombre del operador" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Ciudad" name="ciudad">
+                <Input placeholder="Ciudad" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Estado" name="estado">
+                <Select placeholder="Estado" allowClear showSearch optionFilterProp="label"
+                  options={estados.map(e => ({ value: e.nombre, label: e.nombre }))} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Zona" name="zona">
+                <Select placeholder="Zona" allowClear
+                  options={zonas.map(z => ({ value: z.codigo, label: z.codigo }))} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Sistema" name="sistema">
+                <Select placeholder="Sistema" allowClear
+                  options={sistemas.map(s => ({ value: s.codigo, label: s.codigo }))} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="RST" name="senal">
+                <Input style={{ width: 80, textAlign: 'center', fontWeight: 700 }} maxLength={3} />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item label="Observaciones" name="observaciones">
+                <Input.TextArea rows={2} placeholder="Observaciones" />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+
+      {/* Modal: editar operador (click en indicativo) */}
+      <Modal
+        title={<><UserOutlined style={{ marginRight: 8 }} />Editar Operador — {editOpIndicativo}</>}
+        open={editOpModal}
+        onOk={handleSaveOp}
+        onCancel={() => setEditOpModal(false)}
+        okText="Guardar" cancelText="Cancelar"
+        confirmLoading={savingOp}
+        width={420}
+      >
+        <Spin spinning={loadingOp}>
+          <Form form={editOpForm} layout="vertical" style={{ marginTop: 16 }}>
+            <Form.Item label="Nombre completo" name="nombre_completo">
+              <Input placeholder="Nombre del radioaficionado" />
+            </Form.Item>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item label="Ciudad / Municipio" name="municipio">
+                  <Input placeholder="Ciudad" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="Estado" name="estado">
+                  <Select placeholder="Estado" allowClear showSearch optionFilterProp="label"
+                    options={estados.map(e => ({ value: e.nombre, label: e.nombre }))} />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form>
+        </Spin>
+      </Modal>
     </div>
   )
 }

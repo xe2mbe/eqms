@@ -10,6 +10,7 @@ export interface LibretaConfig {
   rst_default?: string | null
   anunciar_primera_vez?: boolean
   anunciar_reaparicion?: boolean
+  zona_swl_default?: string | null
 }
 
 export interface CheckIndicativoResult {

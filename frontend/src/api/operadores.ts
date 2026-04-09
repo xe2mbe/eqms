@@ -16,4 +16,7 @@ export const operadoresApi = {
 
   autocomplete: (q: string) =>
     client.get<Operador[]>('/operadores/autocomplete', { params: { q } }),
+
+  update: (indicativo: string, data: { nombre_completo?: string; municipio?: string; estado?: string }) =>
+    client.put<Operador>(`/operadores/${indicativo}`, data),
 }

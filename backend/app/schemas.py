@@ -226,11 +226,17 @@ class EstadisticaSistema(BaseModel):
     sistema: str
     total: int
 
+class EstadisticaEvento(BaseModel):
+    evento: str
+    total: int
+
 class EstadisticaResumen(BaseModel):
     total_reportes: int
     total_operadores: int
+    total_estaciones: int
     estados: List[EstadisticaEstado]
     sistemas: List[EstadisticaSistema]
+    eventos: List[EstadisticaEvento]
 
 
 # ─── Libreta config ──────────────────────────────────────────────────────────
@@ -245,6 +251,7 @@ class LibretaConfigOut(BaseModel):
     rst_default: Optional[str] = "59"
     anunciar_primera_vez: bool = False
     anunciar_reaparicion: bool = False
+    zona_swl_default: Optional[str] = None
     class Config:
         from_attributes = True
 
@@ -258,6 +265,7 @@ class LibretaConfigUpdate(BaseModel):
     rst_default: Optional[str] = "59"
     anunciar_primera_vez: bool = False
     anunciar_reaparicion: bool = False
+    zona_swl_default: Optional[str] = None
 
 class NuevoHamCreate(BaseModel):
     indicativo: str

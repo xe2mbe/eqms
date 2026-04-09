@@ -1,25 +1,34 @@
 import { useEffect, useState } from 'react'
-import { Row, Col, Card, Statistic, Spin, DatePicker, Typography, Table } from 'antd'
-import { FileTextOutlined, TeamOutlined, GlobalOutlined, WifiOutlined } from '@ant-design/icons'
+import { Row, Col, Card, Statistic, Spin, DatePicker, Typography, Table, Empty } from 'antd'
+import { FileTextOutlined, TeamOutlined, GlobalOutlined, WifiOutlined, RadarChartOutlined } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
 import { estadisticasApi } from '@/api/estadisticas'
 import type { EstadisticaResumen } from '@/types'
+import MexicoMapCard from '@/components/dashboard/MexicoMapCard'
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
 
+const PIE_COLORS = [
+  '#1A569E','#1677ff','#40a9ff','#52c41a','#73d13d',
+  '#fa8c16','#ffc53d','#722ed1','#eb2f96','#13c2c2',
+]
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<EstadisticaResumen | null>(null)
+  const [totales, setTotales] = useState<EstadisticaResumen | null>(null)
   const [dateRange, setDateRange] = useState<[string, string]>([
-    dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
-    dayjs().format('YYYY-MM-DD'),
+    dayjs().subtract(30, 'day').startOf('day').format('YYYY-MM-DD'),
+    dayjs().add(1, 'day').endOf('day').format('YYYY-MM-DD'),
   ])
 
   useEffect(() => {
-    loadData()
-  }, [dateRange])
+    estadisticasApi.resumen({}).then(r => setTotales(r.data))
+  }, [])
+
+  useEffect(() => { loadData() }, [dateRange])
 
   const loadData = async () => {
     setLoading(true)
@@ -34,33 +43,56 @@ export default function DashboardPage() {
     }
   }
 
+  const sistemas = data?.sistemas ?? []
+  const estados  = data?.estados  ?? []
+  const eventos  = data?.eventos  ?? []
+
   const barSistemas = {
-    tooltip: { trigger: 'axis' },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: 16, right: 16, bottom: 8, top: 16, containLabel: true },
-    xAxis: { type: 'category', data: data?.sistemas.map(s => s.sistema) || [] },
-    yAxis: { type: 'value' },
+    xAxis: {
+      type: 'category',
+      data: sistemas.map(s => s.sistema),
+      axisLabel: { fontSize: 11 },
+    },
+    yAxis: { type: 'value', minInterval: 1 },
     series: [{
-      data: data?.sistemas.map(s => s.total) || [],
+      data: sistemas.map(s => s.total),
       type: 'bar',
+      label: { show: true, position: 'top', fontSize: 11 },
       itemStyle: { color: '#1A569E', borderRadius: [4, 4, 0, 0] },
     }],
   }
 
-  const pieEstados = {
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+  const topEstadosColumns = [
+    {
+      title: '#', width: 36,
+      render: (_: unknown, __: unknown, i: number) =>
+        <span style={{ color: '#999', fontSize: 12 }}>{i + 1}</span>,
+    },
+    { title: 'Estado', dataIndex: 'estado', key: 'estado' },
+    {
+      title: 'Reportes', dataIndex: 'total', key: 'total', align: 'right' as const,
+      render: (v: number) => <strong style={{ color: '#1A569E' }}>{v.toLocaleString()}</strong>,
+    },
+  ]
+
+  const pieEventos = {
+    tooltip: { trigger: 'item', formatter: '{b}<br/>{c} reportes ({d}%)' },
+    legend: { orient: 'vertical', right: 0, top: 'center', textStyle: { fontSize: 11 } },
+    color: PIE_COLORS,
     series: [{
       type: 'pie',
-      radius: ['40%', '70%'],
-      data: (data?.estados.slice(0, 10) || []).map(e => ({ name: e.estado, value: e.total })),
-      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,.3)' } },
+      radius: ['38%', '65%'],
+      center: ['38%', '50%'],
+      data: eventos.map(e => ({ name: e.evento, value: e.total })),
+      label: { show: false },
+      emphasis: {
+        label: { show: true, fontSize: 13, fontWeight: 'bold' },
+        itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,.3)' },
+      },
     }],
   }
-
-  const topEstadosColumns = [
-    { title: 'Estado', dataIndex: 'estado', key: 'estado' },
-    { title: 'Reportes', dataIndex: 'total', key: 'total',
-      render: (v: number) => <strong>{v.toLocaleString()}</strong> },
-  ]
 
   return (
     <div className="page-container">
@@ -69,85 +101,93 @@ export default function DashboardPage() {
         <RangePicker
           value={[dayjs(dateRange[0]), dayjs(dateRange[1])]}
           onChange={(dates) => {
-            if (dates?.[0] && dates?.[1]) {
+            if (dates?.[0] && dates?.[1])
               setDateRange([dates[0].format('YYYY-MM-DD'), dates[1].format('YYYY-MM-DD')])
-            }
           }}
         />
       </div>
 
       <Spin spinning={loading}>
-        {/* Métricas principales */}
+        {/* Tarjetas — totales globales */}
         <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} lg={6}>
+          <Col xs={24} sm={12} lg={5}>
             <Card className="card-shadow">
-              <Statistic
-                title="Total Reportes"
-                value={data?.total_reportes ?? 0}
+              <Statistic title="Total Reportes" value={totales?.total_reportes ?? '—'}
                 prefix={<FileTextOutlined style={{ color: '#1A569E' }} />}
-                valueStyle={{ color: '#1A569E' }}
-              />
+                valueStyle={{ color: '#1A569E' }} />
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={6}>
+          <Col xs={24} sm={12} lg={4}>
             <Card className="card-shadow">
-              <Statistic
-                title="Operadores Activos"
-                value={data?.total_operadores ?? 0}
+              <Statistic title="Operadores" value={totales?.total_operadores ?? '—'}
                 prefix={<TeamOutlined style={{ color: '#52c41a' }} />}
-                valueStyle={{ color: '#52c41a' }}
-              />
+                valueStyle={{ color: '#52c41a' }} />
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={6}>
+          <Col xs={24} sm={12} lg={5}>
             <Card className="card-shadow">
-              <Statistic
-                title="Estados con Actividad"
-                value={data?.estados.length ?? 0}
+              <Statistic title="Estaciones Reportadas" value={totales?.total_estaciones ?? '—'}
+                prefix={<RadarChartOutlined style={{ color: '#1677ff' }} />}
+                valueStyle={{ color: '#1677ff' }} />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={5}>
+            <Card className="card-shadow">
+              <Statistic title="Estados con Actividad" value={totales?.estados.length ?? '—'}
                 prefix={<GlobalOutlined style={{ color: '#fa8c16' }} />}
-                valueStyle={{ color: '#fa8c16' }}
-              />
+                valueStyle={{ color: '#fa8c16' }} />
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={6}>
+          <Col xs={24} sm={12} lg={5}>
             <Card className="card-shadow">
-              <Statistic
-                title="Sistemas Usados"
-                value={data?.sistemas.length ?? 0}
+              <Statistic title="Sistemas Usados" value={totales?.sistemas.length ?? '—'}
                 prefix={<WifiOutlined style={{ color: '#722ed1' }} />}
-                valueStyle={{ color: '#722ed1' }}
-              />
+                valueStyle={{ color: '#722ed1' }} />
             </Card>
           </Col>
         </Row>
 
+        {/* Mapa + Top 10 */}
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-          {/* Gráfica por sistema */}
+          <Col xs={24} lg={16}>
+            <Card title="Actividad por Estado" className="card-shadow"
+              styles={{ body: { padding: '8px 16px 16px' } }}>
+              <MexicoMapCard estados={estados} />
+            </Card>
+          </Col>
+          <Col xs={24} lg={8}>
+            <Card title="Top 10 Estados" className="card-shadow" style={{ height: '100%' }}>
+              {estados.length === 0
+                ? <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                : <Table
+                    dataSource={estados.slice(0, 10)}
+                    columns={topEstadosColumns}
+                    rowKey="estado"
+                    size="small"
+                    pagination={false}
+                    scroll={{ y: 380 }}
+                  />
+              }
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Sistemas + Distribución por Evento */}
+        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
           <Col xs={24} lg={14}>
             <Card title="Reportes por Sistema" className="card-shadow">
-              <ReactECharts option={barSistemas} style={{ height: 280 }} />
+              {sistemas.length === 0
+                ? <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: '40px 0' }} />
+                : <ReactECharts option={barSistemas} style={{ height: 280 }} notMerge />
+              }
             </Card>
           </Col>
-
-          {/* Top estados */}
           <Col xs={24} lg={10}>
-            <Card title="Top 10 Estados" className="card-shadow">
-              <Table
-                dataSource={data?.estados.slice(0, 10) || []}
-                columns={topEstadosColumns}
-                rowKey="estado"
-                size="small"
-                pagination={false}
-                scroll={{ y: 240 }}
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-          <Col xs={24} lg={12}>
-            <Card title="Distribución por Estado (Top 10)" className="card-shadow">
-              <ReactECharts option={pieEstados} style={{ height: 300 }} />
+            <Card title="Distribución por Evento" className="card-shadow">
+              {eventos.length === 0
+                ? <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: '40px 0' }} />
+                : <ReactECharts option={pieEventos} style={{ height: 280 }} notMerge />
+              }
             </Card>
           </Col>
         </Row>

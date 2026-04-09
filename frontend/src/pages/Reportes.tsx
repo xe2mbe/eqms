@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   Table, Button, Space, DatePicker, Input, Select,
-  Typography, Card, Tag, Popconfirm, message, Tooltip,
+  Typography, Card, Tag, Popconfirm, message, Tooltip, Badge,
 } from 'antd'
 import {
   PlusOutlined, SearchOutlined, ClearOutlined,
@@ -11,28 +11,59 @@ import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { reportesApi } from '@/api/reportes'
 import { catalogosApi } from '@/api/catalogos'
-import type { Reporte, ReporteFilters, Evento, Sistema } from '@/types'
+import { useAuthStore } from '@/store/authStore'
+import { useColPrefs } from '@/components/common/ColSettings'
+import type { Reporte, ReporteFilters, Evento, Sistema, Zona } from '@/types'
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
 
-const SIGNAL_COLOR: Record<number, string> = {
-  59: 'green', 57: 'blue', 55: 'orange', 53: 'red',
+// ─── Column definitions ───────────────────────────────────────────────────────
+
+const ALL_COL_KEYS = [
+  'id', 'indicativo', 'senal', 'estado', 'zona',
+  'sistema', 'tipo_reporte', 'qrz_station', 'fecha_reporte',
+] as const
+type ColKey = typeof ALL_COL_KEYS[number]
+
+const COL_LABELS: Record<ColKey, string> = {
+  id: 'ID',
+  indicativo: 'Indicativo',
+  senal: 'RST',
+  estado: 'Estado',
+  zona: 'Zona',
+  sistema: 'Sistema',
+  tipo_reporte: 'Tipo',
+  qrz_station: 'Estación',
+  fecha_reporte: 'Fecha',
 }
+
+const LOCKED_KEYS: ColKey[] = ['indicativo']
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ReportesPage() {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<Reporte[]>([])
   const [total, setTotal] = useState(0)
   const [eventos, setEventos] = useState<Evento[]>([])
   const [sistemas, setSistemas] = useState<Sistema[]>([])
+  const [zonas, setZonas] = useState<Zona[]>([])
   const [filters, setFilters] = useState<ReporteFilters>({ page: 1, page_size: 50 })
   const [tempFilters, setTempFilters] = useState<ReporteFilters>({})
+  const [selectedKeys, setSelectedKeys] = useState<number[]>([])
+  const [deletingBulk, setDeletingBulk] = useState(false)
+
+  const { colOrder, colVisible, colSettingsButton } = useColPrefs(
+    'reportes', user?.id, ALL_COL_KEYS, LOCKED_KEYS, COL_LABELS,
+  )
 
   useEffect(() => {
     catalogosApi.eventos().then(r => setEventos(r.data))
     catalogosApi.sistemas().then(r => setSistemas(r.data))
+    catalogosApi.zonas().then(r => setZonas(r.data))
   }, [])
 
   useEffect(() => { fetchData() }, [filters])
@@ -43,6 +74,7 @@ export default function ReportesPage() {
       const { data: res } = await reportesApi.list(filters)
       setData(res.items)
       setTotal(res.total)
+      setSelectedKeys([])
     } finally {
       setLoading(false)
     }
@@ -67,52 +99,96 @@ export default function ReportesPage() {
     }
   }
 
-  const columns = [
-    { title: 'ID', dataIndex: 'id', width: 65 },
-    { title: 'Indicativo', dataIndex: 'indicativo', width: 110,
-      render: (v: string) => <strong style={{ color: '#1A569E' }}>{v}</strong> },
-    { title: 'Señal', dataIndex: 'senal', width: 80,
-      render: (v: number) => <Tag color={SIGNAL_COLOR[v] || 'default'}>{v}</Tag> },
-    { title: 'Estado', dataIndex: 'estado', width: 130 },
-    { title: 'Zona', dataIndex: 'zona', width: 80 },
-    { title: 'Sistema', dataIndex: 'sistema', width: 100,
-      render: (v: string) => v ? <Tag>{v}</Tag> : null },
-    { title: 'Tipo', dataIndex: 'tipo_reporte', width: 160,
-      render: (v: string) => v ? <Tag color="blue">{v}</Tag> : null },
-    { title: 'Estación', dataIndex: 'qrz_station', width: 100 },
-    { title: 'Fecha', dataIndex: 'fecha_reporte', width: 140,
-      render: (v: string) => dayjs(v).format('DD/MM/YYYY HH:mm') },
-    {
-      title: 'Acciones', width: 90, fixed: 'right' as const,
-      render: (_: unknown, record: Reporte) => (
-        <Space>
-          <Tooltip title="Editar">
-            <Button size="small" icon={<EditOutlined />}
-              onClick={() => navigate(`/reportes/nuevo?id=${record.id}`)} />
-          </Tooltip>
-          <Popconfirm
-            title="¿Eliminar este reporte?"
-            description={`Indicativo: ${record.indicativo}`}
-            okText="Sí, eliminar" cancelText="Cancelar"
-            okButtonProps={{ danger: true }}
-            onConfirm={() => handleDelete(record.id)}
-          >
-            <Tooltip title="Eliminar">
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
+  const handleDeleteSelected = async () => {
+    setDeletingBulk(true)
+    try {
+      await Promise.all(selectedKeys.map(id => reportesApi.delete(id)))
+      message.success(`${selectedKeys.length} reporte(s) eliminados`)
+      fetchData()
+    } catch {
+      message.error('Error al eliminar algunos reportes')
+      fetchData()
+    } finally {
+      setDeletingBulk(false)
+    }
+  }
+
+  // ─── Column defs ─────────────────────────────────────────────────────────────
+
+  const colDefs: Record<ColKey, object> = {
+    id: { title: 'ID', dataIndex: 'id', width: 65 },
+    indicativo: {
+      title: 'Indicativo', dataIndex: 'indicativo', width: 110, fixed: 'left' as const,
+      render: (v: string) => <strong style={{ color: '#1A569E' }}>{v}</strong>,
     },
+    senal: {
+      title: 'RST', dataIndex: 'senal', width: 70,
+      render: (v: number) => <strong>{v}</strong>,
+    },
+    estado: { title: 'Estado', dataIndex: 'estado', width: 130 },
+    zona: {
+      title: 'Zona', dataIndex: 'zona', width: 80, align: 'center' as const,
+      render: (v: string) => {
+        if (!v) return null
+        const z = zonas.find(z => z.codigo === v)
+        return <Tag color={z?.color ?? '#1677ff'} style={{ fontWeight: 600 }}>{v}</Tag>
+      },
+    },
+    sistema: {
+      title: 'Sistema', dataIndex: 'sistema', width: 100,
+      render: (v: string) => v ? <Tag>{v}</Tag> : null,
+    },
+    tipo_reporte: {
+      title: 'Tipo', dataIndex: 'tipo_reporte', width: 160,
+      render: (v: string) => v ? <Tag color="blue">{v}</Tag> : null,
+    },
+    qrz_station: { title: 'Estación', dataIndex: 'qrz_station', width: 100 },
+    fecha_reporte: {
+      title: 'Fecha', dataIndex: 'fecha_reporte', width: 140,
+      render: (v: string) => dayjs(v).format('DD/MM/YYYY HH:mm'),
+    },
+  }
+
+  const actionCol = {
+    title: '', width: 90, fixed: 'right' as const,
+    render: (_: unknown, record: Reporte) => (
+      <Space>
+        <Tooltip title="Editar">
+          <Button size="small" icon={<EditOutlined />}
+            onClick={() => navigate(`/reportes/nuevo?id=${record.id}`)} />
+        </Tooltip>
+        <Popconfirm
+          title="¿Eliminar este reporte?"
+          description={`Indicativo: ${record.indicativo}`}
+          okText="Sí, eliminar" cancelText="Cancelar"
+          okButtonProps={{ danger: true }}
+          onConfirm={() => handleDelete(record.id)}
+        >
+          <Tooltip title="Eliminar">
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Tooltip>
+        </Popconfirm>
+      </Space>
+    ),
+  }
+
+  const columns = [
+    ...colOrder.filter(k => colVisible.includes(k)).map(k => colDefs[k]),
+    actionCol,
   ]
+
+  // ─── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>Reportes Tradicionales</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/reportes/nuevo')}>
-          Nuevo Reporte
-        </Button>
+        <Space>
+          {colSettingsButton}
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/reportes/nuevo')}>
+            Nuevo Reporte
+          </Button>
+        </Space>
       </div>
 
       {/* Filtros */}
@@ -149,14 +225,44 @@ export default function ReportesPage() {
         </Space>
       </Card>
 
+      {/* Barra de selección */}
+      {selectedKeys.length > 0 && (
+        <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: '#1A569E', fontWeight: 600 }}>
+            {selectedKeys.length} seleccionado(s)
+          </span>
+          <Popconfirm
+            title={`¿Eliminar ${selectedKeys.length} reporte(s)?`}
+            description="Esta acción no se puede deshacer."
+            okText="Sí, eliminar" cancelText="Cancelar"
+            okButtonProps={{ danger: true }}
+            onConfirm={handleDeleteSelected}
+          >
+            <Button size="small" danger icon={<DeleteOutlined />} loading={deletingBulk}>
+              Eliminar seleccionados
+            </Button>
+          </Popconfirm>
+          <Button size="small" onClick={() => setSelectedKeys([])}>Deseleccionar</Button>
+        </div>
+      )}
+
       <Card className="card-shadow">
         <Table
           dataSource={data}
-          columns={columns}
+          columns={columns as any}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 1100 }}
+          scroll={{ x: 'max-content' }}
           size="small"
+          rowSelection={{
+            selectedRowKeys: selectedKeys,
+            onChange: (keys) => setSelectedKeys(keys as number[]),
+            selections: [
+              Table.SELECTION_ALL,
+              Table.SELECTION_INVERT,
+              Table.SELECTION_NONE,
+            ],
+          }}
           pagination={{
             total,
             pageSize: filters.page_size,
@@ -166,6 +272,11 @@ export default function ReportesPage() {
             pageSizeOptions: ['25', '50', '100'],
             onChange: (page, page_size) => setFilters(prev => ({ ...prev, page, page_size })),
           }}
+          title={() =>
+            <span style={{ fontWeight: 700 }}>
+              Registros <Badge count={total} color="#1A569E" style={{ marginLeft: 8 }} />
+            </span>
+          }
         />
       </Card>
     </div>

@@ -190,6 +190,7 @@ class LibretaConfigUsuario(Base):
     rst_default = Column(String(3), nullable=True, default="59")
     anunciar_primera_vez = Column(Boolean, default=False)
     anunciar_reaparicion = Column(Boolean, default=False)
+    zona_swl_default = Column(String(20), nullable=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     usuario = relationship("Usuario", backref="libreta_config")

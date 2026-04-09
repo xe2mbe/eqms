@@ -4,7 +4,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined, FileTextOutlined, BarChartOutlined,
   UserOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
-  PlusCircleOutlined, TeamOutlined, BookOutlined, SettingOutlined,
+  TeamOutlined, BookOutlined, SettingOutlined,
   AppstoreOutlined, CalendarOutlined, RadarChartOutlined,
   WifiOutlined, ShareAltOutlined,
 } from '@ant-design/icons'
@@ -19,12 +19,7 @@ const menuItems = [
       { key: '/libreta', icon: <BookOutlined />, label: 'Libreta' },
     ],
   },
-  { key: '/reportes', icon: <FileTextOutlined />, label: 'Reportes',
-    children: [
-      { key: '/reportes', icon: <FileTextOutlined />, label: 'Lista de Reportes' },
-      { key: '/reportes/nuevo', icon: <PlusCircleOutlined />, label: 'Nuevo Reporte' },
-    ],
-  },
+  { key: '/reportes', icon: <FileTextOutlined />, label: 'Registros' },
   { key: '/estadisticas', icon: <BarChartOutlined />, label: 'Estadísticas' },
   {
     key: '/gestion', icon: <AppstoreOutlined />, label: 'Gestión',
@@ -35,6 +30,7 @@ const menuItems = [
       { key: '/gestion/sistemas',      icon: <WifiOutlined />,      label: 'Sistemas' },
       { key: '/gestion/estaciones',    icon: <BookOutlined />,      label: 'Estaciones' },
       { key: '/gestion/redes-sociales',icon: <ShareAltOutlined />,  label: 'Redes Sociales' },
+      { key: '/gestion/radioexperimentadores', icon: <WifiOutlined />, label: 'Radioexperimentadores' },
     ],
   },
   { key: '/configuracion', icon: <SettingOutlined />, label: 'Configuración' },
