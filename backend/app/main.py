@@ -6,7 +6,7 @@ import logging, os
 
 from app.config import settings
 from app.database import Base, engine
-from app.routers import auth, reportes, usuarios, catalogos, estadisticas, operadores, configuracion, libreta
+from app.routers import auth, reportes, usuarios, catalogos, estadisticas, operadores, configuracion, libreta, admin_db, premios
 from app.seeds import seed_prefijos
 from app.database import SessionLocal
 
@@ -57,6 +57,8 @@ app.include_router(estadisticas.router, prefix="/api/estadisticas", tags=["Estad
 app.include_router(operadores.router,     prefix="/api/operadores",     tags=["Operadores"])
 app.include_router(configuracion.router, prefix="/api/configuracion", tags=["Configuración"])
 app.include_router(libreta.router,      prefix="/api/libreta",      tags=["Libreta"])
+app.include_router(admin_db.router,     prefix="/api/admin/db",     tags=["Admin DB"])
+app.include_router(premios.router,      prefix="/api/premios",       tags=["Premios"])
 
 
 uploads_path = "/app/uploads"

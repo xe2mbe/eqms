@@ -96,6 +96,7 @@ class Reporte(Base):
     estado = Column(String(80), nullable=True, index=True)
     ciudad = Column(String(80), nullable=True)
     zona = Column(String(20), nullable=True, index=True)
+    pais = Column(String(80), nullable=True, index=True)
     sistema = Column(String(20), nullable=True, index=True)
     tipo_reporte = Column(String(80), nullable=True, index=True)
     qrz_station = Column(String(20), nullable=True)

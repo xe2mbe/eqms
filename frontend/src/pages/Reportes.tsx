@@ -21,7 +21,7 @@ const { RangePicker } = DatePicker
 // ─── Column definitions ───────────────────────────────────────────────────────
 
 const ALL_COL_KEYS = [
-  'id', 'indicativo', 'senal', 'estado', 'zona',
+  'id', 'indicativo', 'senal', 'pais', 'estado', 'zona',
   'sistema', 'tipo_reporte', 'qrz_station', 'fecha_reporte',
 ] as const
 type ColKey = typeof ALL_COL_KEYS[number]
@@ -30,6 +30,7 @@ const COL_LABELS: Record<ColKey, string> = {
   id: 'ID',
   indicativo: 'Indicativo',
   senal: 'RST',
+  pais: 'País',
   estado: 'Estado',
   zona: 'Zona',
   sistema: 'Sistema',
@@ -126,6 +127,10 @@ export default function ReportesPage() {
     senal: {
       title: 'RST', dataIndex: 'senal', width: 70,
       render: (v: number) => <strong>{v}</strong>,
+    },
+    pais: {
+      title: 'País', dataIndex: 'pais', width: 140,
+      render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
     },
     estado: { title: 'Estado', dataIndex: 'estado', width: 130 },
     zona: {

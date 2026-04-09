@@ -6,7 +6,7 @@ import {
   UserOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   TeamOutlined, BookOutlined, SettingOutlined,
   AppstoreOutlined, CalendarOutlined, RadarChartOutlined,
-  ShareAltOutlined, ApiOutlined, AudioOutlined,
+  ShareAltOutlined, ApiOutlined, AudioOutlined, TrophyOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
 
@@ -21,6 +21,7 @@ const menuItems = [
   },
   { key: '/reportes', icon: <FileTextOutlined />, label: 'Registros' },
   { key: '/estadisticas', icon: <BarChartOutlined />, label: 'Estadísticas' },
+  { key: '/premios', icon: <TrophyOutlined />, label: 'Premios y Distinciones' },
   {
     key: '/gestion', icon: <AppstoreOutlined />, label: 'Gestión',
     children: [

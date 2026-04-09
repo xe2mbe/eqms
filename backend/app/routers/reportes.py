@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 from typing import Optional
 from datetime import datetime
 import math
@@ -79,7 +79,19 @@ def create_reporte(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    reporte = models.Reporte(**body.model_dump(), capturado_por=current_user.id)
+    data = body.model_dump()
+    # Auto-asignar país desde prefijo del indicativo
+    if not data.get("pais") and data.get("indicativo"):
+        prefijo = db.execute(
+            text(
+                "SELECT pais FROM prefijos_pais "
+                "WHERE :ind ILIKE (prefijo || '%') "
+                "ORDER BY LENGTH(prefijo) DESC LIMIT 1"
+            ),
+            {"ind": data["indicativo"].upper()},
+        ).scalar()
+        data["pais"] = prefijo
+    reporte = models.Reporte(**data, capturado_por=current_user.id)
     db.add(reporte)
     db.commit()
     db.refresh(reporte)

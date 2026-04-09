@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 from typing import Optional
 from datetime import datetime
 
@@ -163,3 +163,171 @@ def rs_resumen(
         }
         for r in rows
     ]
+
+
+# ─── Nuevas estadísticas avanzadas ────────────────────────────────────────────
+
+@router.get("/horario")
+def actividad_horaria(
+    fecha_inicio: Optional[datetime] = None,
+    fecha_fin: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+):
+    """Distribución de contactos por hora del día (ventanas de propagación)."""
+    q = db.execute(text("""
+        SELECT EXTRACT(HOUR FROM fecha_reporte AT TIME ZONE 'America/Mexico_City')::int AS hora,
+               COUNT(*) AS total
+        FROM reportes
+        WHERE (:fi IS NULL OR fecha_reporte >= :fi)
+          AND (:ff IS NULL OR fecha_reporte <= :ff)
+        GROUP BY hora ORDER BY hora
+    """), {"fi": fecha_inicio, "ff": fecha_fin})
+    hours = {r[0]: r[1] for r in q}
+    return [{"hora": h, "total": hours.get(h, 0)} for h in range(24)]
+
+
+@router.get("/top-indicativos")
+def top_indicativos(
+    limite: int = 20,
+    fecha_inicio: Optional[datetime] = None,
+    fecha_fin: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+):
+    """Top operadores por número de contactos con estado y zona."""
+    rows = db.execute(text("""
+        SELECT r.indicativo,
+               COUNT(*) AS total,
+               COUNT(DISTINCT r.estado) AS estados,
+               COUNT(DISTINCT r.zona)   AS zonas,
+               MAX(r.fecha_reporte)     AS ultimo,
+               rx.nombre_completo
+        FROM reportes r
+        LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
+        WHERE (:fi IS NULL OR r.fecha_reporte >= :fi)
+          AND (:ff IS NULL OR r.fecha_reporte <= :ff)
+        GROUP BY r.indicativo, rx.nombre_completo
+        ORDER BY total DESC LIMIT :lim
+    """), {"fi": fecha_inicio, "ff": fecha_fin, "lim": limite}).fetchall()
+    return [
+        {"indicativo": r[0], "total": r[1], "estados": r[2], "zonas": r[3],
+         "ultimo": str(r[4]) if r[4] else None, "nombre": r[5]}
+        for r in rows
+    ]
+
+
+@router.get("/zona-actividad")
+def zona_actividad(
+    fecha_inicio: Optional[datetime] = None,
+    fecha_fin: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+):
+    """Actividad por zona FMRE: contactos, indicativos únicos, señal promedio."""
+    rows = db.execute(text("""
+        SELECT zona,
+               COUNT(*) AS total,
+               COUNT(DISTINCT indicativo) AS indicativos,
+               ROUND(AVG(senal), 1) AS senal_promedio
+        FROM reportes
+        WHERE zona IS NOT NULL
+          AND (:fi IS NULL OR fecha_reporte >= :fi)
+          AND (:ff IS NULL OR fecha_reporte <= :ff)
+        GROUP BY zona ORDER BY total DESC
+    """), {"fi": fecha_inicio, "ff": fecha_fin}).fetchall()
+    return [{"zona": r[0], "total": r[1], "indicativos": r[2], "senal_promedio": float(r[3] or 0)} for r in rows]
+
+
+@router.get("/nuevos-mensuales")
+def nuevos_mensuales(db: Session = Depends(get_db)):
+    """Primeras apariciones de indicativos por mes (crecimiento de la red)."""
+    rows = db.execute(text("""
+        WITH primera AS (
+            SELECT indicativo, MIN(fecha_reporte) AS primera_vez
+            FROM reportes GROUP BY indicativo
+        )
+        SELECT DATE_TRUNC('month', primera_vez) AS mes, COUNT(*) AS nuevos
+        FROM primera
+        GROUP BY mes ORDER BY mes
+    """)).fetchall()
+    return [{"mes": str(r[0]), "nuevos": r[1]} for r in rows]
+
+
+@router.get("/retencion")
+def retencion(db: Session = Depends(get_db)):
+    """Retención mensual: cuántos indicativos del mes anterior repiten actividad."""
+    rows = db.execute(text("""
+        WITH mensual AS (
+            SELECT indicativo,
+                   DATE_TRUNC('month', fecha_reporte) AS mes
+            FROM reportes
+            GROUP BY indicativo, DATE_TRUNC('month', fecha_reporte)
+        ),
+        pares AS (
+            SELECT a.mes,
+                   COUNT(DISTINCT a.indicativo) AS activos,
+                   COUNT(DISTINCT b.indicativo) AS retenidos
+            FROM mensual a
+            LEFT JOIN mensual b
+              ON b.indicativo = a.indicativo
+              AND b.mes = a.mes - INTERVAL '1 month'
+            GROUP BY a.mes
+        )
+        SELECT mes, activos, retenidos,
+               CASE WHEN activos > 0 THEN ROUND(retenidos::numeric / activos * 100, 1) ELSE 0 END AS tasa
+        FROM pares ORDER BY mes
+    """)).fetchall()
+    return [{"mes": str(r[0]), "activos": r[1], "retenidos": r[2], "tasa": float(r[3])} for r in rows]
+
+
+@router.get("/rst-por-zona")
+def rst_por_zona(
+    fecha_inicio: Optional[datetime] = None,
+    fecha_fin: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+):
+    """Distribución de RST (señal) por zona: muestra calidad de propagación."""
+    rows = db.execute(text("""
+        SELECT zona, senal, COUNT(*) AS total
+        FROM reportes
+        WHERE zona IS NOT NULL AND senal IS NOT NULL
+          AND (:fi IS NULL OR fecha_reporte >= :fi)
+          AND (:ff IS NULL OR fecha_reporte <= :ff)
+        GROUP BY zona, senal ORDER BY zona, senal
+    """), {"fi": fecha_inicio, "ff": fecha_fin}).fetchall()
+    return [{"zona": r[0], "senal": r[1], "total": r[2]} for r in rows]
+
+
+@router.get("/sistemas-por-zona")
+def sistemas_por_zona(
+    fecha_inicio: Optional[datetime] = None,
+    fecha_fin: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+):
+    """Sistemas de comunicación usados por zona (infraestructura necesaria)."""
+    rows = db.execute(text("""
+        SELECT zona, sistema, COUNT(*) AS total
+        FROM reportes
+        WHERE zona IS NOT NULL AND sistema IS NOT NULL
+          AND (:fi IS NULL OR fecha_reporte >= :fi)
+          AND (:ff IS NULL OR fecha_reporte <= :ff)
+        GROUP BY zona, sistema ORDER BY zona, total DESC
+    """), {"fi": fecha_inicio, "ff": fecha_fin}).fetchall()
+    return [{"zona": r[0], "sistema": r[1], "total": r[2]} for r in rows]
+
+
+@router.get("/tendencia-eventos")
+def tendencia_eventos(
+    fecha_inicio: Optional[datetime] = None,
+    fecha_fin: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+):
+    """Tendencia mensual de reportes por tipo de evento."""
+    rows = db.execute(text("""
+        SELECT DATE_TRUNC('month', fecha_reporte) AS mes,
+               tipo_reporte, COUNT(*) AS total
+        FROM reportes
+        WHERE tipo_reporte IS NOT NULL
+          AND (:fi IS NULL OR fecha_reporte >= :fi)
+          AND (:ff IS NULL OR fecha_reporte <= :ff)
+        GROUP BY mes, tipo_reporte ORDER BY mes, total DESC
+    """), {"fi": fecha_inicio, "ff": fecha_fin}).fetchall()
+    return [{"mes": str(r[0]), "tipo": r[1], "total": r[2]} for r in rows]

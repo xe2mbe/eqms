@@ -20,6 +20,7 @@ import EstacionesPage from '@/pages/gestion/Estaciones'
 import RedesSocialesPage from '@/pages/gestion/RedesSociales'
 import RadioexperimentadoresPage from '@/pages/gestion/Radioexperimentadores'
 import PerfilPage from '@/pages/Perfil'
+import PremiosPage from '@/pages/Premios'
 
 export default function App() {
   const { checkAuth, isLoading } = useAuthStore()
@@ -58,6 +59,7 @@ export default function App() {
             <Route path="/gestion/radioexperimentadores" element={<RadioexperimentadoresPage />} />
             <Route path="/configuracion" element={<ConfiguracionPage />} />
             <Route path="/perfil" element={<PerfilPage />} />
+            <Route path="/premios" element={<PremiosPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

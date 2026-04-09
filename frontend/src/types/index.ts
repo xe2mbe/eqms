@@ -28,6 +28,7 @@ export interface Reporte {
   estado?: string
   ciudad?: string
   zona?: string
+  pais?: string
   sistema?: string
   tipo_reporte?: string
   qrz_station?: string

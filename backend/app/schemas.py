@@ -153,6 +153,7 @@ class ReporteCreate(BaseModel):
     estado: Optional[str] = None
     ciudad: Optional[str] = None
     zona: Optional[str] = None
+    pais: Optional[str] = None
     sistema: Optional[str] = None
     tipo_reporte: str
     qrz_station: Optional[str] = None
@@ -166,6 +167,7 @@ class ReporteUpdate(BaseModel):
     estado: Optional[str] = None
     ciudad: Optional[str] = None
     zona: Optional[str] = None
+    pais: Optional[str] = None
     sistema: Optional[str] = None
     tipo_reporte: Optional[str] = None
     qrz_station: Optional[str] = None
@@ -180,6 +182,7 @@ class ReporteOut(BaseModel):
     estado: Optional[str] = None
     ciudad: Optional[str] = None
     zona: Optional[str] = None
+    pais: Optional[str] = None
     sistema: Optional[str] = None
     tipo_reporte: Optional[str] = None
     qrz_station: Optional[str] = None

@@ -83,20 +83,23 @@ def test_smtp(
     ))
 
     try:
-        if cfg.ssl:
-            context = ssl.create_default_context()
+        context = ssl.create_default_context()
+        if cfg.port == 465:
+            # SSL/TLS directo
             with smtplib.SMTP_SSL(cfg.host, cfg.port, context=context, timeout=10) as s:
                 s.login(cfg.usuario, cfg.password)
                 s.sendmail(msg["From"], req.destinatario, msg.as_string())
         else:
+            # STARTTLS (puerto 587 o cualquier otro)
             with smtplib.SMTP(cfg.host, cfg.port, timeout=10) as s:
                 s.ehlo()
-                s.starttls()
-                s.ehlo()
+                if cfg.ssl:
+                    s.starttls()
+                    s.ehlo()
                 s.login(cfg.usuario, cfg.password)
                 s.sendmail(msg["From"], req.destinatario, msg.as_string())
     except smtplib.SMTPAuthenticationError:
-        raise HTTPException(400, "Error de autenticación: usuario o contraseña incorrectos.")
+        raise HTTPException(400, "Error de autenticacion: usuario o contrasena incorrectos. Para Gmail usa una Contrasena de Aplicacion (no tu contrasena normal).")
     except smtplib.SMTPConnectError:
         raise HTTPException(400, f"No se pudo conectar a {cfg.host}:{cfg.port}.")
     except Exception as e:

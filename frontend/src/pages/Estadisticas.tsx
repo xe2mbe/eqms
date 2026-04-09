@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Card, Row, Col, Typography, DatePicker, Spin, Tabs } from 'antd'
+import { Card, Row, Col, Typography, DatePicker, Spin, Tabs, Table, Tag, Tooltip } from 'antd'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
 import { estadisticasApi } from '@/api/estadisticas'
+import client from '@/api/client'
 import type { EstadisticaRS } from '@/types'
 
-const { Title } = Typography
+const { Title, Text } = Typography
 const { RangePicker } = DatePicker
+
+const ZONA_COLORS: Record<string, string> = {
+  XE1: '#1677ff', XE2: '#52c41a', XE3: '#fa8c16', XE4: '#722ed1', XE5: '#eb2f96',
+}
 
 export default function EstadisticasPage() {
   const [loading, setLoading] = useState(false)
@@ -19,22 +24,40 @@ export default function EstadisticasPage() {
     dayjs().format('YYYY-MM-DD'),
   ])
 
+  // Advanced stats
+  const [horario, setHorario] = useState<{ hora: number; total: number }[]>([])
+  const [topOps, setTopOps] = useState<any[]>([])
+  const [zonaAct, setZonaAct] = useState<any[]>([])
+  const [nuevos, setNuevos] = useState<any[]>([])
+  const [retencion, setRetencion] = useState<any[]>([])
+  const [rstZona, setRstZona] = useState<any[]>([])
+  const [sistZona, setSistZona] = useState<any[]>([])
+  const [tendEv, setTendEv] = useState<any[]>([])
+
   useEffect(() => { loadAll() }, [dateRange])
 
   const loadAll = async () => {
     setLoading(true)
     const p = { fecha_inicio: dateRange[0], fecha_fin: dateRange[1] }
     try {
-      const [t, s, e, rs] = await Promise.all([
+      const [t, s, e, rs, h, top, za, n, ret, rst, sz, te] = await Promise.all([
         estadisticasApi.tendencia({ ...p, granularidad: 'dia' }),
         estadisticasApi.porSistema(p),
         estadisticasApi.porEstado(p),
         estadisticasApi.rsResumen(p),
+        client.get('/estadisticas/horario', { params: p }),
+        client.get('/estadisticas/top-indicativos', { params: { ...p, limite: 20 } }),
+        client.get('/estadisticas/zona-actividad', { params: p }),
+        client.get('/estadisticas/nuevos-mensuales'),
+        client.get('/estadisticas/retencion'),
+        client.get('/estadisticas/rst-por-zona', { params: p }),
+        client.get('/estadisticas/sistemas-por-zona', { params: p }),
+        client.get('/estadisticas/tendencia-eventos', { params: p }),
       ])
-      setTendencia(t.data)
-      setPorSistema(s.data)
-      setPorEstado(e.data)
-      setRsData(rs.data)
+      setTendencia(t.data); setPorSistema(s.data); setPorEstado(e.data); setRsData(rs.data)
+      setHorario(h.data); setTopOps(top.data); setZonaAct(za.data)
+      setNuevos(n.data); setRetencion(ret.data); setRstZona(rst.data)
+      setSistZona(sz.data); setTendEv(te.data)
     } finally {
       setLoading(false)
     }
@@ -79,6 +102,116 @@ export default function EstadisticasPage() {
     ],
   }
 
+  // ── Advanced chart options ──────────────────────────────────────────────────
+
+  const horarioOption = {
+    tooltip: { trigger: 'axis', formatter: (p: any) => `${p[0].name}:00 hrs — ${p[0].value} contactos` },
+    grid: { left: 8, right: 8, top: 10, bottom: 8, containLabel: true },
+    xAxis: { type: 'category', data: horario.map(h => `${h.hora}`) },
+    yAxis: { type: 'value' },
+    visualMap: { show: false, min: 0, max: Math.max(...horario.map(h => h.total), 1),
+      inRange: { color: ['#bae0ff', '#1A569E'] } },
+    series: [{ data: horario.map(h => h.total), type: 'bar', barMaxWidth: 24,
+      itemStyle: { borderRadius: [3, 3, 0, 0] } }],
+  }
+
+  const zonas = [...new Set(zonaAct.map(z => z.zona))]
+  const zonaBarOption = {
+    tooltip: { trigger: 'axis' },
+    grid: { left: 8, right: 8, top: 10, bottom: 8, containLabel: true },
+    xAxis: { type: 'category', data: zonas },
+    yAxis: [{ type: 'value', name: 'Contactos' }, { type: 'value', name: 'Indicativos', position: 'right' }],
+    series: [
+      { name: 'Contactos', type: 'bar', data: zonas.map(z => zonaAct.find(r => r.zona === z)?.total ?? 0),
+        itemStyle: { color: (p: any) => ZONA_COLORS[p.name] ?? '#1677ff', borderRadius: [4, 4, 0, 0] } },
+      { name: 'Indicativos únicos', type: 'line', yAxisIndex: 1, smooth: true,
+        data: zonas.map(z => zonaAct.find(r => r.zona === z)?.indicativos ?? 0),
+        itemStyle: { color: '#fa8c16' }, lineStyle: { width: 2 } },
+    ],
+  }
+
+  const nuevosOption = {
+    tooltip: { trigger: 'axis' },
+    grid: { left: 8, right: 8, top: 10, bottom: 8, containLabel: true },
+    xAxis: { type: 'category', data: nuevos.map(n => dayjs(n.mes).format('MMM YY')) },
+    yAxis: { type: 'value' },
+    series: [
+      { name: 'Nuevos indicativos', type: 'bar', data: nuevos.map(n => n.nuevos),
+        itemStyle: { color: '#52c41a', borderRadius: [3, 3, 0, 0] } },
+      { name: 'Acumulado', type: 'line', smooth: true,
+        data: nuevos.reduce((acc: number[], n, i) => {
+          acc.push((acc[i-1] ?? 0) + n.nuevos); return acc
+        }, []),
+        itemStyle: { color: '#1A569E' }, yAxisIndex: 0 },
+    ],
+  }
+
+  const retencionOption = {
+    tooltip: { trigger: 'axis' },
+    grid: { left: 8, right: 8, top: 10, bottom: 8, containLabel: true },
+    xAxis: { type: 'category', data: retencion.map(r => dayjs(r.mes).format('MMM YY')) },
+    yAxis: [{ type: 'value', name: 'Operadores' }, { type: 'value', name: '%', max: 100, position: 'right' }],
+    series: [
+      { name: 'Activos', type: 'bar', data: retencion.map(r => r.activos), stack: 'r',
+        itemStyle: { color: '#1677ff', borderRadius: [0,0,0,0] } },
+      { name: 'Retenidos', type: 'bar', data: retencion.map(r => r.retenidos), stack: 'r',
+        itemStyle: { color: '#52c41a', borderRadius: [3,3,0,0] } },
+      { name: 'Tasa %', type: 'line', yAxisIndex: 1, smooth: true,
+        data: retencion.map(r => r.tasa), itemStyle: { color: '#fa8c16' } },
+    ],
+  }
+
+  // RST heatmap by zone
+  const zonaList = [...new Set(rstZona.map(r => r.zona))].sort()
+  const rstValues = [51, 53, 55, 57, 59]
+  const rstHeatOption = {
+    tooltip: { formatter: (p: any) => `Zona ${p.value[1]} · RST ${p.value[0]}: ${p.value[2]} contactos` },
+    grid: { left: 8, right: 80, top: 10, bottom: 8, containLabel: true },
+    xAxis: { type: 'category', data: rstValues.map(String) },
+    yAxis: { type: 'category', data: zonaList },
+    visualMap: { min: 0, max: Math.max(...rstZona.map(r => r.total), 1), calculable: true,
+      orient: 'vertical', right: 0, top: 'center',
+      inRange: { color: ['#f0f8ff', '#1A569E'] } },
+    series: [{
+      type: 'heatmap',
+      data: rstZona.map(r => [String(r.senal), r.zona, r.total]),
+      label: { show: true, fontSize: 10 },
+    }],
+  }
+
+  // Sistemas por zona — stacked bar
+  const sistZonas = [...new Set(sistZona.map(r => r.zona))].sort()
+  const sistSistemas = [...new Set(sistZona.map(r => r.sistema))].sort()
+  const sistColors = ['#1677ff','#52c41a','#fa8c16','#722ed1','#eb2f96','#13c2c2','#faad14','#2f54eb']
+  const sistZonaOption = {
+    tooltip: { trigger: 'axis' },
+    legend: { data: sistSistemas, bottom: 0 },
+    grid: { left: 8, right: 8, top: 10, bottom: 40, containLabel: true },
+    xAxis: { type: 'category', data: sistZonas },
+    yAxis: { type: 'value' },
+    series: sistSistemas.map((s, i) => ({
+      name: s, type: 'bar', stack: 'sz',
+      data: sistZonas.map(z => sistZona.find(r => r.zona === z && r.sistema === s)?.total ?? 0),
+      itemStyle: { color: sistColors[i % sistColors.length] },
+    })),
+  }
+
+  // Event trends — multi-line
+  const evMeses = [...new Set(tendEv.map(r => r.mes))].sort()
+  const evTipos = [...new Set(tendEv.map(r => r.tipo))].sort()
+  const evLineOption = {
+    tooltip: { trigger: 'axis' },
+    legend: { data: evTipos, bottom: 0 },
+    grid: { left: 8, right: 8, top: 10, bottom: 40, containLabel: true },
+    xAxis: { type: 'category', data: evMeses.map(m => dayjs(m).format('MMM YY')) },
+    yAxis: { type: 'value' },
+    series: evTipos.map((t, i) => ({
+      name: t, type: 'line', smooth: true,
+      data: evMeses.map(m => tendEv.find(r => r.mes === m && r.tipo === t)?.total ?? 0),
+      itemStyle: { color: sistColors[i % sistColors.length] },
+    })),
+  }
+
   return (
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -96,12 +229,12 @@ export default function EstadisticasPage() {
         <Tabs defaultActiveKey="tradicional" items={[
           {
             key: 'tradicional',
-            label: 'Reportes Tradicionales',
+            label: 'Reportes',
             children: (
               <Row gutter={[16, 16]}>
                 <Col xs={24}>
                   <Card title="Tendencia diaria de reportes" className="card-shadow">
-                    <ReactECharts option={lineOption} style={{ height: 260 }} />
+                    <ReactECharts option={lineOption} style={{ height: 240 }} />
                   </Card>
                 </Col>
                 <Col xs={24} lg={12}>
@@ -112,6 +245,134 @@ export default function EstadisticasPage() {
                 <Col xs={24} lg={12}>
                   <Card title="Actividad por Sistema" className="card-shadow">
                     <ReactECharts option={radarSistemas} style={{ height: 320 }} />
+                  </Card>
+                </Col>
+              </Row>
+            ),
+          },
+          {
+            key: 'propagacion',
+            label: '📡 Propagación',
+            children: (
+              <Row gutter={[16, 16]}>
+                <Col xs={24} lg={12}>
+                  <Card className="card-shadow"
+                    title={<Tooltip title="Identifica las ventanas horarias de mayor actividad — útil para programar eventos y redes">
+                      ⏰ Actividad por hora del día (tiempo México)
+                    </Tooltip>}>
+                    <ReactECharts option={horarioOption} style={{ height: 280 }} />
+                  </Card>
+                </Col>
+                <Col xs={24} lg={12}>
+                  <Card className="card-shadow"
+                    title={<Tooltip title="Calidad promedio de señal RST por zona — indica condiciones de propagación y equipos">
+                      📶 Calidad de señal (RST) por zona FMRE
+                    </Tooltip>}>
+                    {rstZona.length > 0
+                      ? <ReactECharts option={rstHeatOption} style={{ height: 280 }} />
+                      : <div style={{ textAlign: 'center', padding: 40, color: '#bbb' }}>Sin datos de RST por zona en el período</div>
+                    }
+                  </Card>
+                </Col>
+                <Col xs={24}>
+                  <Card className="card-shadow"
+                    title={<Tooltip title="Sistemas de comunicación usados en cada zona — muestra qué infraestructura se necesita por región">
+                      🔧 Sistemas de comunicación por zona FMRE
+                    </Tooltip>}>
+                    {sistZona.length > 0
+                      ? <ReactECharts option={sistZonaOption} style={{ height: 300 }} />
+                      : <div style={{ textAlign: 'center', padding: 40, color: '#bbb' }}>Sin datos de sistemas por zona</div>
+                    }
+                  </Card>
+                </Col>
+              </Row>
+            ),
+          },
+          {
+            key: 'operadores',
+            label: '👥 Operadores',
+            children: (
+              <Row gutter={[16, 16]}>
+                <Col xs={24} lg={14}>
+                  <Card className="card-shadow"
+                    title={<Tooltip title="Ranking de indicativos más activos con diversidad geográfica — base para reconocimientos">
+                      🏆 Top 20 indicativos más activos
+                    </Tooltip>}>
+                    <Table
+                      dataSource={topOps}
+                      rowKey="indicativo"
+                      size="small"
+                      pagination={false}
+                      scroll={{ y: 340 }}
+                      columns={[
+                        { title: '#', width: 40, render: (_: any, _r: any, i: number) => <Text type="secondary">{i+1}</Text> },
+                        { title: 'Indicativo', dataIndex: 'indicativo',
+                          render: (v: string) => <Text strong style={{ color: '#1A569E', fontFamily: 'monospace', letterSpacing: 1 }}>{v}</Text> },
+                        { title: 'Contactos', dataIndex: 'total', width: 90,
+                          render: (v: number) => <Text strong>{v}</Text> },
+                        { title: 'Estados', dataIndex: 'estados', width: 75,
+                          render: (v: number) => <Tag color="blue">{v}</Tag> },
+                        { title: 'Zonas', dataIndex: 'zonas', width: 70,
+                          render: (v: number) => <Tag color="purple">{v}/5</Tag> },
+                        { title: 'Nombre', dataIndex: 'nombre', ellipsis: true,
+                          render: (v: string) => <Text type="secondary" style={{ fontSize: 11 }}>{v ?? '—'}</Text> },
+                      ]}
+                    />
+                  </Card>
+                </Col>
+                <Col xs={24} lg={10}>
+                  <Card className="card-shadow"
+                    title={<Tooltip title="Contactos, indicativos únicos y señal promedio por zona — identifica zonas activas e inactivas">
+                      🗺️ Actividad por zona FMRE
+                    </Tooltip>}>
+                    <ReactECharts option={zonaBarOption} style={{ height: 280 }} />
+                    {zonaAct.length > 0 && (
+                      <Row gutter={8} style={{ marginTop: 12 }}>
+                        {zonaAct.map(z => (
+                          <Col key={z.zona} span={Math.floor(24 / zonaAct.length)}>
+                            <Card size="small" style={{ textAlign: 'center', borderColor: ZONA_COLORS[z.zona] ?? '#ddd', borderWidth: 2 }}>
+                              <Tag style={{ backgroundColor: ZONA_COLORS[z.zona] ?? '#1677ff', color: '#fff', fontWeight: 700 }}>{z.zona}</Tag>
+                              <div style={{ fontSize: 11, color: '#888' }}>RST ~{z.senal_promedio}</div>
+                            </Card>
+                          </Col>
+                        ))}
+                      </Row>
+                    )}
+                  </Card>
+                </Col>
+              </Row>
+            ),
+          },
+          {
+            key: 'crecimiento',
+            label: '📈 Crecimiento',
+            children: (
+              <Row gutter={[16, 16]}>
+                <Col xs={24} lg={12}>
+                  <Card className="card-shadow"
+                    title={<Tooltip title="Primeras apariciones de indicativos por mes — mide el crecimiento de la red">
+                      🆕 Nuevos indicativos por mes (crecimiento de la red)
+                    </Tooltip>}>
+                    <ReactECharts option={nuevosOption} style={{ height: 280 }} />
+                  </Card>
+                </Col>
+                <Col xs={24} lg={12}>
+                  <Card className="card-shadow"
+                    title={<Tooltip title="Qué porcentaje de operadores activos en un mes también estuvo activo el mes anterior — salud de la red">
+                      🔄 Retención mensual de operadores
+                    </Tooltip>}>
+                    <ReactECharts option={retencionOption} style={{ height: 280 }} />
+                  </Card>
+                </Col>
+                <Col xs={24}>
+                  <Card className="card-shadow"
+                    title={<Tooltip title="Tendencia de participación por tipo de evento — identifica qué programas generan más engagement">
+                      📋 Tendencia por tipo de evento (participación por programa)
+                    </Tooltip>}>
+                    {tendEv.length > 0
+                      ? <ReactECharts option={evLineOption} style={{ height: 300 }} />
+                      : <div style={{ textAlign: 'center', padding: 40, color: '#bbb' }}>Sin datos de eventos en el período</div>
+                    }
                   </Card>
                 </Col>
               </Row>

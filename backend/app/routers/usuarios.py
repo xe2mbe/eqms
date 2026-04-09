@@ -179,14 +179,17 @@ def reenviar_correo(
     msg.attach(MIMEText(html, "html"))
 
     try:
-        if cfg.get("ssl"):
+        if cfg.get("port") == 465:
             ctx = ssl.create_default_context()
             with smtplib.SMTP_SSL(cfg["host"], cfg["port"], context=ctx, timeout=10) as s:
                 s.login(cfg["usuario"], cfg["password"])
                 s.sendmail(msg["From"], user.email, msg.as_string())
         else:
             with smtplib.SMTP(cfg["host"], cfg["port"], timeout=10) as s:
-                s.ehlo(); s.starttls(); s.ehlo()
+                s.ehlo()
+                if cfg.get("ssl"):
+                    s.starttls()
+                    s.ehlo()
                 s.login(cfg["usuario"], cfg["password"])
                 s.sendmail(msg["From"], user.email, msg.as_string())
     except Exception as e:
