@@ -114,6 +114,7 @@ export interface PlataformaRS {
   id: number
   nombre: string
   descripcion?: string
+  color?: string
   is_active: boolean
   metricas: MetricaRS[]
 }

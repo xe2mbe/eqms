@@ -122,6 +122,7 @@ class PlataformaRS(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(80), unique=True, nullable=False)
     descripcion = Column(Text, nullable=True)
+    color = Column(String(20), nullable=True, default="#1677ff")
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

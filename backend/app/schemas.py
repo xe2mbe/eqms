@@ -231,6 +231,7 @@ class PlataformaRSOut(BaseModel):
     id: int
     nombre: str
     descripcion: Optional[str] = None
+    color: Optional[str] = "#1677ff"
     is_active: bool
     metricas: List["MetricaRSOut"] = []
     class Config:

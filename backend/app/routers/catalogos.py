@@ -211,6 +211,7 @@ def lookup_prefijo(indicativo: str, db: Session = Depends(get_db)):
 class PlataformaCreate(BaseModel):
     nombre: str
     descripcion: str | None = None
+    color: str | None = "#1677ff"
     is_active: bool = True
 
 @router.get("/plataformas-rs", response_model=List[schemas.PlataformaRSOut])
@@ -273,7 +274,7 @@ def create_metrica(pid: int, body: schemas.MetricaRSCreate, db: Session = Depend
     return m
 
 @router.put("/plataformas-rs/{pid}/metricas/{mid}", response_model=schemas.MetricaRSOut)
-def update_metrica(pid: int, mid: int, body: schemas.MetricaRSUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
+def update_metrica(pid: int, mid: int, body: schemas.MetricaRSUpdate, db: Session = Depends(get_db), _=Depends(get_current_user)):
     m = db.query(models.MetricaRS).filter(
         models.MetricaRS.id == mid, models.MetricaRS.plataforma_id == pid
     ).first()

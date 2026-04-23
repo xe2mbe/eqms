@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import {
   Card, Form, Select, DatePicker, Button, Table, Typography,
   Space, InputNumber, Input, message, Popconfirm, Modal, Alert,
@@ -8,14 +8,42 @@ import type { InputRef } from 'antd'
 import {
   SaveOutlined, DeleteOutlined, EditOutlined, ReloadOutlined,
   CheckCircleOutlined, WarningOutlined, CalendarOutlined, PlusOutlined,
+  LikeOutlined, MessageOutlined, ShareAltOutlined, PlayCircleOutlined,
+  TeamOutlined, EyeOutlined, HeartOutlined, StarOutlined, BarChartOutlined,
+  TagOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import client from '@/api/client'
 import { catalogosApi } from '@/api/catalogos'
 import { libretaRSApi, type EstadisticaRSPayload, type ReporteRSPayload } from '@/api/libretaRS'
 import type { PlataformaRS, MetricaRS, EstadisticaRSRecord, ReporteRS, Evento, Zona, Estado, Estacion } from '@/types'
+import { useColPrefs } from '@/components/common/ColSettings'
+import { useAuthStore } from '@/store/authStore'
 
 const { Title, Text } = Typography
+
+// ── Columnas configurables tabla reportes ─────────────────────────────────────
+const REPORTE_COL_KEYS = ['indicativo', 'rst', 'operador', 'zona', 'estado', 'ciudad', 'pais', 'url', 'hora', 'cap'] as const
+type ReporteColKey = typeof REPORTE_COL_KEYS[number]
+const REPORTE_COL_LABELS: Record<ReporteColKey, string> = {
+  indicativo: 'Indicativo', rst: 'RST', operador: 'Operador', zona: 'Zona',
+  estado: 'Estado', ciudad: 'Ciudad', pais: 'País', url: 'URL', hora: 'Hora', cap: 'Cap. por',
+}
+const REPORTE_COL_LOCKED: ReporteColKey[] = ['indicativo']
+
+// ── Mapa de iconos y colores por slug de métrica ─────────────────────────────
+const METRICA_META: Record<string, { icon: React.ReactNode; color: string }> = {
+  me_gusta:       { icon: <LikeOutlined />,        color: '#1677ff' },
+  comentarios:    { icon: <MessageOutlined />,      color: '#52c41a' },
+  compartidos:    { icon: <ShareAltOutlined />,     color: '#722ed1' },
+  reproducciones: { icon: <PlayCircleOutlined />,   color: '#f5222d' },
+  seguidores:     { icon: <TeamOutlined />,         color: '#fa8c16' },
+  alcance:        { icon: <EyeOutlined />,          color: '#13c2c2' },
+  impresiones:    { icon: <BarChartOutlined />,     color: '#eb2f96' },
+  reacciones:     { icon: <HeartOutlined />,        color: '#ff4d4f' },
+  guardados:      { icon: <StarOutlined />,         color: '#faad14' },
+}
+const getMetricaMeta = (slug: string) => METRICA_META[slug] ?? { icon: <TagOutlined />, color: '#8c8c8c' }
 
 // ── Validación de indicativo (igual que Libreta RF) ──────────────────────────
 const INDICATIVO_RE = /^[A-Z0-9]{1,3}[0-9][A-Z]{1,3}$/
@@ -39,6 +67,10 @@ interface FilaRS {
 }
 
 export default function LibretaRSPage() {
+  const { user } = useAuthStore()
+  const { colOrder, colVisible, colSettingsButton } =
+    useColPrefs('libreta_rs_reportes', user?.id, REPORTE_COL_KEYS, REPORTE_COL_LOCKED, REPORTE_COL_LABELS)
+
   const [plataformas, setPlataformas] = useState<PlataformaRS[]>([])
   const [eventos, setEventos] = useState<Evento[]>([])
   const [zonas, setZonas] = useState<Zona[]>([])
@@ -75,6 +107,10 @@ export default function LibretaRSPage() {
   const [totalReportes, setTotalReportes] = useState(0)
   const [pageReportes, setPageReportes] = useState(1)
   const [loadingReportes, setLoadingReportes] = useState(false)
+
+  // ── Modal sobreescritura métricas ──
+  const [overwriteModal, setOverwriteModal] = useState(false)
+  const [pendingMetricasPayload, setPendingMetricasPayload] = useState<{ payload: EstadisticaRSPayload; existingId: number } | null>(null)
 
   // ── Modales edición ──
   const [editMetricaModal, setEditMetricaModal] = useState(false)
@@ -149,24 +185,50 @@ export default function LibretaRSPage() {
     if (!platSeleccionada) return
     if (!sesionEvento?.trim()) { message.warning('Selecciona un evento antes de guardar'); return }
     const values = await metricasForm.validateFields()
+    const valores: Record<string, number> = {}
+    for (const m of metricasActivas) valores[m.slug] = values[`m_${m.slug}`] ?? 0
+    const payload: EstadisticaRSPayload = {
+      plataforma_id: platSeleccionada.id,
+      valores,
+      fecha_reporte: sesionFecha.toISOString(),
+      observaciones: values.observaciones,
+    }
+    // Verificar si ya existe un registro para esta plataforma y fecha
+    const existente = metricasGuardadas.find(r =>
+      r.plataforma_id === platSeleccionada.id &&
+      dayjs(r.fecha_reporte).isSame(sesionFecha, 'day')
+    )
+    if (existente) {
+      setPendingMetricasPayload({ payload, existingId: existente.id })
+      setOverwriteModal(true)
+      return
+    }
+    await doGuardarMetricas(payload, null)
+  }
+
+  const doGuardarMetricas = async (payload: EstadisticaRSPayload, existingId: number | null) => {
     setSavingMetricas(true)
     try {
-      const valores: Record<string, number> = {}
-      for (const m of metricasActivas) valores[m.slug] = values[`m_${m.slug}`] ?? 0
-      const payload: EstadisticaRSPayload = {
-        plataforma_id: platSeleccionada.id,
-        valores,
-        fecha_reporte: sesionFecha.toISOString(),
-        observaciones: values.observaciones,
+      if (existingId) {
+        await libretaRSApi.updateEstadistica(existingId, payload)
+        message.success('Métricas actualizadas')
+      } else {
+        await libretaRSApi.createEstadistica(payload)
+        message.success('Métricas guardadas')
       }
-      await libretaRSApi.createEstadistica(payload)
-      message.success('Métricas guardadas')
       metricasForm.resetFields()
       fetchMetricas(1); setPageMetricas(1)
       setTimeout(() => inputRef.current?.focus?.(), 150)
     } catch (e: any) {
       message.error(e?.response?.data?.detail || 'Error al guardar métricas')
     } finally { setSavingMetricas(false) }
+  }
+
+  const handleConfirmOverwrite = async () => {
+    if (!pendingMetricasPayload) return
+    setOverwriteModal(false)
+    await doGuardarMetricas(pendingMetricasPayload.payload, pendingMetricasPayload.existingId)
+    setPendingMetricasPayload(null)
   }
 
   // ── Agregar indicativo a la libreta ──
@@ -326,8 +388,22 @@ export default function LibretaRSPage() {
     } catch (e: any) { message.error(e?.response?.data?.detail || 'Error') }
   }
 
-  const tiposEvento = eventos.map(e => ({ value: e.tipo, label: e.tipo }))
-  const estacionOptions = estaciones.filter(e => e.is_active).map(e => ({ value: e.qrz, label: e.qrz }))
+  const tiposEvento = eventos.map(e => ({
+    value: e.tipo,
+    label: (
+      <Tag style={{ backgroundColor: e.color ?? '#1677ff', borderColor: e.color ?? '#1677ff', color: '#fff', fontWeight: 600, marginRight: 0 }}>
+        {e.tipo}
+      </Tag>
+    ),
+  }))
+  const estacionOptions = estaciones.filter(e => e.is_active).map(e => ({
+    value: e.qrz,
+    label: (
+      <Tag style={{ backgroundColor: e.color ?? '#1677ff', borderColor: e.color ?? '#1677ff', color: '#fff', fontWeight: 600, marginRight: 0 }}>
+        {e.qrz}
+      </Tag>
+    ),
+  }))
 
   // ── Columnas libreta captura ──
   const libroColumns = [
@@ -424,15 +500,29 @@ export default function LibretaRSPage() {
   const metricasColumns = [
     {
       title: 'Métricas', key: 'valores',
-      render: (_: unknown, r: EstadisticaRSRecord) => (
-        <Space wrap size={4}>
-          {Object.entries(r.valores || {}).map(([k, v]) => (
-            <span key={k}><Text type="secondary" style={{ fontSize: 11 }}>{k}:</Text> <strong>{Number(v).toLocaleString()}</strong></span>
-          ))}
-        </Space>
-      ),
+      render: (_: unknown, r: EstadisticaRSRecord) => {
+        const orden = metricasActivas.length > 0
+          ? metricasActivas.map(m => m.slug)
+          : Object.keys(r.valores || {})
+        const slugsOrdenados = [
+          ...orden.filter(s => s in (r.valores || {})),
+          ...Object.keys(r.valores || {}).filter(s => !orden.includes(s)),
+        ]
+        return (
+          <Space wrap size={4}>
+            {slugsOrdenados.map(k => {
+              const { icon, color } = getMetricaMeta(k)
+              return (
+                <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginRight: 8 }}>
+                  <span style={{ color, fontSize: 13 }}>{icon}</span>
+                  <strong style={{ color, fontSize: 13 }}>{Number((r.valores || {})[k]).toLocaleString()}</strong>
+                </span>
+              )
+            })}
+          </Space>
+        )
+      },
     },
-    { title: 'Observaciones', dataIndex: 'observaciones', key: 'obs', render: (v: string) => v || '—' },
     {
       title: 'Fecha', dataIndex: 'fecha_reporte', key: 'fecha', width: 110,
       render: (v: string) => dayjs(v).format('DD/MM/YY'),
@@ -455,37 +545,31 @@ export default function LibretaRSPage() {
     },
   ]
 
-  // ── Columnas reportes guardados ──
-  const reportesColumns = [
-    {
-      title: 'Indicativo', dataIndex: 'indicativo', key: 'ind',
-      render: (v: string) => <strong style={{ color: '#1A569E' }}>{v}</strong>,
-    },
-    { title: 'RST', dataIndex: 'senal', key: 'rst', width: 60 },
-    { title: 'Operador', dataIndex: 'operador', key: 'op', render: (v: string) => v || '—' },
-    {
-      title: 'Zona', dataIndex: 'zona', key: 'zona', width: 80,
+  // ── Columnas reportes guardados (configurables) ──
+  const reporteColDefs: Record<ReporteColKey, object> = {
+    indicativo: { title: 'Indicativo', dataIndex: 'indicativo', key: 'indicativo',
+      render: (v: string) => <strong style={{ color: '#1A569E' }}>{v}</strong> },
+    rst:        { title: 'RST', dataIndex: 'senal', key: 'rst', width: 60 },
+    operador:   { title: 'Operador', dataIndex: 'operador', key: 'operador', render: (v: string) => v || '—' },
+    zona:       { title: 'Zona', dataIndex: 'zona', key: 'zona', width: 80,
       render: (v: string) => v
         ? <Tag color={zonaColor(v)} style={{ color: '#fff', fontWeight: 700 }}>{v}</Tag>
-        : '—',
-    },
-    { title: 'Estado', dataIndex: 'estado', key: 'est', render: (v: string) => v || '—' },
-    { title: 'Ciudad', dataIndex: 'ciudad', key: 'ciu', render: (v: string) => v || '—' },
-    { title: 'País', dataIndex: 'pais', key: 'pais', render: (v: string) => v || '—' },
-    {
-      title: 'URL', dataIndex: 'url_publicacion', key: 'url',
+        : '—' },
+    estado:     { title: 'Estado', dataIndex: 'estado', key: 'estado', render: (v: string) => v || '—' },
+    ciudad:     { title: 'Ciudad', dataIndex: 'ciudad', key: 'ciudad', render: (v: string) => v || '—' },
+    pais:       { title: 'País', dataIndex: 'pais', key: 'pais', render: (v: string) => v || '—' },
+    url:        { title: 'URL', dataIndex: 'url_publicacion', key: 'url',
       render: (v: string) => v
         ? <a href={v} target="_blank" rel="noreferrer" style={{ fontSize: 11 }}>Ver</a>
-        : '—',
-    },
-    {
-      title: 'Hora', dataIndex: 'created_at', key: 'hora', width: 70,
-      render: (v: string) => dayjs(v).format('HH:mm'),
-    },
-    {
-      title: 'Cap. por', dataIndex: 'capturado_por_nombre', key: 'cap', width: 90,
-      render: (v: string) => v || '—',
-    },
+        : '—' },
+    hora:       { title: 'Hora', dataIndex: 'created_at', key: 'hora', width: 70,
+      render: (v: string) => dayjs(v).format('HH:mm') },
+    cap:        { title: 'Cap. por', dataIndex: 'capturado_por_nombre', key: 'cap', width: 90,
+      render: (v: string) => v || '—' },
+  }
+
+  const reportesColumns = [
+    ...colOrder.filter(k => colVisible.includes(k)).map(k => reporteColDefs[k]),
     {
       title: '', key: 'acc', width: 70,
       render: (_: unknown, r: ReporteRS) => (
@@ -513,7 +597,14 @@ export default function LibretaRSPage() {
             <Form.Item label="Plataforma" style={{ margin: 0 }}>
               <Select placeholder="Selecciona plataforma..." showSearch optionFilterProp="label"
                 style={{ width: '100%' }}
-                options={plataformas.map(p => ({ value: p.id, label: p.nombre }))}
+                options={plataformas.map(p => ({
+                  value: p.id,
+                  label: (
+                    <Tag style={{ backgroundColor: p.color ?? '#1677ff', borderColor: p.color ?? '#1677ff', color: '#fff', fontWeight: 600, marginRight: 0 }}>
+                      {p.nombre}
+                    </Tag>
+                  ),
+                }))}
                 onChange={onPlatChange} />
             </Form.Item>
           </Col>
@@ -552,22 +643,45 @@ export default function LibretaRSPage() {
         }
       />
 
-      {platSeleccionada ? (
+      {platSeleccionada && sesionEvento?.trim() && sesionEstacion ? (
         <>
           {/* ── Métricas ── */}
           <Card className="card-shadow" style={{ marginBottom: 16 }}
             title={`Métricas — ${platSeleccionada.nombre}`}>
             <Form form={metricasForm} layout="inline">
-              {metricasActivas.length > 0 ? metricasActivas.map(m => (
-                <Form.Item key={m.id} label={m.nombre} name={`m_${m.slug}`} initialValue={0}>
-                  <InputNumber min={0} style={{ width: 120 }} />
-                </Form.Item>
-              )) : (
+              {metricasActivas.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                  {metricasActivas.map(m => {
+                    const { icon, color } = getMetricaMeta(m.slug)
+                    return (
+                      <Form.Item key={m.id} name={`m_${m.slug}`} initialValue={0} style={{ margin: 0 }}>
+                        <div style={{
+                          border: `1.5px solid ${color}`,
+                          borderRadius: 8,
+                          padding: '6px 10px',
+                          minWidth: 100,
+                          background: `${color}10`,
+                          textAlign: 'center',
+                        }}>
+                          <div style={{ color, fontSize: 16, marginBottom: 2 }}>{icon}</div>
+                          <div style={{ color, fontWeight: 600, fontSize: 11, marginBottom: 4, whiteSpace: 'nowrap' }}>
+                            {m.nombre}
+                          </div>
+                          <InputNumber
+                            min={0}
+                            size="small"
+                            style={{ width: '100%', borderColor: color }}
+                            value={metricasForm.getFieldValue(`m_${m.slug}`) ?? 0}
+                            onChange={val => metricasForm.setFieldValue(`m_${m.slug}`, val)}
+                          />
+                        </div>
+                      </Form.Item>
+                    )
+                  })}
+                </div>
+              ) : (
                 <Text type="warning">Sin métricas activas. Configúralas en Gestión &gt; Redes Sociales.</Text>
               )}
-              <Form.Item label="Observaciones" name="observaciones">
-                <Input placeholder="Opcional..." style={{ width: 200 }} />
-              </Form.Item>
             </Form>
             <div style={{ marginTop: 12 }}>
               <Button type="primary" icon={<SaveOutlined />} loading={savingMetricas}
@@ -652,7 +766,8 @@ export default function LibretaRSPage() {
 
           {/* ── Reportes guardados hoy ── */}
           <Card className="card-shadow"
-            title={`Reportes del ${sesionFecha.format('DD/MM/YYYY')} — ${platSeleccionada.nombre} (${totalReportes})`}>
+            title={`Reportes del ${sesionFecha.format('DD/MM/YYYY')} — ${platSeleccionada.nombre} (${totalReportes})`}
+            extra={colSettingsButton}>
             <Table dataSource={reportes} columns={reportesColumns} rowKey="id"
               loading={loadingReportes} size="small" pagination={{
                 current: pageReportes, pageSize: 50, total: totalReportes,
@@ -663,9 +778,26 @@ export default function LibretaRSPage() {
         </>
       ) : (
         <Card className="card-shadow">
-          <Text type="secondary">Selecciona una plataforma para comenzar la sesión.</Text>
+          <Text type="secondary">Selecciona Plataforma, Evento y Estación para comenzar la sesión.</Text>
         </Card>
       )}
+
+      {/* ── Modal sobreescritura de métricas ── */}
+      <Modal
+        title={<><WarningOutlined style={{ color: '#fa8c16', marginRight: 8 }} />Métricas ya registradas</>}
+        open={overwriteModal}
+        onOk={handleConfirmOverwrite}
+        onCancel={() => { setOverwriteModal(false); setPendingMetricasPayload(null) }}
+        okText="Sí, sobreescribir"
+        cancelText="Cancelar"
+        okButtonProps={{ danger: true }}
+      >
+        <p>
+          Ya existe un registro de métricas para <strong>{platSeleccionada?.nombre}</strong> en la fecha{' '}
+          <strong>{sesionFecha.format('DD/MM/YYYY')}</strong>.
+        </p>
+        <p>¿Deseas sobreescribir los valores existentes con los nuevos?</p>
+      </Modal>
 
       {/* ── Modal selección de fecha ── */}
       <Modal

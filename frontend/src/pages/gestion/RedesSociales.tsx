@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import {
   Table, Button, Space, Tag, Modal, Form, Input,
   Typography, Card, Popconfirm, message, Switch,
-  Divider, Tooltip,
+  Divider, Tooltip, ColorPicker,
 } from 'antd'
+import type { Color } from 'antd/es/color-picker'
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
   SettingOutlined, CheckCircleOutlined, StopOutlined,
@@ -19,6 +20,7 @@ export default function RedesSocialesPage() {
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editItem, setEditItem] = useState<PlataformaRS | null>(null)
+  const [formColor, setFormColor] = useState('#1677ff')
   const [form] = Form.useForm()
 
   // Panel de métricas
@@ -39,17 +41,24 @@ export default function RedesSocialesPage() {
     } finally { setLoading(false) }
   }
 
-  const openCreate = () => { setEditItem(null); form.resetFields(); setModalOpen(true) }
-  const openEdit = (item: PlataformaRS) => { setEditItem(item); form.setFieldsValue(item); setModalOpen(true) }
+  const openCreate = () => {
+    setEditItem(null); form.resetFields()
+    setFormColor('#1677ff'); setModalOpen(true)
+  }
+  const openEdit = (item: PlataformaRS) => {
+    setEditItem(item); form.setFieldsValue(item)
+    setFormColor(item.color ?? '#1677ff'); setModalOpen(true)
+  }
 
   const handleSave = async () => {
     const values = await form.validateFields()
+    const payload = { ...values, color: formColor }
     try {
       if (editItem) {
-        await client.put(`/catalogos/plataformas-rs/${editItem.id}`, values)
+        await client.put(`/catalogos/plataformas-rs/${editItem.id}`, payload)
         message.success('Plataforma actualizada')
       } else {
-        await client.post('/catalogos/plataformas-rs', values)
+        await client.post('/catalogos/plataformas-rs', payload)
         message.success('Plataforma creada')
       }
       setModalOpen(false); fetchData()
@@ -140,25 +149,25 @@ export default function RedesSocialesPage() {
         </Tooltip>
       ),
     },
-    { title: '', key: 'actions', width: 60,
+    { title: '', key: 'actions', width: 50,
       render: (_: unknown, r: MetricaRS) => (
         !r.is_default ? (
           <Popconfirm title="¿Eliminar métrica?" okText="Sí" cancelText="No"
             onConfirm={() => handleDeleteMetrica(r)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
-        ) : (
-          <Tooltip title="Las métricas predeterminadas no se pueden eliminar, solo desactivar">
-            <Button size="small" disabled icon={<DeleteOutlined />} />
-          </Tooltip>
-        )
+        ) : null
       ),
     },
   ]
 
   const columns = [
     { title: 'Nombre', dataIndex: 'nombre', key: 'nombre',
-      render: (v: string) => <strong>{v}</strong> },
+      render: (v: string, r: PlataformaRS) => {
+        const c = r.color ?? '#1677ff'
+        return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 700, fontSize: 13 }}>{v}</Tag>
+      },
+    },
     { title: 'Descripción', dataIndex: 'descripcion', key: 'descripcion' },
     { title: 'Métricas activas', key: 'metricas',
       render: (_: unknown, r: PlataformaRS) => {
@@ -205,6 +214,26 @@ export default function RedesSocialesPage() {
           </Form.Item>
           <Form.Item label="Descripción" name="descripcion">
             <Input.TextArea rows={2} />
+          </Form.Item>
+          <Form.Item label="Color">
+            <Space align="center">
+              <ColorPicker
+                value={formColor}
+                onChange={(c: Color) => setFormColor(c.toHexString())}
+                showText
+                presets={[{
+                  label: 'Sugeridos',
+                  colors: [
+                    '#1677ff','#52c41a','#fa8c16','#722ed1',
+                    '#eb2f96','#f5222d','#13c2c2','#faad14',
+                    '#2f54eb','#389e0d','#d46b08','#531dab',
+                  ],
+                }]}
+              />
+              <Tag style={{ backgroundColor: formColor, borderColor: formColor, color: '#fff', fontWeight: 700, fontSize: 13 }}>
+                {form.getFieldValue('nombre') || 'Plataforma'}
+              </Tag>
+            </Space>
           </Form.Item>
           <Form.Item label="Activa" name="is_active" valuePropName="checked">
             <Switch />

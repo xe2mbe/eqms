@@ -43,6 +43,7 @@ async def lifespan(app: FastAPI):
         conn.execute(text("ALTER TABLE reportes_rs ADD COLUMN IF NOT EXISTS senal INTEGER DEFAULT 59"))
         conn.execute(text("ALTER TABLE reportes_rs ADD COLUMN IF NOT EXISTS qrz_station VARCHAR(20)"))
         conn.execute(text("ALTER TABLE reportes_rs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ"))
+        conn.execute(text("ALTER TABLE plataformas_rs ADD COLUMN IF NOT EXISTS color VARCHAR(20) DEFAULT '#1677ff'"))
         conn.commit()
 
     db = SessionLocal()
