@@ -2,6 +2,7 @@ from sqlalchemy import (
     Column, Integer, String, Boolean, DateTime, Text,
     ForeignKey, BigInteger, Index
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -125,6 +126,24 @@ class PlataformaRS(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     estadisticas = relationship("EstadisticaRS", back_populates="plataforma")
+    metricas = relationship("MetricaRS", back_populates="plataforma", cascade="all, delete-orphan")
+    reportes_rs = relationship("ReporteRS", back_populates="plataforma")
+
+
+class MetricaRS(Base):
+    """Métricas configurables por plataforma (me_gusta, comentarios, personalizadas)."""
+    __tablename__ = "metricas_rs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plataforma_id = Column(Integer, ForeignKey("plataformas_rs.id"), nullable=False, index=True)
+    nombre = Column(String(80), nullable=False)
+    slug = Column(String(80), nullable=False)        # clave usada en el JSON de valores
+    is_active = Column(Boolean, default=True)
+    is_default = Column(Boolean, default=False)      # True = viene preinstalada
+    orden = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    plataforma = relationship("PlataformaRS", back_populates="metricas")
 
 
 class EstadisticaRS(Base):
@@ -132,16 +151,38 @@ class EstadisticaRS(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     plataforma_id = Column(Integer, ForeignKey("plataformas_rs.id"), nullable=False, index=True)
-    me_gusta = Column(BigInteger, default=0)
-    comentarios = Column(BigInteger, default=0)
-    compartidos = Column(BigInteger, default=0)
-    reproducciones = Column(BigInteger, default=0)
+    valores = Column(JSONB, nullable=False, default=dict)   # {"me_gusta": 100, "comentarios": 50}
     fecha_reporte = Column(DateTime(timezone=True), nullable=False, index=True)
     capturado_por = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     observaciones = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     plataforma = relationship("PlataformaRS", back_populates="estadisticas")
+
+
+class ReporteRS(Base):
+    """Registro de estaciones que reportan via Redes Sociales (equivalente a Reporte en RF)."""
+    __tablename__ = "reportes_rs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    indicativo = Column(String(20), nullable=False, index=True)
+    operador = Column(String(120), nullable=True)
+    senal = Column(Integer, default=59)
+    plataforma_id = Column(Integer, ForeignKey("plataformas_rs.id"), nullable=False, index=True)
+    estado = Column(String(80), nullable=True, index=True)
+    ciudad = Column(String(80), nullable=True)
+    zona = Column(String(20), nullable=True, index=True)
+    pais = Column(String(80), nullable=True)
+    tipo_reporte = Column(String(80), nullable=True, index=True)
+    qrz_station = Column(String(20), nullable=True)
+    url_publicacion = Column(Text, nullable=True)
+    capturado_por = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    fecha_reporte = Column(DateTime(timezone=True), nullable=False, index=True)
+    observaciones = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    plataforma = relationship("PlataformaRS", back_populates="reportes_rs")
 
 
 class Radioexperimentador(Base):

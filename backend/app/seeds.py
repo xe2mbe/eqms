@@ -501,3 +501,29 @@ def seed_prefijos(db: Session) -> None:
     for prefijo, pais, zona_codigo in PREFIJOS:
         db.add(models.PrefijoPais(prefijo=prefijo, pais=pais, zona_codigo=zona_codigo))
     db.commit()
+
+
+METRICAS_DEFAULT = [
+    {"nombre": "Me gusta",      "slug": "me_gusta",      "orden": 1},
+    {"nombre": "Comentarios",   "slug": "comentarios",   "orden": 2},
+    {"nombre": "Compartidos",   "slug": "compartidos",   "orden": 3},
+    {"nombre": "Reproducciones","slug": "reproducciones","orden": 4},
+]
+
+
+def seed_metricas_rs_default(db: Session) -> None:
+    """Para cada plataforma sin métricas, crea las 4 métricas default."""
+    plataformas = db.query(models.PlataformaRS).all()
+    for plat in plataformas:
+        tiene = db.query(models.MetricaRS).filter(models.MetricaRS.plataforma_id == plat.id).count()
+        if tiene == 0:
+            for m in METRICAS_DEFAULT:
+                db.add(models.MetricaRS(
+                    plataforma_id=plat.id,
+                    nombre=m["nombre"],
+                    slug=m["slug"],
+                    is_active=True,
+                    is_default=True,
+                    orden=m["orden"],
+                ))
+    db.commit()

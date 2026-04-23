@@ -16,7 +16,8 @@ const menuItems = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
   { key: '/toma-reportes', icon: <BookOutlined />, label: 'Toma de Reportes',
     children: [
-      { key: '/libreta', icon: <BookOutlined />, label: 'Libreta' },
+      { key: '/libreta',    icon: <BookOutlined />,    label: 'Libreta RF' },
+      { key: '/libreta-rs', icon: <ShareAltOutlined />, label: 'Libreta RS' },
     ],
   },
   { key: '/reportes', icon: <FileTextOutlined />, label: 'Registros' },

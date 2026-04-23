@@ -56,7 +56,7 @@ def list_reportes(
     usuarios = {}
     if usuario_ids:
         for u in db.query(models.Usuario).filter(models.Usuario.id.in_(usuario_ids)).all():
-            usuarios[u.id] = u.full_name
+            usuarios[u.id] = u.indicativo or u.full_name
 
     out_items = []
     for r in items:

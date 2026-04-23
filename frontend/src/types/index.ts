@@ -100,11 +100,22 @@ export interface Estado {
   lng?: string
 }
 
+export interface MetricaRS {
+  id: number
+  plataforma_id: number
+  nombre: string
+  slug: string
+  is_active: boolean
+  is_default: boolean
+  orden: number
+}
+
 export interface PlataformaRS {
   id: number
   nombre: string
   descripcion?: string
   is_active: boolean
+  metricas: MetricaRS[]
 }
 
 export interface EstadisticaRS {
@@ -113,6 +124,37 @@ export interface EstadisticaRS {
   comentarios: number
   compartidos: number
   reproducciones: number
+}
+
+export interface EstadisticaRSRecord {
+  id: number
+  plataforma_id: number
+  plataforma: PlataformaRS
+  valores: Record<string, number>
+  observaciones?: string
+  fecha_reporte: string
+  created_at: string
+  capturado_por_nombre?: string
+}
+
+export interface ReporteRS {
+  id: number
+  indicativo: string
+  operador?: string
+  senal: number
+  plataforma_id: number
+  plataforma: PlataformaRS
+  estado?: string
+  ciudad?: string
+  zona?: string
+  pais?: string
+  tipo_reporte?: string
+  qrz_station?: string
+  url_publicacion?: string
+  fecha_reporte: string
+  observaciones?: string
+  created_at: string
+  capturado_por_nombre?: string
 }
 
 export interface EstadisticaResumen {

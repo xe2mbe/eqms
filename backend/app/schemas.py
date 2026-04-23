@@ -205,20 +205,40 @@ class PaginatedReportes(BaseModel):
 
 # ─── Redes Sociales ──────────────────────────────────────────────────────────
 
+class MetricaRSOut(BaseModel):
+    id: int
+    plataforma_id: int
+    nombre: str
+    slug: str
+    is_active: bool
+    is_default: bool
+    orden: int
+    class Config:
+        from_attributes = True
+
+class MetricaRSCreate(BaseModel):
+    nombre: str
+    slug: str
+    is_active: bool = True
+    orden: int = 0
+
+class MetricaRSUpdate(BaseModel):
+    nombre: Optional[str] = None
+    is_active: Optional[bool] = None
+    orden: Optional[int] = None
+
 class PlataformaRSOut(BaseModel):
     id: int
     nombre: str
     descripcion: Optional[str] = None
     is_active: bool
+    metricas: List["MetricaRSOut"] = []
     class Config:
         from_attributes = True
 
 class EstadisticaRSCreate(BaseModel):
     plataforma_id: int
-    me_gusta: int = 0
-    comentarios: int = 0
-    compartidos: int = 0
-    reproducciones: int = 0
+    valores: dict = {}
     fecha_reporte: datetime
     observaciones: Optional[str] = None
 
@@ -226,12 +246,46 @@ class EstadisticaRSOut(BaseModel):
     id: int
     plataforma_id: int
     plataforma: PlataformaRSOut
-    me_gusta: int
-    comentarios: int
-    compartidos: int
-    reproducciones: int
+    valores: dict = {}
+    observaciones: Optional[str] = None
     fecha_reporte: datetime
     created_at: datetime
+    capturado_por_nombre: Optional[str] = None
+    class Config:
+        from_attributes = True
+
+class ReporteRSCreate(BaseModel):
+    indicativo: str
+    operador: Optional[str] = None
+    senal: int = 59
+    plataforma_id: int
+    estado: Optional[str] = None
+    ciudad: Optional[str] = None
+    zona: Optional[str] = None
+    pais: Optional[str] = None
+    tipo_reporte: Optional[str] = None
+    qrz_station: Optional[str] = None
+    url_publicacion: Optional[str] = None
+    fecha_reporte: datetime
+    observaciones: Optional[str] = None
+
+class ReporteRSOut(BaseModel):
+    id: int
+    indicativo: str
+    operador: Optional[str] = None
+    senal: int = 59
+    plataforma_id: int
+    plataforma: PlataformaRSOut
+    estado: Optional[str] = None
+    ciudad: Optional[str] = None
+    zona: Optional[str] = None
+    pais: Optional[str] = None
+    tipo_reporte: Optional[str] = None
+    qrz_station: Optional[str] = None
+    url_publicacion: Optional[str] = None
+    fecha_reporte: datetime
+    created_at: datetime
+    capturado_por_nombre: Optional[str] = None
     class Config:
         from_attributes = True
 

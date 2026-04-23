@@ -215,12 +215,20 @@ class PlataformaCreate(BaseModel):
 
 @router.get("/plataformas-rs", response_model=List[schemas.PlataformaRSOut])
 def list_plataformas(db: Session = Depends(get_db)):
-    return db.query(models.PlataformaRS).all()
+    return db.query(models.PlataformaRS).filter(models.PlataformaRS.is_active == True).all()
 
 @router.post("/plataformas-rs", response_model=schemas.PlataformaRSOut, status_code=201)
 def create_plataforma(body: PlataformaCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     p = models.PlataformaRS(**body.model_dump())
     db.add(p); db.commit(); db.refresh(p)
+    # Seed métricas default para la nueva plataforma
+    from app.seeds import METRICAS_DEFAULT
+    for m in METRICAS_DEFAULT:
+        db.add(models.MetricaRS(
+            plataforma_id=p.id, nombre=m["nombre"], slug=m["slug"],
+            is_active=True, is_default=True, orden=m["orden"],
+        ))
+    db.commit(); db.refresh(p)
     return p
 
 @router.put("/plataformas-rs/{pid}", response_model=schemas.PlataformaRSOut)
@@ -236,3 +244,50 @@ def delete_plataforma(pid: int, db: Session = Depends(get_db), _=Depends(require
     p = db.query(models.PlataformaRS).filter(models.PlataformaRS.id == pid).first()
     if not p: raise HTTPException(404, "Plataforma no encontrada")
     p.is_active = False; db.commit()
+
+
+# ─── Métricas RS ─────────────────────────────────────────────────────────────
+
+@router.get("/plataformas-rs/{pid}/metricas", response_model=List[schemas.MetricaRSOut])
+def list_metricas(pid: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    return (
+        db.query(models.MetricaRS)
+        .filter(models.MetricaRS.plataforma_id == pid)
+        .order_by(models.MetricaRS.orden)
+        .all()
+    )
+
+@router.post("/plataformas-rs/{pid}/metricas", response_model=schemas.MetricaRSOut, status_code=201)
+def create_metrica(pid: int, body: schemas.MetricaRSCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
+    p = db.query(models.PlataformaRS).filter(models.PlataformaRS.id == pid).first()
+    if not p: raise HTTPException(404, "Plataforma no encontrada")
+    slug = body.slug.strip().lower().replace(" ", "_")
+    existe = db.query(models.MetricaRS).filter(
+        models.MetricaRS.plataforma_id == pid,
+        models.MetricaRS.slug == slug,
+    ).first()
+    if existe: raise HTTPException(400, "Ya existe una métrica con ese slug")
+    m = models.MetricaRS(plataforma_id=pid, nombre=body.nombre, slug=slug,
+                         is_active=body.is_active, is_default=False, orden=body.orden)
+    db.add(m); db.commit(); db.refresh(m)
+    return m
+
+@router.put("/plataformas-rs/{pid}/metricas/{mid}", response_model=schemas.MetricaRSOut)
+def update_metrica(pid: int, mid: int, body: schemas.MetricaRSUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
+    m = db.query(models.MetricaRS).filter(
+        models.MetricaRS.id == mid, models.MetricaRS.plataforma_id == pid
+    ).first()
+    if not m: raise HTTPException(404, "Métrica no encontrada")
+    for k, v in body.model_dump(exclude_unset=True).items():
+        setattr(m, k, v)
+    db.commit(); db.refresh(m)
+    return m
+
+@router.delete("/plataformas-rs/{pid}/metricas/{mid}", status_code=204)
+def delete_metrica(pid: int, mid: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    m = db.query(models.MetricaRS).filter(
+        models.MetricaRS.id == mid, models.MetricaRS.plataforma_id == pid
+    ).first()
+    if not m: raise HTTPException(404, "Métrica no encontrada")
+    if m.is_default: raise HTTPException(400, "No se pueden eliminar las métricas predeterminadas, solo desactivarlas")
+    db.delete(m); db.commit()

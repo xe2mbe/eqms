@@ -11,6 +11,7 @@ import NuevoReportePage from '@/pages/NuevoReporte'
 import EstadisticasPage from '@/pages/Estadisticas'
 import ChangePasswordPage from '@/pages/ChangePassword'
 import LibretaPage from '@/pages/Libreta'
+import LibretaRSPage from '@/pages/LibretaRS'
 import ConfiguracionPage from '@/pages/Configuracion'
 import UsuariosPage from '@/pages/gestion/Usuarios'
 import EventosPage from '@/pages/gestion/Eventos'
@@ -49,6 +50,7 @@ export default function App() {
             <Route path="/reportes" element={<ReportesPage />} />
             <Route path="/reportes/nuevo" element={<NuevoReportePage />} />
             <Route path="/libreta" element={<LibretaPage />} />
+            <Route path="/libreta-rs" element={<LibretaRSPage />} />
             <Route path="/estadisticas" element={<EstadisticasPage />} />
             <Route path="/gestion/usuarios"       element={<UsuariosPage />} />
             <Route path="/gestion/eventos"        element={<EventosPage />} />
