@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Row, Col, Typography, Spin, Tabs, Table, Tag, Tooltip } from 'antd'
+import { Card, Row, Col, Typography, Spin, Tabs, Table, Tag, Tooltip, Empty } from 'antd'
 import DateRangeBar from '@/components/common/DateRangeBar'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
@@ -38,27 +38,26 @@ export default function EstadisticasPage() {
   const loadAll = async () => {
     setLoading(true)
     const p = { fecha_inicio: dateRange[0], fecha_fin: dateRange[1], evento_id: evento }
-    try {
-      const [t, s, e, h, top, za, n, ret, rst, sz, te] = await Promise.all([
-        estadisticasApi.tendencia({ ...p, granularidad: 'dia' }),
-        estadisticasApi.porSistema(p),
-        estadisticasApi.porEstado(p),
-        client.get('/estadisticas/horario', { params: p }),
-        client.get('/estadisticas/top-indicativos', { params: { ...p, limite: 20 } }),
-        client.get('/estadisticas/zona-actividad', { params: p }),
-        client.get('/estadisticas/nuevos-mensuales'),
-        client.get('/estadisticas/retencion'),
-        client.get('/estadisticas/rst-por-zona', { params: p }),
-        client.get('/estadisticas/sistemas-por-zona', { params: p }),
-        client.get('/estadisticas/tendencia-eventos', { params: p }),
-      ])
-      setTendencia(t.data); setPorSistema(s.data); setPorEstado(e.data)
-      setHorario(h.data); setTopOps(top.data); setZonaAct(za.data)
-      setNuevos(n.data); setRetencion(ret.data); setRstZona(rst.data)
-      setSistZona(sz.data); setTendEv(te.data)
-    } finally {
-      setLoading(false)
-    }
+    const results = await Promise.allSettled([
+      estadisticasApi.tendencia({ ...p, granularidad: 'dia' }),
+      estadisticasApi.porSistema(p),
+      estadisticasApi.porEstado(p),
+      client.get('/estadisticas/horario', { params: p }),
+      client.get('/estadisticas/top-indicativos', { params: { ...p, limite: 20 } }),
+      client.get('/estadisticas/zona-actividad', { params: p }),
+      client.get('/estadisticas/nuevos-mensuales'),
+      client.get('/estadisticas/retencion'),
+      client.get('/estadisticas/rst-por-zona', { params: p }),
+      client.get('/estadisticas/sistemas-por-zona', { params: p }),
+      client.get('/estadisticas/tendencia-eventos', { params: p }),
+    ])
+    const ok = (i: number) =>
+      results[i].status === 'fulfilled' ? (results[i] as PromiseFulfilledResult<any>).value.data : []
+    setTendencia(ok(0)); setPorSistema(ok(1)); setPorEstado(ok(2))
+    setHorario(ok(3));   setTopOps(ok(4));    setZonaAct(ok(5))
+    setNuevos(ok(6));    setRetencion(ok(7)); setRstZona(ok(8))
+    setSistZona(ok(9));  setTendEv(ok(10))
+    setLoading(false)
   }
 
   const lineOption = {
@@ -218,17 +217,26 @@ export default function EstadisticasPage() {
               <Row gutter={[16, 16]}>
                 <Col xs={24}>
                   <Card title="Tendencia diaria de reportes" className="card-shadow">
-                    <ReactECharts option={lineOption} style={{ height: 240 }} />
+                    {tendencia.length > 0
+                      ? <ReactECharts option={lineOption} style={{ height: 240 }} notMerge />
+                      : <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} />
+                    }
                   </Card>
                 </Col>
                 <Col xs={24} lg={12}>
                   <Card title="Top 15 Estados con más actividad" className="card-shadow">
-                    <ReactECharts option={hbarEstados} style={{ height: 320 }} />
+                    {porEstado.length > 0
+                      ? <ReactECharts option={hbarEstados} style={{ height: 320 }} notMerge />
+                      : <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 60 }} />
+                    }
                   </Card>
                 </Col>
                 <Col xs={24} lg={12}>
                   <Card title="Actividad por Sistema" className="card-shadow">
-                    <ReactECharts option={radarSistemas} style={{ height: 320 }} />
+                    {porSistema.length > 0
+                      ? <ReactECharts option={radarSistemas} style={{ height: 320 }} notMerge />
+                      : <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 60 }} />
+                    }
                   </Card>
                 </Col>
               </Row>
@@ -244,7 +252,10 @@ export default function EstadisticasPage() {
                     title={<Tooltip title="Identifica las ventanas horarias de mayor actividad — útil para programar eventos y redes">
                       ⏰ Actividad por hora del día (tiempo México)
                     </Tooltip>}>
-                    <ReactECharts option={horarioOption} style={{ height: 280 }} />
+                    {horario.length > 0
+                      ? <ReactECharts option={horarioOption} style={{ height: 280 }} notMerge />
+                      : <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} />
+                    }
                   </Card>
                 </Col>
                 <Col xs={24} lg={12}>
@@ -309,7 +320,10 @@ export default function EstadisticasPage() {
                     title={<Tooltip title="Contactos, indicativos únicos y señal promedio por zona — identifica zonas activas e inactivas">
                       🗺️ Actividad por zona FMRE
                     </Tooltip>}>
-                    <ReactECharts option={zonaBarOption} style={{ height: 280 }} />
+                    {zonaAct.length > 0
+                      ? <ReactECharts option={zonaBarOption} style={{ height: 280 }} notMerge />
+                      : <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} />
+                    }
                     {zonaAct.length > 0 && (
                       <Row gutter={8} style={{ marginTop: 12 }}>
                         {zonaAct.map(z => (
@@ -337,7 +351,10 @@ export default function EstadisticasPage() {
                     title={<Tooltip title="Primeras apariciones de indicativos por mes — mide el crecimiento de la red">
                       🆕 Nuevos indicativos por mes (crecimiento de la red)
                     </Tooltip>}>
-                    <ReactECharts option={nuevosOption} style={{ height: 280 }} />
+                    {nuevos.length > 0
+                      ? <ReactECharts option={nuevosOption} style={{ height: 280 }} notMerge />
+                      : <Empty description="Sin datos" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} />
+                    }
                   </Card>
                 </Col>
                 <Col xs={24} lg={12}>
@@ -345,7 +362,10 @@ export default function EstadisticasPage() {
                     title={<Tooltip title="Qué porcentaje de operadores activos en un mes también estuvo activo el mes anterior — salud de la red">
                       🔄 Retención mensual de operadores
                     </Tooltip>}>
-                    <ReactECharts option={retencionOption} style={{ height: 280 }} />
+                    {retencion.length > 0
+                      ? <ReactECharts option={retencionOption} style={{ height: 280 }} notMerge />
+                      : <Empty description="Sin datos" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} />
+                    }
                   </Card>
                 </Col>
                 <Col xs={24}>
