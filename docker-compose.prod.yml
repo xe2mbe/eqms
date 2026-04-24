@@ -1,0 +1,12 @@
+services:
+
+  db:
+    ports: []
+
+  backend:
+    volumes: []
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  frontend:
+    ports:
+      - "5173:80"
