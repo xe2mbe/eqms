@@ -30,7 +30,10 @@ function loadPrefs<K extends string>(key: string, allKeys: readonly K[]): ColPre
       const missing = allKeys.filter(k => !validOrder.includes(k))
       return {
         order: [...validOrder, ...missing],
-        visible: parsed.visible.filter(k => (allKeys as readonly string[]).includes(k)) as K[],
+        visible: [
+          ...parsed.visible.filter(k => (allKeys as readonly string[]).includes(k)),
+          ...missing,
+        ] as K[],
       }
     }
   } catch { /* ignore */ }
