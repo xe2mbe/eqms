@@ -44,16 +44,18 @@ export default function DateRangeBar({ value, onChange, ultimoEventoEndpoint, ev
   const lastMonday = thisMonday.subtract(7, 'day')
   const lastSunday = thisMonday.subtract(1, 'day')
 
+  const tomorrow = today.add(1, 'day')
+
   const presets: { label: string; value: [Dayjs, Dayjs] }[] = [
-    { label: 'Hoy',             value: [today.startOf('day'),                                        today] },
-    { label: 'Esta semana',     value: [thisMonday,                                                  today] },
+    { label: 'Hoy',             value: [today.startOf('day'),                                        tomorrow] },
+    { label: 'Esta semana',     value: [thisMonday,                                                  tomorrow] },
     { label: 'Semana anterior', value: [lastMonday,                                                  lastSunday] },
-    { label: 'Este mes',        value: [today.startOf('month'),                                      today] },
+    { label: 'Este mes',        value: [today.startOf('month'),                                      tomorrow] },
     { label: 'Mes anterior',    value: [today.subtract(1,'month').startOf('month'),  today.subtract(1,'month').endOf('month')] },
-    { label: 'Últimos 90 días', value: [today.subtract(90,'day'),                                   today] },
-    { label: 'Este año',        value: [today.startOf('year'),                                       today] },
+    { label: 'Últimos 90 días', value: [today.subtract(90,'day'),                                   tomorrow] },
+    { label: 'Este año',        value: [today.startOf('year'),                                       tomorrow] },
     { label: 'Año anterior',    value: [today.subtract(1,'year').startOf('year'),    today.subtract(1,'year').endOf('year')] },
-    { label: 'Todos',           value: [dayjs('2020-01-01'),                                        today] },
+    { label: 'Todos',           value: [dayjs('2020-01-01'),                                        tomorrow] },
     ...(ultimoEvento
       ? [{ label: 'Último evento', value: [ultimoEvento.startOf('day'), ultimoEvento.endOf('day')] as [Dayjs, Dayjs] }]
       : []),

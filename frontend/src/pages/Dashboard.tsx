@@ -20,7 +20,7 @@ export default function DashboardPage() {
   const [data, setData] = useState<EstadisticaResumen | null>(null)
   const [dateRange, setDateRange] = useState<[string, string]>([
     dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
-    dayjs().format('YYYY-MM-DD'),
+    dayjs().add(1, 'day').format('YYYY-MM-DD'),
   ])
   const [evento, setEvento] = useState<number | undefined>()
 
