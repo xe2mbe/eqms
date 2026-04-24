@@ -155,6 +155,7 @@ export default function LibretaPage() {
   const [guardandoHam, setGuardandoHam] = useState(false)
   const pendienteRef = useRef<{ indicativo: string; op: Operador | null; pais: string; zona: string; zonaEsNacional: boolean; ultimaAparicion: string | null } | null>(null)
   const registrarHamBtnRef = useRef<HTMLButtonElement>(null)
+  const continuarCapturaBtnRef = useRef<HTMLButtonElement>(null)
 
   // Modal reaparición
   const [reaparicionModal, setReaparicionModal] = useState(false)
@@ -863,9 +864,13 @@ export default function LibretaPage() {
       <Modal
         title={<><BellOutlined style={{ color: '#fa8c16', marginRight: 8 }} />Reaparición: {reaparicionIndicativo}</>}
         open={reaparicionModal} closable={false} maskClosable={false}
-        onOk={handleContinuarReaparicion} okText="Continuar captura"
-        cancelButtonProps={{ style: { display: 'none' } }} width={420}
-        okButtonProps={{ autoFocus: true }}>
+        footer={
+          <Button ref={continuarCapturaBtnRef} type="primary" onClick={handleContinuarReaparicion}>
+            Continuar captura
+          </Button>
+        }
+        width={420}
+        afterOpenChange={open => { if (open) continuarCapturaBtnRef.current?.focus() }}>
         {reaparicionInfo && (
           <Alert type="warning" showIcon
             message={`${reaparicionIndicativo} no ha aparecido en ${reaparicionInfo.dias_sin_aparecer} días`}
