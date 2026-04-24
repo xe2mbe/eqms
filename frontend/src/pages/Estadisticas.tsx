@@ -238,6 +238,8 @@ export default function EstadisticasPage() {
     ],
   }
 
+  const coberturaActivos = cobertura.filter(e => e.total > 0)
+
   const coberturaEstadoBarOption = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
       formatter: (p: any) => `${p[0].name}: ${p[0].value} contactos` },
@@ -245,11 +247,11 @@ export default function EstadisticasPage() {
     xAxis: { type: 'value' },
     yAxis: {
       type: 'category',
-      data: cobertura.slice(0, 32).map(e => e.abreviatura).reverse(),
+      data: coberturaActivos.map(e => e.abreviatura).reverse(),
     },
     series: [{
       type: 'bar',
-      data: cobertura.slice(0, 32).map(e => ({
+      data: coberturaActivos.map(e => ({
         value: e.total,
         itemStyle: { color: ZONA_COLORS[e.zona] ?? '#aaa', borderRadius: [0, 4, 4, 0] },
       })).reverse(),
@@ -505,10 +507,10 @@ export default function EstadisticasPage() {
                         ))}
                       </div>
                     }>
-                    {cobertura.filter(e => e.total > 0).length > 0
+                    {coberturaActivos.length > 0
                       ? <ReactECharts
                           option={coberturaEstadoBarOption}
-                          style={{ height: Math.max(300, cobertura.filter(e => e.total > 0).length * 22 + 40) }}
+                          style={{ height: Math.max(300, coberturaActivos.length * 22 + 40) }}
                           notMerge
                         />
                       : <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} />
@@ -521,7 +523,7 @@ export default function EstadisticasPage() {
                   <Card className="card-shadow"
                     title="Detalle por estado">
                     <Table
-                      dataSource={cobertura}
+                      dataSource={coberturaActivos}
                       rowKey="abreviatura"
                       size="small"
                       pagination={{ pageSize: 16, showSizeChanger: false }}
