@@ -30,14 +30,22 @@ async def lifespan(app: FastAPI):
             "ALTER TABLE estadisticas_rs ADD COLUMN IF NOT EXISTS valores JSONB DEFAULT '{}'::jsonb"
         ))
         conn.execute(text("""
-            UPDATE estadisticas_rs
-            SET valores = json_build_object(
-                'me_gusta',       COALESCE(me_gusta, 0),
-                'comentarios',    COALESCE(comentarios, 0),
-                'compartidos',    COALESCE(compartidos, 0),
-                'reproducciones', COALESCE(reproducciones, 0)
-            )::jsonb
-            WHERE valores = '{}'::jsonb OR valores IS NULL
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'estadisticas_rs' AND column_name = 'me_gusta'
+                ) THEN
+                    UPDATE estadisticas_rs
+                    SET valores = json_build_object(
+                        'me_gusta',       COALESCE(me_gusta, 0),
+                        'comentarios',    COALESCE(comentarios, 0),
+                        'compartidos',    COALESCE(compartidos, 0),
+                        'reproducciones', COALESCE(reproducciones, 0)
+                    )::jsonb
+                    WHERE valores = '{}'::jsonb OR valores IS NULL;
+                END IF;
+            END $$;
         """))
         # reportes_rs: nuevos campos compatibles con tabla reportes
         conn.execute(text("ALTER TABLE reportes_rs ADD COLUMN IF NOT EXISTS senal INTEGER DEFAULT 59"))
