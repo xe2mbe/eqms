@@ -6,9 +6,11 @@ import AppLayout from '@/components/layout/AppLayout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import LoginPage from '@/pages/Login'
 import DashboardPage from '@/pages/Dashboard'
+import DashboardRSPage from '@/pages/DashboardRS'
 import ReportesPage from '@/pages/Reportes'
 import NuevoReportePage from '@/pages/NuevoReporte'
 import EstadisticasPage from '@/pages/Estadisticas'
+import EstadisticasRSPage from '@/pages/EstadisticasRS'
 import ChangePasswordPage from '@/pages/ChangePassword'
 import LibretaPage from '@/pages/Libreta'
 import LibretaRSPage from '@/pages/LibretaRS'
@@ -45,13 +47,17 @@ export default function App() {
         <Route path="/cambiar-contrasena" element={<ChangePasswordPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/" element={<Navigate to="/dashboard/rf" replace />} />
+            <Route path="/dashboard" element={<Navigate to="/dashboard/rf" replace />} />
+            <Route path="/dashboard/rf" element={<DashboardPage />} />
+            <Route path="/dashboard/rs" element={<DashboardRSPage />} />
             <Route path="/reportes" element={<ReportesPage />} />
             <Route path="/reportes/nuevo" element={<NuevoReportePage />} />
             <Route path="/libreta" element={<LibretaPage />} />
             <Route path="/libreta-rs" element={<LibretaRSPage />} />
-            <Route path="/estadisticas" element={<EstadisticasPage />} />
+            <Route path="/estadisticas" element={<Navigate to="/estadisticas/rf" replace />} />
+            <Route path="/estadisticas/rf" element={<EstadisticasPage />} />
+            <Route path="/estadisticas/rs" element={<EstadisticasRSPage />} />
             <Route path="/gestion/usuarios"       element={<UsuariosPage />} />
             <Route path="/gestion/eventos"        element={<EventosPage />} />
             <Route path="/gestion/zonas"          element={<ZonasPage />} />

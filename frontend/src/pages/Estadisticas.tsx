@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Card, Row, Col, Typography, DatePicker, Spin, Tabs, Table, Tag, Tooltip } from 'antd'
+import { Card, Row, Col, Typography, Spin, Tabs, Table, Tag, Tooltip } from 'antd'
+import DateRangeBar from '@/components/common/DateRangeBar'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
 import { estadisticasApi } from '@/api/estadisticas'
 import client from '@/api/client'
-import type { EstadisticaRS } from '@/types'
 
 const { Title, Text } = Typography
-const { RangePicker } = DatePicker
 
 const ZONA_COLORS: Record<string, string> = {
   XE1: '#1677ff', XE2: '#52c41a', XE3: '#fa8c16', XE4: '#722ed1', XE5: '#eb2f96',
@@ -18,11 +17,11 @@ export default function EstadisticasPage() {
   const [tendencia, setTendencia] = useState<{ periodo: string; total: number }[]>([])
   const [porSistema, setPorSistema] = useState<{ sistema: string; total: number }[]>([])
   const [porEstado, setPorEstado] = useState<{ estado: string; total: number }[]>([])
-  const [rsData, setRsData] = useState<EstadisticaRS[]>([])
   const [dateRange, setDateRange] = useState<[string, string]>([
     dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
     dayjs().format('YYYY-MM-DD'),
   ])
+  const [evento, setEvento] = useState<string | undefined>()
 
   // Advanced stats
   const [horario, setHorario] = useState<{ hora: number; total: number }[]>([])
@@ -34,17 +33,16 @@ export default function EstadisticasPage() {
   const [sistZona, setSistZona] = useState<any[]>([])
   const [tendEv, setTendEv] = useState<any[]>([])
 
-  useEffect(() => { loadAll() }, [dateRange])
+  useEffect(() => { loadAll() }, [dateRange, evento])
 
   const loadAll = async () => {
     setLoading(true)
-    const p = { fecha_inicio: dateRange[0], fecha_fin: dateRange[1] }
+    const p = { fecha_inicio: dateRange[0], fecha_fin: dateRange[1], tipo_reporte: evento }
     try {
-      const [t, s, e, rs, h, top, za, n, ret, rst, sz, te] = await Promise.all([
+      const [t, s, e, h, top, za, n, ret, rst, sz, te] = await Promise.all([
         estadisticasApi.tendencia({ ...p, granularidad: 'dia' }),
         estadisticasApi.porSistema(p),
         estadisticasApi.porEstado(p),
-        estadisticasApi.rsResumen(p),
         client.get('/estadisticas/horario', { params: p }),
         client.get('/estadisticas/top-indicativos', { params: { ...p, limite: 20 } }),
         client.get('/estadisticas/zona-actividad', { params: p }),
@@ -54,7 +52,7 @@ export default function EstadisticasPage() {
         client.get('/estadisticas/sistemas-por-zona', { params: p }),
         client.get('/estadisticas/tendencia-eventos', { params: p }),
       ])
-      setTendencia(t.data); setPorSistema(s.data); setPorEstado(e.data); setRsData(rs.data)
+      setTendencia(t.data); setPorSistema(s.data); setPorEstado(e.data)
       setHorario(h.data); setTopOps(top.data); setZonaAct(za.data)
       setNuevos(n.data); setRetencion(ret.data); setRstZona(rst.data)
       setSistZona(sz.data); setTendEv(te.data)
@@ -86,20 +84,6 @@ export default function EstadisticasPage() {
     radar: { indicator: porSistema.slice(0, 8).map(s => ({ name: s.sistema, max: Math.max(...porSistema.map(x => x.total)) })) },
     series: [{ type: 'radar', data: [{ value: porSistema.slice(0, 8).map(s => s.total), name: 'Reportes',
       itemStyle: { color: '#1A569E' }, areaStyle: { opacity: .2 } }] }],
-  }
-
-  const rsBar = {
-    tooltip: { trigger: 'axis' },
-    legend: {},
-    grid: { left: 16, right: 16, top: 40, bottom: 8, containLabel: true },
-    xAxis: { type: 'category', data: rsData.map(r => r.plataforma) },
-    yAxis: { type: 'value' },
-    series: [
-      { name: 'Me gusta', data: rsData.map(r => r.me_gusta), type: 'bar', stack: 'rs', itemStyle: { color: '#1677ff' } },
-      { name: 'Comentarios', data: rsData.map(r => r.comentarios), type: 'bar', stack: 'rs', itemStyle: { color: '#52c41a' } },
-      { name: 'Compartidos', data: rsData.map(r => r.compartidos), type: 'bar', stack: 'rs', itemStyle: { color: '#fa8c16' } },
-      { name: 'Reproducciones', data: rsData.map(r => r.reproducciones), type: 'bar', stack: 'rs', itemStyle: { color: '#722ed1' } },
-    ],
   }
 
   // ── Advanced chart options ──────────────────────────────────────────────────
@@ -215,13 +199,13 @@ export default function EstadisticasPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Title level={4} style={{ margin: 0 }}>Estadísticas</Title>
-        <RangePicker
-          value={[dayjs(dateRange[0]), dayjs(dateRange[1])]}
-          onChange={(d) => {
-            if (d?.[0] && d?.[1])
-              setDateRange([d[0].format('YYYY-MM-DD'), d[1].format('YYYY-MM-DD')])
-          }}
+        <Title level={4} style={{ margin: 0 }}>Estadísticas RF</Title>
+        <DateRangeBar
+          value={dateRange}
+          onChange={setDateRange}
+          ultimoEventoEndpoint="/estadisticas/ultima-actividad"
+          evento={evento}
+          onEventoChange={setEvento}
         />
       </div>
 
@@ -373,19 +357,6 @@ export default function EstadisticasPage() {
                       ? <ReactECharts option={evLineOption} style={{ height: 300 }} />
                       : <div style={{ textAlign: 'center', padding: 40, color: '#bbb' }}>Sin datos de eventos en el período</div>
                     }
-                  </Card>
-                </Col>
-              </Row>
-            ),
-          },
-          {
-            key: 'redes',
-            label: 'Redes Sociales',
-            children: (
-              <Row gutter={[16, 16]}>
-                <Col xs={24}>
-                  <Card title="Actividad por Plataforma" className="card-shadow">
-                    <ReactECharts option={rsBar} style={{ height: 320 }} />
                   </Card>
                 </Col>
               </Row>

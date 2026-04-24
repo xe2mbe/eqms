@@ -1,19 +1,63 @@
 import client from './client'
-import type { EstadisticaResumen, EstadisticaRS } from '@/types'
+import type { EstadisticaResumen } from '@/types'
 
 export const estadisticasApi = {
   resumen: (params?: { fecha_inicio?: string; fecha_fin?: string; tipo_reporte?: string }) =>
     client.get<EstadisticaResumen>('/estadisticas/resumen', { params }),
 
-  porEstado: (params?: { fecha_inicio?: string; fecha_fin?: string }) =>
+  porEstado: (params?: { fecha_inicio?: string; fecha_fin?: string; tipo_reporte?: string }) =>
     client.get<{ estado: string; total: number }[]>('/estadisticas/por-estado', { params }),
 
-  porSistema: (params?: { fecha_inicio?: string; fecha_fin?: string }) =>
+  porSistema: (params?: { fecha_inicio?: string; fecha_fin?: string; tipo_reporte?: string }) =>
     client.get<{ sistema: string; total: number }[]>('/estadisticas/por-sistema', { params }),
 
-  tendencia: (params?: { fecha_inicio?: string; fecha_fin?: string; granularidad?: string }) =>
+  tendencia: (params?: { fecha_inicio?: string; fecha_fin?: string; granularidad?: string; tipo_reporte?: string }) =>
     client.get<{ periodo: string; total: number }[]>('/estadisticas/tendencia', { params }),
 
+  // ── RS ────────────────────────────────────────────────────────────────────
+
+  rsResumenReportes: (params?: { fecha_inicio?: string; fecha_fin?: string }) =>
+    client.get<{
+      total_reportes: number
+      total_indicativos: number
+      total_estados: number
+      por_plataforma: { plataforma: string; total: number }[]
+      por_estado: { estado: string; total: number }[]
+    }>('/estadisticas/rs/resumen-reportes', { params }),
+
   rsResumen: (params?: { fecha_inicio?: string; fecha_fin?: string }) =>
-    client.get<EstadisticaRS[]>('/estadisticas/rs/resumen', { params }),
+    client.get<{ plataforma: string; color: string; slug: string; total: number }[]>(
+      '/estadisticas/rs/resumen', { params }
+    ),
+
+  rsTendencia: (params?: { fecha_inicio?: string; fecha_fin?: string; granularidad?: string }) =>
+    client.get<{ periodo: string; plataforma: string; total: number }[]>(
+      '/estadisticas/rs/tendencia', { params }
+    ),
+
+  rsPorEstado: (params?: { fecha_inicio?: string; fecha_fin?: string }) =>
+    client.get<{ estado: string; total: number }[]>('/estadisticas/rs/por-estado', { params }),
+
+  rsTopIndicativos: (params?: { fecha_inicio?: string; fecha_fin?: string; limite?: number }) =>
+    client.get<{ plataforma: string; indicativo: string; total: number; estados: number; zonas: number; ultimo: string | null; nombre: string | null }[]>(
+      '/estadisticas/rs/top-indicativos', { params }
+    ),
+
+  rsZonaActividad: (params?: { fecha_inicio?: string; fecha_fin?: string }) =>
+    client.get<{ plataforma: string; zona: string; total: number; indicativos: number }[]>(
+      '/estadisticas/rs/zona-actividad', { params }
+    ),
+
+  rsNuevosMensuales: () =>
+    client.get<{ mes: string; plataforma: string; nuevos: number }[]>('/estadisticas/rs/nuevos-mensuales'),
+
+  rsPorEstadoPlataforma: (params?: { fecha_inicio?: string; fecha_fin?: string }) =>
+    client.get<{ plataforma: string; estado: string; total: number }[]>(
+      '/estadisticas/rs/por-estado-plataforma', { params }
+    ),
+
+  rsTendenciaMetricas: (params?: { fecha_inicio?: string; fecha_fin?: string; granularidad?: string; plataforma_id?: number }) =>
+    client.get<{ periodo: string; plataforma: string; slug: string; total: number }[]>(
+      '/estadisticas/rs/tendencia-metricas', { params }
+    ),
 }

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 from typing import List, Optional
 from pydantic import BaseModel
 
@@ -27,7 +27,11 @@ def create_evento(body: schemas.EventoCreate, db: Session = Depends(get_db), _=D
 def update_evento(evento_id: int, body: schemas.EventoCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     e = db.query(models.Evento).filter(models.Evento.id == evento_id).first()
     if not e: raise HTTPException(404, "Evento no encontrado")
+    old_tipo = e.tipo
     for k, v in body.model_dump().items(): setattr(e, k, v)
+    if old_tipo and old_tipo != e.tipo:
+        db.execute(text("UPDATE reportes SET tipo_reporte = :new WHERE tipo_reporte = :old"), {"old": old_tipo, "new": e.tipo})
+        db.execute(text("UPDATE reportes_rs SET tipo_reporte = :new WHERE tipo_reporte = :old"), {"old": old_tipo, "new": e.tipo})
     db.commit(); db.refresh(e)
     return e
 
@@ -87,7 +91,12 @@ def create_zona(body: ZonaCreate, db: Session = Depends(get_db), _=Depends(requi
 def update_zona(zona_id: int, body: ZonaCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     z = db.query(models.Zona).filter(models.Zona.id == zona_id).first()
     if not z: raise HTTPException(404, "Zona no encontrada")
+    old_codigo = z.codigo
     for k, v in body.model_dump().items(): setattr(z, k, v)
+    if old_codigo and old_codigo != z.codigo:
+        db.execute(text("UPDATE reportes SET zona = :new WHERE zona = :old"), {"old": old_codigo, "new": z.codigo})
+        db.execute(text("UPDATE reportes_rs SET zona = :new WHERE zona = :old"), {"old": old_codigo, "new": z.codigo})
+        db.execute(text("UPDATE estados SET zona = :new WHERE zona = :old"), {"old": old_codigo, "new": z.codigo})
     db.commit(); db.refresh(z)
     return z
 
@@ -120,7 +129,10 @@ def create_sistema(body: SistemaCreate, db: Session = Depends(get_db), _=Depends
 def update_sistema(sistema_id: int, body: SistemaCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     s = db.query(models.Sistema).filter(models.Sistema.id == sistema_id).first()
     if not s: raise HTTPException(404, "Sistema no encontrado")
+    old_codigo = s.codigo
     for k, v in body.model_dump().items(): setattr(s, k, v)
+    if old_codigo and old_codigo != s.codigo:
+        db.execute(text("UPDATE reportes SET sistema = :new WHERE sistema = :old"), {"old": old_codigo, "new": s.codigo})
     db.commit(); db.refresh(s)
     return s
 

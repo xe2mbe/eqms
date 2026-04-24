@@ -6,14 +6,19 @@ import {
   UserOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   TeamOutlined, BookOutlined, SettingOutlined,
   AppstoreOutlined, CalendarOutlined, RadarChartOutlined,
-  ShareAltOutlined, ApiOutlined, AudioOutlined, TrophyOutlined,
+  ShareAltOutlined, ApiOutlined, AudioOutlined, TrophyOutlined, WifiOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
 
 const { Sider, Header, Content, Footer } = Layout
 
 const menuItems = [
-  { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
+  { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard',
+    children: [
+      { key: '/dashboard/rf', icon: <WifiOutlined />,    label: 'Dashboard RF' },
+      { key: '/dashboard/rs', icon: <ShareAltOutlined />, label: 'Dashboard RS' },
+    ],
+  },
   { key: '/toma-reportes', icon: <BookOutlined />, label: 'Toma de Reportes',
     children: [
       { key: '/libreta',    icon: <BookOutlined />,    label: 'Libreta RF' },
@@ -21,7 +26,12 @@ const menuItems = [
     ],
   },
   { key: '/reportes', icon: <FileTextOutlined />, label: 'Registros' },
-  { key: '/estadisticas', icon: <BarChartOutlined />, label: 'Estadísticas' },
+  { key: '/estadisticas', icon: <BarChartOutlined />, label: 'Estadísticas',
+    children: [
+      { key: '/estadisticas/rf', icon: <WifiOutlined />,    label: 'Estadísticas RF' },
+      { key: '/estadisticas/rs', icon: <ShareAltOutlined />, label: 'Estadísticas RS' },
+    ],
+  },
   { key: '/premios', icon: <TrophyOutlined />, label: 'Premios y Distinciones' },
   {
     key: '/gestion', icon: <AppstoreOutlined />, label: 'Gestión',
@@ -91,7 +101,7 @@ export default function AppLayout() {
           theme="dark"
           mode="inline"
           selectedKeys={[location.pathname]}
-          defaultOpenKeys={['/reportes', '/toma-reportes', '/gestion']}
+          defaultOpenKeys={['/dashboard', '/reportes', '/toma-reportes', '/estadisticas', '/gestion']}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
           style={{ borderRight: 0, flex: 1, overflowY: 'auto' }}

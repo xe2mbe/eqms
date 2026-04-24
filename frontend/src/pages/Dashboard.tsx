@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Row, Col, Card, Statistic, Spin, DatePicker, Typography, Table, Empty } from 'antd'
+import { Row, Col, Card, Statistic, Spin, Typography, Table, Empty } from 'antd'
 import { FileTextOutlined, TeamOutlined, GlobalOutlined, WifiOutlined, RadarChartOutlined } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
 import { estadisticasApi } from '@/api/estadisticas'
 import type { EstadisticaResumen } from '@/types'
 import MexicoMapCard from '@/components/dashboard/MexicoMapCard'
+import DateRangeBar from '@/components/common/DateRangeBar'
 
 const { Title } = Typography
-const { RangePicker } = DatePicker
 
 const PIE_COLORS = [
   '#1A569E','#1677ff','#40a9ff','#52c41a','#73d13d',
@@ -18,17 +18,13 @@ const PIE_COLORS = [
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<EstadisticaResumen | null>(null)
-  const [totales, setTotales] = useState<EstadisticaResumen | null>(null)
   const [dateRange, setDateRange] = useState<[string, string]>([
-    dayjs().subtract(30, 'day').startOf('day').format('YYYY-MM-DD'),
-    dayjs().add(1, 'day').endOf('day').format('YYYY-MM-DD'),
+    dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
+    dayjs().format('YYYY-MM-DD'),
   ])
+  const [evento, setEvento] = useState<string | undefined>()
 
-  useEffect(() => {
-    estadisticasApi.resumen({}).then(r => setTotales(r.data))
-  }, [])
-
-  useEffect(() => { loadData() }, [dateRange])
+  useEffect(() => { loadData() }, [dateRange, evento])
 
   const loadData = async () => {
     setLoading(true)
@@ -36,6 +32,7 @@ export default function DashboardPage() {
       const { data: res } = await estadisticasApi.resumen({
         fecha_inicio: dateRange[0],
         fecha_fin: dateRange[1],
+        tipo_reporte: evento,
       })
       setData(res)
     } finally {
@@ -97,50 +94,49 @@ export default function DashboardPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Title level={4} style={{ margin: 0 }}>Dashboard</Title>
-        <RangePicker
-          value={[dayjs(dateRange[0]), dayjs(dateRange[1])]}
-          onChange={(dates) => {
-            if (dates?.[0] && dates?.[1])
-              setDateRange([dates[0].format('YYYY-MM-DD'), dates[1].format('YYYY-MM-DD')])
-          }}
+        <Title level={4} style={{ margin: 0 }}>Dashboard RF</Title>
+        <DateRangeBar
+          value={dateRange}
+          onChange={setDateRange}
+          ultimoEventoEndpoint="/estadisticas/ultima-actividad"
+          evento={evento}
+          onEventoChange={setEvento}
         />
       </div>
 
       <Spin spinning={loading}>
-        {/* Tarjetas — totales globales */}
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} lg={5}>
             <Card className="card-shadow">
-              <Statistic title="Total Reportes" value={totales?.total_reportes ?? '—'}
+              <Statistic title="Total Reportes" value={data?.total_reportes ?? '—'}
                 prefix={<FileTextOutlined style={{ color: '#1A569E' }} />}
                 valueStyle={{ color: '#1A569E' }} />
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={4}>
             <Card className="card-shadow">
-              <Statistic title="Operadores" value={totales?.total_operadores ?? '—'}
+              <Statistic title="Operadores" value={data?.total_operadores ?? '—'}
                 prefix={<TeamOutlined style={{ color: '#52c41a' }} />}
                 valueStyle={{ color: '#52c41a' }} />
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={5}>
             <Card className="card-shadow">
-              <Statistic title="Estaciones Reportadas" value={totales?.total_estaciones ?? '—'}
+              <Statistic title="Estaciones Reportadas" value={data?.total_estaciones ?? '—'}
                 prefix={<RadarChartOutlined style={{ color: '#1677ff' }} />}
                 valueStyle={{ color: '#1677ff' }} />
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={5}>
             <Card className="card-shadow">
-              <Statistic title="Estados con Actividad" value={totales?.estados.length ?? '—'}
+              <Statistic title="Estados con Actividad" value={data?.estados.length ?? '—'}
                 prefix={<GlobalOutlined style={{ color: '#fa8c16' }} />}
                 valueStyle={{ color: '#fa8c16' }} />
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={5}>
             <Card className="card-shadow">
-              <Statistic title="Sistemas Usados" value={totales?.sistemas.length ?? '—'}
+              <Statistic title="Sistemas Usados" value={data?.sistemas.length ?? '—'}
                 prefix={<WifiOutlined style={{ color: '#722ed1' }} />}
                 valueStyle={{ color: '#722ed1' }} />
             </Card>
