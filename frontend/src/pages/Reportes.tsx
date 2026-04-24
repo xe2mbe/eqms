@@ -152,11 +152,14 @@ export default function ReportesPage() {
     },
     tipo_reporte: {
       title: 'Tipo', dataIndex: 'tipo_reporte', width: 160,
-      render: (v: string) => {
-        if (!v) return null
-        const ev = eventos.find(e => e.tipo === v)
+      render: (v: string, record: Reporte) => {
+        const ev = record.evento_id
+          ? eventos.find(e => e.id === record.evento_id)
+          : eventos.find(e => e.tipo === v)
+        const label = ev?.tipo ?? v
+        if (!label) return null
         const c = ev?.color ?? '#1677ff'
-        return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{v}</Tag>
+        return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{label}</Tag>
       },
     },
     qrz_station: {
@@ -231,15 +234,15 @@ export default function ReportesPage() {
             placeholder="Tipo de evento"
             allowClear style={{ width: 200 }}
             labelRender={({ value }) => {
-              const ev = eventos.find(e => e.tipo === value)
+              const ev = eventos.find(e => e.id === value)
               const c = ev?.color ?? '#1677ff'
-              return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{String(value)}</Tag>
+              return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{ev?.tipo ?? String(value)}</Tag>
             }}
             options={eventos.map(e => {
               const c = e.color ?? '#1677ff'
-              return { value: e.tipo, label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{e.tipo}</Tag> }
+              return { value: e.id, label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{e.tipo}</Tag> }
             })}
-            onChange={(v) => setTempFilters(prev => ({ ...prev, tipo_reporte: v }))}
+            onChange={(v) => setTempFilters(prev => ({ ...prev, evento_id: v }))}
           />
           <Select
             placeholder="Sistema"

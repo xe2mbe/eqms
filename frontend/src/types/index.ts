@@ -31,6 +31,7 @@ export interface Reporte {
   pais?: string
   sistema?: string
   tipo_reporte?: string
+  evento_id?: number
   qrz_station?: string
   fecha_reporte: string
   observaciones?: string
@@ -51,6 +52,7 @@ export interface ReporteFilters {
   fecha_inicio?: string
   fecha_fin?: string
   tipo_reporte?: string
+  evento_id?: number
   sistema?: string
   zona?: string
   estado?: string
