@@ -154,6 +154,7 @@ export default function LibretaPage() {
   const [primeraVezIndicativo, setPrimeraVezIndicativo] = useState('')
   const [guardandoHam, setGuardandoHam] = useState(false)
   const pendienteRef = useRef<{ indicativo: string; op: Operador | null; pais: string; zona: string; zonaEsNacional: boolean; ultimaAparicion: string | null } | null>(null)
+  const omitirBtnRef = useRef<HTMLButtonElement>(null)
 
   // Modal reaparición
   const [reaparicionModal, setReaparicionModal] = useState(false)
@@ -770,6 +771,7 @@ export default function LibretaPage() {
         footer={null}
         width={520}
         styles={{ body: { padding: 0 } }}
+        afterOpenChange={open => { if (open) omitirBtnRef.current?.focus() }}
       >
         {/* Cabecera con gradiente */}
         <div style={{
@@ -846,7 +848,7 @@ export default function LibretaPage() {
           padding: '12px 24px 20px',
           display: 'flex', justifyContent: 'flex-end', gap: 8,
         }}>
-          <Button onClick={handleOmitirNuevoHam} size="large">
+          <Button ref={omitirBtnRef} onClick={handleOmitirNuevoHam} size="large">
             Omitir
           </Button>
           <Button type="primary" icon={<SaveOutlined />} size="large"
@@ -862,7 +864,8 @@ export default function LibretaPage() {
         title={<><BellOutlined style={{ color: '#fa8c16', marginRight: 8 }} />Reaparición: {reaparicionIndicativo}</>}
         open={reaparicionModal} closable={false} maskClosable={false}
         onOk={handleContinuarReaparicion} okText="Continuar captura"
-        cancelButtonProps={{ style: { display: 'none' } }} width={420}>
+        cancelButtonProps={{ style: { display: 'none' } }} width={420}
+        okButtonProps={{ autoFocus: true }}>
         {reaparicionInfo && (
           <Alert type="warning" showIcon
             message={`${reaparicionIndicativo} no ha aparecido en ${reaparicionInfo.dias_sin_aparecer} días`}
