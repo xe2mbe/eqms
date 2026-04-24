@@ -1073,7 +1073,8 @@ export default function LibretaPage() {
                 })} />
             </Col>
             <Col>
-              <Button type="primary" icon={<PlusOutlined />} onClick={buscarYAgregar} loading={buscando}>
+              <Button type="primary" icon={<PlusOutlined />} onClick={buscarYAgregar} loading={buscando}
+                onMouseDown={e => e.preventDefault()}>
                 Agregar
               </Button>
             </Col>

@@ -247,7 +247,6 @@ export default function LibretaRSPage() {
     }
     setBuscando(true)
     setInputIndicativo('')
-    setTimeout(() => inputRef.current?.focus(), 50)
 
     const [opRes, prefixRes] = await Promise.allSettled([
       client.get(`/operadores/buscar/${encodeURIComponent(cs)}`),
@@ -255,6 +254,7 @@ export default function LibretaRSPage() {
     ])
 
     setBuscando(false)
+    setTimeout(() => inputRef.current?.focus(), 50)
 
     const op = opRes.status === 'fulfilled' ? opRes.value.data : null
     const prefix = prefixRes.status === 'fulfilled' ? prefixRes.value.data : null
@@ -728,7 +728,8 @@ export default function LibretaRSPage() {
                 />
               </Col>
               <Col>
-                <Button type="primary" icon={<PlusOutlined />} loading={buscando} onClick={buscarYAgregar}>
+                <Button type="primary" icon={<PlusOutlined />} loading={buscando} onClick={buscarYAgregar}
+                  onMouseDown={e => e.preventDefault()}>
                   Agregar
                 </Button>
               </Col>
