@@ -8,6 +8,7 @@ import LoginPage from '@/pages/Login'
 import DashboardPage from '@/pages/Dashboard'
 import DashboardRSPage from '@/pages/DashboardRS'
 import ReportesPage from '@/pages/Reportes'
+import ReportesRSPage from '@/pages/ReportesRS'
 import NuevoReportePage from '@/pages/NuevoReporte'
 import EstadisticasPage from '@/pages/Estadisticas'
 import EstadisticasRSPage from '@/pages/EstadisticasRS'
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="/dashboard/rs" element={<DashboardRSPage />} />
             <Route path="/reportes" element={<ReportesPage />} />
             <Route path="/reportes/nuevo" element={<NuevoReportePage />} />
+            <Route path="/reportes-rs" element={<ReportesRSPage />} />
             <Route path="/libreta" element={<LibretaPage />} />
             <Route path="/libreta-rs" element={<LibretaRSPage />} />
             <Route path="/estadisticas" element={<Navigate to="/estadisticas/rf" replace />} />

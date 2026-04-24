@@ -283,6 +283,7 @@ class ReporteRSOut(BaseModel):
     zona: Optional[str] = None
     pais: Optional[str] = None
     tipo_reporte: Optional[str] = None
+    evento_id: Optional[int] = None
     qrz_station: Optional[str] = None
     url_publicacion: Optional[str] = None
     fecha_reporte: datetime

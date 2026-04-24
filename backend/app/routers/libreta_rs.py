@@ -128,6 +128,7 @@ def list_reportes_rs(
     plataforma_id: Optional[int] = None,
     indicativo: Optional[str] = None,
     tipo_reporte: Optional[str] = None,
+    evento_id: Optional[int] = None,
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
     db: Session = Depends(get_db),
@@ -138,7 +139,9 @@ def list_reportes_rs(
         q = q.filter(models.ReporteRS.plataforma_id == plataforma_id)
     if indicativo:
         q = q.filter(models.ReporteRS.indicativo.ilike(f"%{indicativo}%"))
-    if tipo_reporte:
+    if evento_id:
+        q = q.filter(models.ReporteRS.evento_id == evento_id)
+    elif tipo_reporte:
         q = q.filter(models.ReporteRS.tipo_reporte == tipo_reporte)
     if fecha_inicio:
         q = q.filter(models.ReporteRS.fecha_reporte >= fecha_inicio)

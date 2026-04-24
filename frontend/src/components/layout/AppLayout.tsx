@@ -25,7 +25,12 @@ const menuItems = [
       { key: '/libreta-rs', icon: <ShareAltOutlined />, label: 'Libreta RS' },
     ],
   },
-  { key: '/reportes', icon: <FileTextOutlined />, label: 'Registros' },
+  { key: '/registros', icon: <FileTextOutlined />, label: 'Registros',
+    children: [
+      { key: '/reportes',    icon: <WifiOutlined />,    label: 'Registros RF' },
+      { key: '/reportes-rs', icon: <ShareAltOutlined />, label: 'Registros RS' },
+    ],
+  },
   { key: '/estadisticas', icon: <BarChartOutlined />, label: 'Estadísticas',
     children: [
       { key: '/estadisticas/rf', icon: <WifiOutlined />,    label: 'Estadísticas RF' },
@@ -101,7 +106,7 @@ export default function AppLayout() {
           theme="dark"
           mode="inline"
           selectedKeys={[location.pathname]}
-          defaultOpenKeys={['/dashboard', '/reportes', '/toma-reportes', '/estadisticas', '/gestion']}
+          defaultOpenKeys={['/dashboard', '/registros', '/toma-reportes', '/estadisticas', '/gestion']}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
           style={{ borderRight: 0, flex: 1, overflowY: 'auto' }}

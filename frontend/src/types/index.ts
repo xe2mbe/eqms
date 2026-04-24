@@ -152,6 +152,7 @@ export interface ReporteRS {
   zona?: string
   pais?: string
   tipo_reporte?: string
+  evento_id?: number
   qrz_station?: string
   url_publicacion?: string
   fecha_reporte: string
