@@ -11,8 +11,8 @@ interface Props {
   value: [string, string]
   onChange: (range: [string, string]) => void
   ultimoEventoEndpoint?: string
-  evento?: string
-  onEventoChange?: (evento: string | undefined) => void
+  evento?: number
+  onEventoChange?: (evento: number | undefined) => void
 }
 
 function getMonday(d: Dayjs): Dayjs {
@@ -69,7 +69,7 @@ export default function DateRangeBar({ value, onChange, ultimoEventoEndpoint, ev
           value={evento}
           onChange={onEventoChange}
           options={eventos.map(e => ({
-            value: e.tipo,
+            value: e.id,
             label: (
               <span>
                 {e.color && (

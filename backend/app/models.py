@@ -100,6 +100,7 @@ class Reporte(Base):
     pais = Column(String(80), nullable=True, index=True)
     sistema = Column(String(20), nullable=True, index=True)
     tipo_reporte = Column(String(80), nullable=True, index=True)
+    evento_id = Column(Integer, ForeignKey("eventos.id"), nullable=True, index=True)
     qrz_station = Column(String(20), nullable=True)
     capturado_por = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     fecha_reporte = Column(DateTime(timezone=True), nullable=False, index=True)
@@ -108,6 +109,7 @@ class Reporte(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     capturado_por_usuario = relationship("Usuario", back_populates="reportes", foreign_keys=[capturado_por])
+    evento = relationship("Evento", foreign_keys=[evento_id])
 
     __table_args__ = (
         Index("ix_reportes_fecha_tipo", "fecha_reporte", "tipo_reporte"),
@@ -175,6 +177,7 @@ class ReporteRS(Base):
     zona = Column(String(20), nullable=True, index=True)
     pais = Column(String(80), nullable=True)
     tipo_reporte = Column(String(80), nullable=True, index=True)
+    evento_id = Column(Integer, ForeignKey("eventos.id"), nullable=True, index=True)
     qrz_station = Column(String(20), nullable=True)
     url_publicacion = Column(Text, nullable=True)
     capturado_por = Column(Integer, ForeignKey("usuarios.id"), nullable=True)

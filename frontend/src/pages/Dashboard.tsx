@@ -22,7 +22,7 @@ export default function DashboardPage() {
     dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
     dayjs().format('YYYY-MM-DD'),
   ])
-  const [evento, setEvento] = useState<string | undefined>()
+  const [evento, setEvento] = useState<number | undefined>()
 
   useEffect(() => { loadData() }, [dateRange, evento])
 
@@ -32,7 +32,7 @@ export default function DashboardPage() {
       const { data: res } = await estadisticasApi.resumen({
         fecha_inicio: dateRange[0],
         fecha_fin: dateRange[1],
-        tipo_reporte: evento,
+        evento_id: evento,
       })
       setData(res)
     } finally {

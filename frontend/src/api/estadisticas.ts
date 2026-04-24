@@ -2,16 +2,16 @@ import client from './client'
 import type { EstadisticaResumen } from '@/types'
 
 export const estadisticasApi = {
-  resumen: (params?: { fecha_inicio?: string; fecha_fin?: string; tipo_reporte?: string }) =>
+  resumen: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number }) =>
     client.get<EstadisticaResumen>('/estadisticas/resumen', { params }),
 
-  porEstado: (params?: { fecha_inicio?: string; fecha_fin?: string; tipo_reporte?: string }) =>
+  porEstado: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number }) =>
     client.get<{ estado: string; total: number }[]>('/estadisticas/por-estado', { params }),
 
-  porSistema: (params?: { fecha_inicio?: string; fecha_fin?: string; tipo_reporte?: string }) =>
+  porSistema: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number }) =>
     client.get<{ sistema: string; total: number }[]>('/estadisticas/por-sistema', { params }),
 
-  tendencia: (params?: { fecha_inicio?: string; fecha_fin?: string; granularidad?: string; tipo_reporte?: string }) =>
+  tendencia: (params?: { fecha_inicio?: string; fecha_fin?: string; granularidad?: string; evento_id?: number }) =>
     client.get<{ periodo: string; total: number }[]>('/estadisticas/tendencia', { params }),
 
   // ── RS ────────────────────────────────────────────────────────────────────

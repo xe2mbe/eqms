@@ -21,7 +21,7 @@ def _fin(fecha_fin: Optional[datetime]) -> Optional[datetime]:
 def resumen(
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
-    tipo_reporte: Optional[str] = None,
+    evento_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
     from datetime import timedelta
@@ -29,11 +29,10 @@ def resumen(
     if fecha_inicio:
         q = q.filter(models.Reporte.fecha_reporte >= fecha_inicio)
     if fecha_fin:
-        # Si llega solo fecha (sin hora), incluir todo ese día
         fin = fecha_fin if fecha_fin.hour or fecha_fin.minute else fecha_fin.replace(hour=23, minute=59, second=59)
         q = q.filter(models.Reporte.fecha_reporte <= fin)
-    if tipo_reporte:
-        q = q.filter(models.Reporte.tipo_reporte == tipo_reporte)
+    if evento_id:
+        q = q.filter(models.Reporte.evento_id == evento_id)
 
     total = q.count()
     # Operadores = usuarios del sistema que capturaron reportes
@@ -79,13 +78,13 @@ def resumen(
 def por_estado(
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
-    tipo_reporte: Optional[str] = None,
+    evento_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
     q = db.query(models.Reporte.estado, func.count().label("total")).filter(models.Reporte.estado != None)
     if fecha_inicio: q = q.filter(models.Reporte.fecha_reporte >= fecha_inicio)
     if fecha_fin:    q = q.filter(models.Reporte.fecha_reporte <= fecha_fin)
-    if tipo_reporte: q = q.filter(models.Reporte.tipo_reporte == tipo_reporte)
+    if evento_id:    q = q.filter(models.Reporte.evento_id == evento_id)
     rows = q.group_by(models.Reporte.estado).order_by(func.count().desc()).all()
     return [{"estado": e, "total": t} for e, t in rows]
 
@@ -94,13 +93,13 @@ def por_estado(
 def por_sistema(
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
-    tipo_reporte: Optional[str] = None,
+    evento_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
     q = db.query(models.Reporte.sistema, func.count().label("total")).filter(models.Reporte.sistema != None)
     if fecha_inicio: q = q.filter(models.Reporte.fecha_reporte >= fecha_inicio)
     if fecha_fin:    q = q.filter(models.Reporte.fecha_reporte <= fecha_fin)
-    if tipo_reporte: q = q.filter(models.Reporte.tipo_reporte == tipo_reporte)
+    if evento_id:    q = q.filter(models.Reporte.evento_id == evento_id)
     rows = q.group_by(models.Reporte.sistema).order_by(func.count().desc()).all()
     return [{"sistema": s, "total": t} for s, t in rows]
 
@@ -110,7 +109,7 @@ def tendencia(
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
     granularidad: str = Query("dia", pattern="^(dia|semana|mes)$"),
-    tipo_reporte: Optional[str] = None,
+    evento_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
     if granularidad == "mes":
@@ -122,7 +121,7 @@ def tendencia(
     q = db.query(trunc.label("periodo"), func.count().label("total"))
     if fecha_inicio: q = q.filter(models.Reporte.fecha_reporte >= fecha_inicio)
     if fecha_fin:    q = q.filter(models.Reporte.fecha_reporte <= fecha_fin)
-    if tipo_reporte: q = q.filter(models.Reporte.tipo_reporte == tipo_reporte)
+    if evento_id:    q = q.filter(models.Reporte.evento_id == evento_id)
     rows = q.group_by("periodo").order_by("periodo").all()
     return [{"periodo": str(p), "total": t} for p, t in rows]
 
@@ -375,7 +374,7 @@ def rs_ultima_actividad(db: Session = Depends(get_db)):
 def actividad_horaria(
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
-    tipo_reporte: Optional[str] = None,
+    evento_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
     """Distribución de contactos por hora del día (ventanas de propagación)."""
@@ -385,9 +384,9 @@ def actividad_horaria(
         FROM reportes
         WHERE (:fi IS NULL OR fecha_reporte >= :fi)
           AND (:ff IS NULL OR fecha_reporte <= :ff)
-          AND (:tipo IS NULL OR tipo_reporte = :tipo)
+          AND (:evento_id IS NULL OR evento_id = :evento_id)
         GROUP BY hora ORDER BY hora
-    """), {"fi": fecha_inicio, "ff": fecha_fin, "tipo": tipo_reporte})
+    """), {"fi": fecha_inicio, "ff": fecha_fin, "evento_id": evento_id})
     hours = {r[0]: r[1] for r in q}
     return [{"hora": h, "total": hours.get(h, 0)} for h in range(24)]
 
@@ -397,7 +396,7 @@ def top_indicativos(
     limite: int = 20,
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
-    tipo_reporte: Optional[str] = None,
+    evento_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
     """Top operadores por número de contactos con estado y zona."""
@@ -412,10 +411,10 @@ def top_indicativos(
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
         WHERE (:fi IS NULL OR r.fecha_reporte >= :fi)
           AND (:ff IS NULL OR r.fecha_reporte <= :ff)
-          AND (:tipo IS NULL OR r.tipo_reporte = :tipo)
+          AND (:evento_id IS NULL OR r.evento_id = :evento_id)
         GROUP BY r.indicativo, rx.nombre_completo
         ORDER BY total DESC LIMIT :lim
-    """), {"fi": fecha_inicio, "ff": fecha_fin, "lim": limite, "tipo": tipo_reporte}).fetchall()
+    """), {"fi": fecha_inicio, "ff": fecha_fin, "lim": limite, "evento_id": evento_id}).fetchall()
     return [
         {"indicativo": r[0], "total": r[1], "estados": r[2], "zonas": r[3],
          "ultimo": str(r[4]) if r[4] else None, "nombre": r[5]}
@@ -427,7 +426,7 @@ def top_indicativos(
 def zona_actividad(
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
-    tipo_reporte: Optional[str] = None,
+    evento_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
     """Actividad por zona FMRE: contactos, indicativos únicos, señal promedio."""
@@ -440,9 +439,9 @@ def zona_actividad(
         WHERE zona IS NOT NULL
           AND (:fi IS NULL OR fecha_reporte >= :fi)
           AND (:ff IS NULL OR fecha_reporte <= :ff)
-          AND (:tipo IS NULL OR tipo_reporte = :tipo)
+          AND (:evento_id IS NULL OR evento_id = :evento_id)
         GROUP BY zona ORDER BY total DESC
-    """), {"fi": fecha_inicio, "ff": _fin(fecha_fin), "tipo": tipo_reporte}).fetchall()
+    """), {"fi": fecha_inicio, "ff": _fin(fecha_fin), "evento_id": evento_id}).fetchall()
     return [{"zona": r[0], "total": r[1], "indicativos": r[2], "senal_promedio": float(r[3] or 0)} for r in rows]
 
 
@@ -492,7 +491,7 @@ def retencion(db: Session = Depends(get_db)):
 def rst_por_zona(
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
-    tipo_reporte: Optional[str] = None,
+    evento_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
     """Distribución de RST (señal) por zona: muestra calidad de propagación."""
@@ -502,9 +501,9 @@ def rst_por_zona(
         WHERE zona IS NOT NULL AND senal IS NOT NULL
           AND (:fi IS NULL OR fecha_reporte >= :fi)
           AND (:ff IS NULL OR fecha_reporte <= :ff)
-          AND (:tipo IS NULL OR tipo_reporte = :tipo)
+          AND (:evento_id IS NULL OR evento_id = :evento_id)
         GROUP BY zona, senal ORDER BY zona, senal
-    """), {"fi": fecha_inicio, "ff": fecha_fin, "tipo": tipo_reporte}).fetchall()
+    """), {"fi": fecha_inicio, "ff": fecha_fin, "evento_id": evento_id}).fetchall()
     return [{"zona": r[0], "senal": r[1], "total": r[2]} for r in rows]
 
 
@@ -512,7 +511,7 @@ def rst_por_zona(
 def sistemas_por_zona(
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
-    tipo_reporte: Optional[str] = None,
+    evento_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
     """Sistemas de comunicación usados por zona (infraestructura necesaria)."""
@@ -522,9 +521,9 @@ def sistemas_por_zona(
         WHERE zona IS NOT NULL AND sistema IS NOT NULL
           AND (:fi IS NULL OR fecha_reporte >= :fi)
           AND (:ff IS NULL OR fecha_reporte <= :ff)
-          AND (:tipo IS NULL OR tipo_reporte = :tipo)
+          AND (:evento_id IS NULL OR evento_id = :evento_id)
         GROUP BY zona, sistema ORDER BY zona, total DESC
-    """), {"fi": fecha_inicio, "ff": fecha_fin, "tipo": tipo_reporte}).fetchall()
+    """), {"fi": fecha_inicio, "ff": fecha_fin, "evento_id": evento_id}).fetchall()
     return [{"zona": r[0], "sistema": r[1], "total": r[2]} for r in rows]
 
 

@@ -21,7 +21,7 @@ export default function EstadisticasPage() {
     dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
     dayjs().format('YYYY-MM-DD'),
   ])
-  const [evento, setEvento] = useState<string | undefined>()
+  const [evento, setEvento] = useState<number | undefined>()
 
   // Advanced stats
   const [horario, setHorario] = useState<{ hora: number; total: number }[]>([])
@@ -37,7 +37,7 @@ export default function EstadisticasPage() {
 
   const loadAll = async () => {
     setLoading(true)
-    const p = { fecha_inicio: dateRange[0], fecha_fin: dateRange[1], tipo_reporte: evento }
+    const p = { fecha_inicio: dateRange[0], fecha_fin: dateRange[1], evento_id: evento }
     try {
       const [t, s, e, h, top, za, n, ret, rst, sz, te] = await Promise.all([
         estadisticasApi.tendencia({ ...p, granularidad: 'dia' }),

@@ -19,6 +19,7 @@ def list_reportes(
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
     tipo_reporte: Optional[str] = None,
+    evento_id: Optional[int] = None,
     sistema: Optional[str] = None,
     zona: Optional[str] = None,
     estado: Optional[str] = None,
@@ -32,7 +33,9 @@ def list_reportes(
         q = q.filter(models.Reporte.fecha_reporte >= fecha_inicio)
     if fecha_fin:
         q = q.filter(models.Reporte.fecha_reporte <= fecha_fin)
-    if tipo_reporte:
+    if evento_id:
+        q = q.filter(models.Reporte.evento_id == evento_id)
+    elif tipo_reporte:
         q = q.filter(models.Reporte.tipo_reporte == tipo_reporte)
     if sistema:
         q = q.filter(models.Reporte.sistema == sistema)
@@ -91,6 +94,13 @@ def create_reporte(
             {"ind": data["indicativo"].upper()},
         ).scalar()
         data["pais"] = prefijo
+    # Sincronizar evento_id desde tipo_reporte
+    if data.get("tipo_reporte") and not data.get("evento_id"):
+        ev = db.execute(
+            text("SELECT id FROM eventos WHERE tipo = :tipo LIMIT 1"),
+            {"tipo": data["tipo_reporte"]},
+        ).scalar()
+        data["evento_id"] = ev
     reporte = models.Reporte(**data, capturado_por=current_user.id)
     db.add(reporte)
     db.commit()
@@ -123,8 +133,16 @@ def update_reporte(
     if not r:
         raise HTTPException(status_code=404, detail="Reporte no encontrado")
 
-    for field, value in body.model_dump(exclude_unset=True).items():
+    updates = body.model_dump(exclude_unset=True)
+    for field, value in updates.items():
         setattr(r, field, value)
+    # Sincronizar evento_id si cambió tipo_reporte
+    if "tipo_reporte" in updates:
+        ev = db.execute(
+            text("SELECT id FROM eventos WHERE tipo = :tipo LIMIT 1"),
+            {"tipo": updates["tipo_reporte"]},
+        ).scalar()
+        r.evento_id = ev
 
     db.commit()
     db.refresh(r)
