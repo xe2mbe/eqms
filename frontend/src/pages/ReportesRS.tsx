@@ -11,14 +11,14 @@ import { libretaRSApi } from '@/api/libretaRS'
 import { catalogosApi } from '@/api/catalogos'
 import { useAuthStore } from '@/store/authStore'
 import { useColPrefs } from '@/components/common/ColSettings'
-import type { ReporteRS, Evento, Zona, PlataformaRS } from '@/types'
+import type { ReporteRS, Evento, Zona, PlataformaRS, Estacion } from '@/types'
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
 
 const ALL_COL_KEYS = [
   'id', 'indicativo', 'senal', 'plataforma', 'pais', 'estado', 'zona',
-  'tipo_reporte', 'qrz_station', 'fecha_reporte',
+  'tipo_reporte', 'qrz_station', 'fecha_reporte', 'capturado_por_nombre',
 ] as const
 type ColKey = typeof ALL_COL_KEYS[number]
 
@@ -26,6 +26,7 @@ const COL_LABELS: Record<ColKey, string> = {
   id: 'ID', indicativo: 'Indicativo', senal: 'RST', plataforma: 'Red Social',
   pais: 'País', estado: 'Estado', zona: 'Zona',
   tipo_reporte: 'Tipo', qrz_station: 'Estación', fecha_reporte: 'Fecha',
+  capturado_por_nombre: 'Capturado por',
 }
 
 const LOCKED_KEYS: ColKey[] = ['indicativo']
@@ -48,6 +49,7 @@ export default function ReportesRSPage() {
   const [eventos, setEventos] = useState<Evento[]>([])
   const [zonas, setZonas] = useState<Zona[]>([])
   const [plataformas, setPlataformas] = useState<PlataformaRS[]>([])
+  const [estaciones, setEstaciones] = useState<Estacion[]>([])
   const [filters, setFilters] = useState<Filters>({ page: 1, page_size: 50 })
   const [tempFilters, setTempFilters] = useState<Partial<Filters>>({})
 
@@ -59,6 +61,7 @@ export default function ReportesRSPage() {
     catalogosApi.eventos().then(r => setEventos(r.data))
     catalogosApi.zonas().then(r => setZonas(r.data))
     catalogosApi.plataformasRS().then(r => setPlataformas(r.data))
+    catalogosApi.estaciones().then(r => setEstaciones(r.data))
   }, [])
 
   useEffect(() => { fetchData() }, [filters])
@@ -139,12 +142,21 @@ export default function ReportesRSPage() {
       },
     },
     qrz_station: {
-      title: 'Estación', dataIndex: 'qrz_station', width: 110,
-      render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
+      title: 'Estación', dataIndex: 'qrz_station', width: 120,
+      render: (v: string) => {
+        if (!v) return null
+        const est = estaciones.find(e => e.qrz === v)
+        const c = est?.color ?? '#1677ff'
+        return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{v}</Tag>
+      },
     },
     fecha_reporte: {
       title: 'Fecha', dataIndex: 'fecha_reporte', width: 140,
       render: (v: string) => dayjs(v).format('DD/MM/YYYY HH:mm'),
+    },
+    capturado_por_nombre: {
+      title: 'Capturado por', dataIndex: 'capturado_por_nombre', width: 140,
+      render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
     },
   }
 

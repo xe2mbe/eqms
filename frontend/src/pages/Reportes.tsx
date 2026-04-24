@@ -22,7 +22,7 @@ const { RangePicker } = DatePicker
 
 const ALL_COL_KEYS = [
   'id', 'indicativo', 'senal', 'pais', 'estado', 'zona',
-  'sistema', 'tipo_reporte', 'qrz_station', 'fecha_reporte',
+  'sistema', 'tipo_reporte', 'qrz_station', 'fecha_reporte', 'capturado_por_nombre',
 ] as const
 type ColKey = typeof ALL_COL_KEYS[number]
 
@@ -37,6 +37,7 @@ const COL_LABELS: Record<ColKey, string> = {
   tipo_reporte: 'Tipo',
   qrz_station: 'Estación',
   fecha_reporte: 'Fecha',
+  capturado_por_nombre: 'Capturado por',
 }
 
 const LOCKED_KEYS: ColKey[] = ['indicativo']
@@ -174,6 +175,10 @@ export default function ReportesPage() {
     fecha_reporte: {
       title: 'Fecha', dataIndex: 'fecha_reporte', width: 140,
       render: (v: string) => dayjs(v).format('DD/MM/YYYY HH:mm'),
+    },
+    capturado_por_nombre: {
+      title: 'Capturado por', dataIndex: 'capturado_por_nombre', width: 140,
+      render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
     },
   }
 
