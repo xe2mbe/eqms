@@ -30,7 +30,7 @@ export default function EstadisticasRSPage() {
   const [loading, setLoading]             = useState(false)
   const [dateRange, setDateRange]         = useState<[string, string]>([
     dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
-    dayjs().add(1, 'day').format('YYYY-MM-DD'),
+    dayjs().format('YYYY-MM-DD'),
   ])
   const [tendencia, setTendencia]         = useState<TendRow[]>([])
   const [porEstadoPlat, setPorEstadoPlat] = useState<EstadoPlat[]>([])

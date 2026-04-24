@@ -70,7 +70,7 @@ export default function NuevoReportePage() {
   const onFinish = async (values: any) => {
     setLoading(true)
     try {
-      const payload = { ...values, fecha_reporte: values.fecha_reporte.toISOString() }
+      const payload = { ...values, fecha_reporte: values.fecha_reporte.format('YYYY-MM-DDTHH:mm:ss') }
       if (isEdit) {
         await reportesApi.update(Number(editId), payload)
         message.success('Reporte actualizado')

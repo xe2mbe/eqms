@@ -170,8 +170,8 @@ export default function LibretaRSPage() {
       const { data } = await libretaRSApi.listReportes({
         page: p, page_size: 50,
         plataforma_id: platSeleccionada.id,
-        fecha_inicio: sesionFecha.startOf('day').toISOString(),
-        fecha_fin: sesionFecha.endOf('day').toISOString(),
+        fecha_inicio: sesionFecha.startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+        fecha_fin: sesionFecha.endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
       })
       setReportes(data.items)
       setTotalReportes(data.total)
@@ -190,7 +190,7 @@ export default function LibretaRSPage() {
     const payload: EstadisticaRSPayload = {
       plataforma_id: platSeleccionada.id,
       valores,
-      fecha_reporte: sesionFecha.toISOString(),
+      fecha_reporte: sesionFecha.format('YYYY-MM-DDTHH:mm:ss'),
       observaciones: values.observaciones,
     }
     // Verificar si ya existe un registro para esta plataforma y fecha
@@ -316,7 +316,7 @@ export default function LibretaRSPage() {
           pais: fila.pais,
           tipo_reporte: sesionEvento,
           qrz_station: sesionEstacion,
-          fecha_reporte: sesionFecha.toISOString(),
+          fecha_reporte: sesionFecha.format('YYYY-MM-DDTHH:mm:ss'),
         }
         return libretaRSApi.createReporte(payload)
       }))
@@ -356,7 +356,7 @@ export default function LibretaRSPage() {
       await libretaRSApi.updateEstadistica(editMetricaRecord.id, {
         plataforma_id: editMetricaRecord.plataforma_id,
         valores,
-        fecha_reporte: values.fecha_reporte.toISOString(),
+        fecha_reporte: values.fecha_reporte.format('YYYY-MM-DDTHH:mm:ss'),
         observaciones: values.observaciones,
       })
       message.success('Actualizado')
@@ -380,7 +380,7 @@ export default function LibretaRSPage() {
         ...values,
         indicativo: values.indicativo.toUpperCase().trim(),
         plataforma_id: editReporteRecord.plataforma_id,
-        fecha_reporte: values.fecha_reporte.toISOString(),
+        fecha_reporte: values.fecha_reporte.format('YYYY-MM-DDTHH:mm:ss'),
       })
       message.success('Actualizado')
       setEditReporteModal(false)

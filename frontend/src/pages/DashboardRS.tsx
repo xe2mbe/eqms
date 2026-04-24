@@ -26,7 +26,7 @@ export default function DashboardRSPage() {
   const [data, setData] = useState<Resumen | null>(null)
   const [dateRange, setDateRange] = useState<[string, string]>([
     dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
-    dayjs().add(1, 'day').format('YYYY-MM-DD'),
+    dayjs().format('YYYY-MM-DD'),
   ])
 
   useEffect(() => { loadData() }, [dateRange])

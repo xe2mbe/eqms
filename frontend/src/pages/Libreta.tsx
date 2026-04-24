@@ -216,8 +216,8 @@ export default function LibretaPage() {
     try {
       const fecha = dayjs(cfg.fecha)
       const { data } = await reportesApi.list({
-        fecha_inicio: fecha.startOf('day').toISOString(),
-        fecha_fin: fecha.endOf('day').toISOString(),
+        fecha_inicio: fecha.startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+        fecha_fin: fecha.endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
         tipo_reporte: cfg.tipo_evento,
         page_size: 200,
       })
@@ -369,14 +369,14 @@ export default function LibretaPage() {
   const iniciarSesion = async () => {
     try { await sesionForm.validateFields() } catch { return }
     const vals = sesionForm.getFieldsValue()
-    await activarSesion(vals, (vals.fecha_hora as dayjs.Dayjs).toISOString())
+    await activarSesion(vals, (vals.fecha_hora as dayjs.Dayjs).format('YYYY-MM-DDTHH:mm:ss'))
   }
 
   const handleCapturaDirecta = () => {
     setWarnModalOpen(false)
     const vals = sesionForm.getFieldsValue()
     if (!vals.tipo_evento) { setConfigVisible(true); return }
-    activarSesion(vals, fechaSeleccionada.toISOString())
+    activarSesion(vals, fechaSeleccionada.format('YYYY-MM-DDTHH:mm:ss'))
   }
 
   const handleIrAConfig = () => {
