@@ -654,28 +654,26 @@ export default function LibretaRSPage() {
                   {metricasActivas.map(m => {
                     const { icon, color } = getMetricaMeta(m.slug)
                     return (
-                      <Form.Item key={m.id} name={`m_${m.slug}`} initialValue={0} style={{ margin: 0 }}>
-                        <div style={{
-                          border: `1.5px solid ${color}`,
-                          borderRadius: 8,
-                          padding: '6px 10px',
-                          minWidth: 100,
-                          background: `${color}10`,
-                          textAlign: 'center',
-                        }}>
-                          <div style={{ color, fontSize: 16, marginBottom: 2 }}>{icon}</div>
-                          <div style={{ color, fontWeight: 600, fontSize: 11, marginBottom: 4, whiteSpace: 'nowrap' }}>
-                            {m.nombre}
-                          </div>
+                      <div key={m.id} style={{
+                        border: `1.5px solid ${color}`,
+                        borderRadius: 8,
+                        padding: '6px 10px',
+                        minWidth: 100,
+                        background: `${color}10`,
+                        textAlign: 'center',
+                      }}>
+                        <div style={{ color, fontSize: 16, marginBottom: 2 }}>{icon}</div>
+                        <div style={{ color, fontWeight: 600, fontSize: 11, marginBottom: 4, whiteSpace: 'nowrap' }}>
+                          {m.nombre}
+                        </div>
+                        <Form.Item name={`m_${m.slug}`} initialValue={0} style={{ margin: 0 }}>
                           <InputNumber
                             min={0}
                             size="small"
                             style={{ width: '100%', borderColor: color }}
-                            value={metricasForm.getFieldValue(`m_${m.slug}`) ?? 0}
-                            onChange={val => metricasForm.setFieldValue(`m_${m.slug}`, val)}
                           />
-                        </div>
-                      </Form.Item>
+                        </Form.Item>
+                      </div>
                     )
                   })}
                 </div>
