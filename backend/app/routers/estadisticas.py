@@ -445,29 +445,52 @@ def zona_actividad(
     return [{"zona": r[0], "total": r[1], "indicativos": r[2], "senal_promedio": float(r[3] or 0)} for r in rows]
 
 
+@router.get("/primera-actividad")
+def primera_actividad(db: Session = Depends(get_db)):
+    fecha = db.execute(text("SELECT MIN(fecha_reporte)::date FROM reportes")).scalar()
+    return {"fecha": str(fecha) if fecha else None}
+
+
 @router.get("/nuevos-mensuales")
-def nuevos_mensuales(db: Session = Depends(get_db)):
+def nuevos_mensuales(
+    fecha_inicio: Optional[datetime] = None,
+    fecha_fin: Optional[datetime] = None,
+    evento_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
     """Primeras apariciones de indicativos por mes (crecimiento de la red)."""
+    ff = _fin(fecha_fin)
     rows = db.execute(text("""
         WITH primera AS (
             SELECT indicativo, MIN(fecha_reporte) AS primera_vez
-            FROM reportes GROUP BY indicativo
+            FROM reportes
+            WHERE (:fi IS NULL OR fecha_reporte >= :fi)
+              AND (:ff IS NULL OR fecha_reporte <= :ff)
+              AND (:ev IS NULL OR evento_id = :ev)
+            GROUP BY indicativo
         )
         SELECT DATE_TRUNC('month', primera_vez) AS mes, COUNT(*) AS nuevos
-        FROM primera
-        GROUP BY mes ORDER BY mes
-    """)).fetchall()
+        FROM primera GROUP BY mes ORDER BY mes
+    """), {"fi": fecha_inicio, "ff": ff, "ev": evento_id}).fetchall()
     return [{"mes": str(r[0]), "nuevos": r[1]} for r in rows]
 
 
 @router.get("/retencion")
-def retencion(db: Session = Depends(get_db)):
+def retencion(
+    fecha_inicio: Optional[datetime] = None,
+    fecha_fin: Optional[datetime] = None,
+    evento_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
     """Retención mensual: cuántos indicativos del mes anterior repiten actividad."""
+    ff = _fin(fecha_fin)
     rows = db.execute(text("""
         WITH mensual AS (
-            SELECT indicativo,
-                   DATE_TRUNC('month', fecha_reporte) AS mes
+            SELECT indicativo, DATE_TRUNC('month', fecha_reporte) AS mes
             FROM reportes
+            WHERE (:fi IS NULL OR fecha_reporte >= :fi)
+              AND (:ff IS NULL OR fecha_reporte <= :ff)
+              AND (:ev IS NULL OR evento_id = :ev)
             GROUP BY indicativo, DATE_TRUNC('month', fecha_reporte)
         ),
         pares AS (
@@ -483,8 +506,51 @@ def retencion(db: Session = Depends(get_db)):
         SELECT mes, activos, retenidos,
                CASE WHEN activos > 0 THEN ROUND(retenidos::numeric / activos * 100, 1) ELSE 0 END AS tasa
         FROM pares ORDER BY mes
-    """)).fetchall()
+    """), {"fi": fecha_inicio, "ff": ff, "ev": evento_id}).fetchall()
     return [{"mes": str(r[0]), "activos": r[1], "retenidos": r[2], "tasa": float(r[3])} for r in rows]
+
+
+@router.get("/cobertura-estados")
+def cobertura_estados(
+    fecha_inicio: Optional[datetime] = None,
+    fecha_fin: Optional[datetime] = None,
+    evento_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """Todos los estados del catálogo con su actividad en el período."""
+    ff = _fin(fecha_fin)
+    catalog = db.query(models.Estado).order_by(models.Estado.nombre).all()
+    rows = db.execute(text("""
+        SELECT estado,
+               COUNT(*)                  AS total,
+               COUNT(DISTINCT indicativo) AS indicativos,
+               ROUND(AVG(senal), 1)      AS senal_promedio
+        FROM reportes
+        WHERE estado IS NOT NULL
+          AND (:fi IS NULL OR fecha_reporte >= :fi)
+          AND (:ff IS NULL OR fecha_reporte <= :ff)
+          AND (:ev IS NULL OR evento_id = :ev)
+        GROUP BY estado
+    """), {"fi": fecha_inicio, "ff": ff, "ev": evento_id}).fetchall()
+
+    activity: dict = {}
+    for r in rows:
+        activity[r[0]] = {"total": r[1], "indicativos": r[2], "senal_promedio": float(r[3] or 0)}
+
+    result = []
+    for e in catalog:
+        act = activity.get(e.abreviatura) or activity.get(e.nombre) or \
+              {"total": 0, "indicativos": 0, "senal_promedio": 0.0}
+        result.append({
+            "abreviatura": e.abreviatura,
+            "nombre": e.nombre,
+            "zona": e.zona,
+            "total": act["total"],
+            "indicativos": act["indicativos"],
+            "senal_promedio": act["senal_promedio"],
+        })
+
+    return sorted(result, key=lambda x: -x["total"])
 
 
 @router.get("/rst-por-zona")

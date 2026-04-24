@@ -48,6 +48,20 @@ export const estadisticasApi = {
       '/estadisticas/rs/zona-actividad', { params }
     ),
 
+  primeraActividad: () =>
+    client.get<{ fecha: string | null }>('/estadisticas/primera-actividad'),
+
+  nuevosMensuales: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number }) =>
+    client.get<{ mes: string; nuevos: number }[]>('/estadisticas/nuevos-mensuales', { params }),
+
+  retencion: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number }) =>
+    client.get<{ mes: string; activos: number; retenidos: number; tasa: number }[]>('/estadisticas/retencion', { params }),
+
+  coberturaEstados: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number }) =>
+    client.get<{ abreviatura: string; nombre: string; zona: string; total: number; indicativos: number; senal_promedio: number }[]>(
+      '/estadisticas/cobertura-estados', { params }
+    ),
+
   rsNuevosMensuales: () =>
     client.get<{ mes: string; plataforma: string; nuevos: number }[]>('/estadisticas/rs/nuevos-mensuales'),
 
