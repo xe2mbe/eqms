@@ -11,7 +11,10 @@ const { Title, Text } = Typography
 const ZONA_COLORS: Record<string, string> = {
   XE1: '#1677ff', XE2: '#52c41a', XE3: '#fa8c16', XE4: '#722ed1', XE5: '#eb2f96',
 }
-const CHART_COLORS = ['#1A569E','#52c41a','#fa8c16','#722ed1','#eb2f96','#13c2c2','#faad14','#2f54eb']
+const CHART_COLORS = [
+  '#5470c6','#91cc75','#fac858','#ee6666','#73c0de',
+  '#3ba272','#fc8452','#9a60b4','#ea7ccc','#27727b',
+]
 
 type CoberturaEstado = {
   abreviatura: string; nombre: string; zona: string
@@ -85,7 +88,18 @@ export default function EstadisticasPage() {
     xAxis: { type: 'category', data: tendencia.map(t => dayjs(t.periodo).format('DD/MM')) },
     yAxis: { type: 'value' },
     series: [{ data: tendencia.map(t => t.total), type: 'line', smooth: true,
-      areaStyle: { opacity: .15 }, itemStyle: { color: '#1A569E' } }],
+      itemStyle: { color: '#5470c6' },
+      lineStyle: { width: 2.5, color: '#5470c6' },
+      areaStyle: {
+        color: {
+          type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(84,112,198,0.35)' },
+            { offset: 1, color: 'rgba(84,112,198,0.02)' },
+          ],
+        },
+      },
+    }],
   }
 
   const hbarEstados = {
@@ -93,17 +107,32 @@ export default function EstadisticasPage() {
     grid: { left: 120, right: 16, top: 8, bottom: 8, containLabel: false },
     xAxis: { type: 'value' },
     yAxis: { type: 'category', data: porEstado.slice(0, 15).map(e => e.estado).reverse() },
-    series: [{ data: porEstado.slice(0, 15).map(e => e.total).reverse(),
-      type: 'bar', itemStyle: { color: '#1A569E', borderRadius: [0, 4, 4, 0] } }],
+    series: [{
+      data: porEstado.slice(0, 15).map((e, i) => ({
+        value: e.total,
+        itemStyle: {
+          color: CHART_COLORS[(14 - i) % CHART_COLORS.length],
+          borderRadius: [0, 4, 4, 0],
+        },
+      })).reverse(),
+      type: 'bar',
+      label: { show: true, position: 'right', fontSize: 10 },
+    }],
   }
 
   const radarSistemas = {
     tooltip: {},
-    radar: { indicator: porSistema.slice(0, 8).map(s => ({
-      name: s.sistema, max: Math.max(...porSistema.map(x => x.total), 1),
-    })) },
+    radar: {
+      indicator: porSistema.slice(0, 8).map(s => ({
+        name: s.sistema, max: Math.max(...porSistema.map(x => x.total), 1),
+      })),
+      splitArea: { areaStyle: { color: ['rgba(84,112,198,0.04)', 'rgba(84,112,198,0.08)'] } },
+    },
     series: [{ type: 'radar', data: [{ value: porSistema.slice(0, 8).map(s => s.total), name: 'Reportes',
-      itemStyle: { color: '#1A569E' }, areaStyle: { opacity: .2 } }] }],
+      itemStyle: { color: '#5470c6' },
+      lineStyle: { color: '#5470c6', width: 2 },
+      areaStyle: { color: 'rgba(84,112,198,0.25)' },
+    }] }],
   }
 
   const horarioOption = {
@@ -112,7 +141,7 @@ export default function EstadisticasPage() {
     xAxis: { type: 'category', data: horario.map(h => `${h.hora}`) },
     yAxis: { type: 'value' },
     visualMap: { show: false, min: 0, max: Math.max(...horario.map(h => h.total), 1),
-      inRange: { color: ['#bae0ff', '#1A569E'] } },
+      inRange: { color: ['#dfe6f7', '#5470c6'] } },
     series: [{ data: horario.map(h => h.total), type: 'bar', barMaxWidth: 24,
       itemStyle: { borderRadius: [3, 3, 0, 0] } }],
   }
@@ -139,10 +168,20 @@ export default function EstadisticasPage() {
     yAxis: { type: 'value' },
     series: [
       { name: 'Nuevos indicativos', type: 'bar', data: nuevos.map(n => n.nuevos),
-        itemStyle: { color: '#52c41a', borderRadius: [3, 3, 0, 0] } },
+        itemStyle: { color: '#91cc75', borderRadius: [3, 3, 0, 0] } },
       { name: 'Acumulado', type: 'line', smooth: true,
         data: nuevos.reduce((acc: number[], n, i) => { acc.push((acc[i-1] ?? 0) + n.nuevos); return acc }, []),
-        itemStyle: { color: '#1A569E' } },
+        itemStyle: { color: '#5470c6' }, lineStyle: { width: 2.5 },
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(84,112,198,0.25)' },
+              { offset: 1, color: 'rgba(84,112,198,0.02)' },
+            ],
+          },
+        },
+      },
     ],
   }
 
@@ -153,11 +192,11 @@ export default function EstadisticasPage() {
     yAxis: [{ type: 'value', name: 'Operadores' }, { type: 'value', name: '%', max: 100, position: 'right' }],
     series: [
       { name: 'Activos', type: 'bar', data: retencion.map(r => r.activos), stack: 'r',
-        itemStyle: { color: '#1677ff', borderRadius: [0,0,0,0] } },
+        itemStyle: { color: '#73c0de', borderRadius: [0,0,0,0] } },
       { name: 'Retenidos', type: 'bar', data: retencion.map(r => r.retenidos), stack: 'r',
-        itemStyle: { color: '#52c41a', borderRadius: [3,3,0,0] } },
+        itemStyle: { color: '#91cc75', borderRadius: [3,3,0,0] } },
       { name: 'Tasa %', type: 'line', yAxisIndex: 1, smooth: true,
-        data: retencion.map(r => r.tasa), itemStyle: { color: '#fa8c16' } },
+        data: retencion.map(r => r.tasa), itemStyle: { color: '#fac858' }, lineStyle: { width: 2.5 } },
     ],
   }
 
@@ -170,7 +209,7 @@ export default function EstadisticasPage() {
     yAxis: { type: 'category', data: zonaList },
     visualMap: { min: 0, max: Math.max(...rstZona.map((r: any) => r.total), 1), calculable: true,
       orient: 'vertical', right: 0, top: 'center',
-      inRange: { color: ['#f0f8ff', '#1A569E'] } },
+      inRange: { color: ['#fff7e6', '#fc8452'] } },
     series: [{ type: 'heatmap', data: rstZona.map((r: any) => [String(r.senal), r.zona, r.total]),
       label: { show: true, fontSize: 10 } }],
   }

@@ -16,9 +16,9 @@ type Resumen = {
   por_estado: { estado: string; total: number }[]
 }
 
-const PIE_COLORS = [
-  '#1A569E','#1677ff','#40a9ff','#52c41a','#73d13d',
-  '#fa8c16','#ffc53d','#722ed1','#eb2f96','#13c2c2',
+const CHART_COLORS = [
+  '#5470c6','#91cc75','#fac858','#ee6666','#73c0de',
+  '#3ba272','#fc8452','#9a60b4','#ea7ccc','#27727b',
 ]
 
 export default function DashboardRSPage() {
@@ -53,17 +53,19 @@ export default function DashboardRSPage() {
     xAxis: { type: 'category', data: plataformas.map(p => p.plataforma), axisLabel: { fontSize: 11 } },
     yAxis: { type: 'value', minInterval: 1 },
     series: [{
-      data: plataformas.map(p => p.total),
+      data: plataformas.map((p, i) => ({
+        value: p.total,
+        itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length], borderRadius: [4, 4, 0, 0] },
+      })),
       type: 'bar',
-      label: { show: true, position: 'top', fontSize: 11 },
-      itemStyle: { color: '#1A569E', borderRadius: [4, 4, 0, 0] },
+      label: { show: true, position: 'top', fontSize: 11, fontWeight: 'bold' },
     }],
   }
 
   const pieEstados = {
     tooltip: { trigger: 'item', formatter: '{b}<br/>{c} reportes ({d}%)' },
     legend: { orient: 'vertical', right: 0, top: 'center', textStyle: { fontSize: 11 } },
-    color: PIE_COLORS,
+    color: CHART_COLORS,
     series: [{
       type: 'pie',
       radius: ['38%', '65%'],

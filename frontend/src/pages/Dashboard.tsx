@@ -10,9 +10,9 @@ import DateRangeBar from '@/components/common/DateRangeBar'
 
 const { Title } = Typography
 
-const PIE_COLORS = [
-  '#1A569E','#1677ff','#40a9ff','#52c41a','#73d13d',
-  '#fa8c16','#ffc53d','#722ed1','#eb2f96','#13c2c2',
+const CHART_COLORS = [
+  '#5470c6','#91cc75','#fac858','#ee6666','#73c0de',
+  '#3ba272','#fc8452','#9a60b4','#ea7ccc','#27727b',
 ]
 
 export default function DashboardPage() {
@@ -54,10 +54,12 @@ export default function DashboardPage() {
     },
     yAxis: { type: 'value', minInterval: 1 },
     series: [{
-      data: sistemas.map(s => s.total),
+      data: sistemas.map((s, i) => ({
+        value: s.total,
+        itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length], borderRadius: [4, 4, 0, 0] },
+      })),
       type: 'bar',
-      label: { show: true, position: 'top', fontSize: 11 },
-      itemStyle: { color: '#1A569E', borderRadius: [4, 4, 0, 0] },
+      label: { show: true, position: 'top', fontSize: 11, fontWeight: 'bold' },
     }],
   }
 
@@ -86,9 +88,9 @@ export default function DashboardPage() {
           display: 'inline-block',
           padding: '1px 10px',
           borderRadius: 12,
-          background: PIE_COLORS[i % PIE_COLORS.length] + '22',
-          color: PIE_COLORS[i % PIE_COLORS.length],
-          border: `1px solid ${PIE_COLORS[i % PIE_COLORS.length]}55`,
+          background: CHART_COLORS[i % CHART_COLORS.length] + '22',
+          color: CHART_COLORS[i % CHART_COLORS.length],
+          border: `1px solid ${CHART_COLORS[i % CHART_COLORS.length]}55`,
           fontWeight: 600, fontSize: 12,
         }}>
           {v}
@@ -102,7 +104,7 @@ export default function DashboardPage() {
           <div style={{ width: 50, height: 5, background: '#f0f0f0', borderRadius: 3, overflow: 'hidden' }}>
             <div style={{
               width: `${(v / maxEstado) * 100}%`, height: '100%',
-              background: PIE_COLORS[i % PIE_COLORS.length], borderRadius: 3,
+              background: CHART_COLORS[i % CHART_COLORS.length], borderRadius: 3,
             }} />
           </div>
           <strong style={{ color: '#1A569E', minWidth: 36, textAlign: 'right' }}>
@@ -116,7 +118,7 @@ export default function DashboardPage() {
   const pieEventos = {
     tooltip: { trigger: 'item', formatter: '{b}<br/>{c} reportes ({d}%)' },
     legend: { orient: 'vertical', right: 0, top: 'center', textStyle: { fontSize: 11 } },
-    color: PIE_COLORS,
+    color: CHART_COLORS,
     series: [{
       type: 'pie',
       radius: ['38%', '65%'],

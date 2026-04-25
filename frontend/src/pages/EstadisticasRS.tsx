@@ -10,7 +10,10 @@ const { Title, Text } = Typography
 const ZONA_COLORS: Record<string, string> = {
   XE1: '#1677ff', XE2: '#52c41a', XE3: '#fa8c16', XE4: '#722ed1', XE5: '#eb2f96',
 }
-const CHART_COLORS = ['#1A569E','#52c41a','#fa8c16','#722ed1','#eb2f96','#13c2c2','#faad14','#2f54eb','#389e0d','#d46b08']
+const CHART_COLORS = [
+  '#5470c6','#91cc75','#fac858','#ee6666','#73c0de',
+  '#3ba272','#fc8452','#9a60b4','#ea7ccc','#27727b',
+]
 
 const METRICA_LABELS: Record<string, string> = {
   me_gusta: 'Me gusta', comentarios: 'Comentarios', compartidos: 'Compartidos',
@@ -104,12 +107,26 @@ export default function EstadisticasRSPage() {
     grid: { left: 8, right: 8, top: 16, bottom: 40, containLabel: true },
     xAxis: { type: 'category', data: periodos.map(d => dayjs(d).format('DD/MM')) },
     yAxis: { type: 'value', minInterval: 1 },
-    series: plataformas.map((pl, i) => ({
-      name: pl, type: 'line', smooth: true,
-      data: periodos.map(per => tendencia.find(r => r.periodo === per && r.plataforma === pl)?.total ?? 0),
-      itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] },
-      areaStyle: { opacity: 0.08 },
-    })),
+    series: plataformas.map((pl, i) => {
+      const c = CHART_COLORS[i % CHART_COLORS.length]
+      const hex = c.replace('#','')
+      const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16)
+      return {
+        name: pl, type: 'line', smooth: true,
+        data: periodos.map(per => tendencia.find(r => r.periodo === per && r.plataforma === pl)?.total ?? 0),
+        itemStyle: { color: c },
+        lineStyle: { width: 2, color: c },
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: `rgba(${r},${g},${b},0.25)` },
+              { offset: 1, color: `rgba(${r},${g},${b},0.02)` },
+            ],
+          },
+        },
+      }
+    }),
   }
 
   const estadosList = [...new Set(porEstadoPlat.map(r => r.estado))]
