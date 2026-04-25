@@ -21,7 +21,7 @@ const { RangePicker } = DatePicker
 // ─── Column definitions ───────────────────────────────────────────────────────
 
 const ALL_COL_KEYS = [
-  'id', 'indicativo', 'senal', 'pais', 'estado', 'zona',
+  'id', 'indicativo', 'senal', 'ciudad', 'pais', 'estado', 'zona',
   'sistema', 'evento', 'estacion', 'fecha_reporte', 'capturado_por_nombre',
 ] as const
 type ColKey = typeof ALL_COL_KEYS[number]
@@ -30,6 +30,7 @@ const COL_LABELS: Record<ColKey, string> = {
   id: 'ID',
   indicativo: 'Indicativo',
   senal: 'RST',
+  ciudad: 'Ciudad',
   pais: 'País',
   estado: 'Estado',
   zona: 'Zona',
@@ -58,7 +59,7 @@ export default function ReportesPage() {
   const [deletingBulk, setDeletingBulk] = useState(false)
 
   const { colOrder, colVisible, colSettingsButton } = useColPrefs(
-    'reportes_v2', user?.id, ALL_COL_KEYS, LOCKED_KEYS, COL_LABELS,
+    'reportes_v3', user?.id, ALL_COL_KEYS, LOCKED_KEYS, COL_LABELS,
   )
 
   useEffect(() => {
@@ -124,6 +125,10 @@ export default function ReportesPage() {
     senal: {
       title: 'RST', dataIndex: 'senal', width: 70,
       render: (v: number) => <strong>{v}</strong>,
+    },
+    ciudad: {
+      title: 'Ciudad', dataIndex: 'ciudad', width: 130,
+      render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
     },
     pais: {
       title: 'País', dataIndex: 'pais', width: 140,

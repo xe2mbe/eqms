@@ -17,14 +17,14 @@ const { Title } = Typography
 const { RangePicker } = DatePicker
 
 const ALL_COL_KEYS = [
-  'id', 'indicativo', 'senal', 'plataforma', 'pais', 'estado', 'zona',
+  'id', 'indicativo', 'senal', 'plataforma', 'ciudad', 'pais', 'estado', 'zona',
   'evento', 'estacion', 'fecha_reporte', 'capturado_por_nombre',
 ] as const
 type ColKey = typeof ALL_COL_KEYS[number]
 
 const COL_LABELS: Record<ColKey, string> = {
   id: 'ID', indicativo: 'Indicativo', senal: 'RST', plataforma: 'Red Social',
-  pais: 'País', estado: 'Estado', zona: 'Zona',
+  ciudad: 'Ciudad', pais: 'País', estado: 'Estado', zona: 'Zona',
   evento: 'Tipo', estacion: 'Estación', fecha_reporte: 'Fecha',
   capturado_por_nombre: 'Capturado por',
 }
@@ -52,7 +52,7 @@ export default function ReportesRSPage() {
   const [tempFilters, setTempFilters] = useState<Partial<Filters>>({})
 
   const { colOrder, colVisible, colSettingsButton } = useColPrefs(
-    'reportes_rs_v2', user?.id, ALL_COL_KEYS, LOCKED_KEYS, COL_LABELS,
+    'reportes_rs_v3', user?.id, ALL_COL_KEYS, LOCKED_KEYS, COL_LABELS,
   )
 
   useEffect(() => {
@@ -111,6 +111,10 @@ export default function ReportesRSPage() {
         const c = p.color ?? '#1677ff'
         return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{p.nombre}</Tag>
       },
+    },
+    ciudad: {
+      title: 'Ciudad', dataIndex: 'ciudad', width: 130,
+      render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
     },
     pais: {
       title: 'País', dataIndex: 'pais', width: 140,
