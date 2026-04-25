@@ -1,0 +1,21 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: 138.122.96.71
+          port: 65022
+          username: xe2n
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/eqms
+            git pull origin main
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
