@@ -373,6 +373,31 @@ class SmtpConfig(BaseModel):
 class SmtpTestRequest(BaseModel):
     destinatario: str
 
+class SistemaInfoConfig(BaseModel):
+    url_sistema: str = ""
+    descripcion: str = ""
+
+DEFAULT_EMAIL_BIENVENIDA_ASUNTO = "Bienvenido al sistema – FMRE"
+DEFAULT_EMAIL_BIENVENIDA_CUERPO = """\
+<h2>Bienvenido a <a href="{{url_sistema}}">{{url_sistema}}</a></h2>
+<p>Hola <strong>{{full_name}}</strong>,</p>
+<p>Tu cuenta ha sido creada en el sistema de gestión de la
+<strong>Federación Mexicana de Radioexperimentadores A.C.</strong></p>
+<table style="border-collapse:collapse;margin:16px 0">
+  <tr><td style="padding:4px 12px 4px 0"><strong>Usuario:</strong></td><td>{{username}}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0"><strong>Contraseña:</strong></td><td>{{password}}</td></tr>
+</table>
+<p>Ingresa al sistema y cambia tu contraseña en el primer inicio de sesión.</p>
+<p style="color:#999;font-size:12px">Este es un mensaje automático — no responder.</p>
+"""
+
+class EmailBienvenidaConfig(BaseModel):
+    asunto: str = DEFAULT_EMAIL_BIENVENIDA_ASUNTO
+    cuerpo: str = DEFAULT_EMAIL_BIENVENIDA_CUERPO
+
+class ReenviarCorreoRequest(BaseModel):
+    password_inicial: str = ""
+
 
 # ─── Audit ───────────────────────────────────────────────────────────────────
 

@@ -13,7 +13,7 @@ import {
   SyncOutlined, ReloadOutlined, LockOutlined,
 } from '@ant-design/icons'
 import type { RcFile } from 'antd/es/upload'
-import { configuracionApi, type SmtpConfig } from '@/api/configuracion'
+import { configuracionApi, type SmtpConfig, type SistemaInfoConfig, type EmailBienvenidaConfig } from '@/api/configuracion'
 import client from '@/api/client'
 
 const { Title, Text } = Typography
@@ -221,12 +221,127 @@ function TabCorreo() {
 
 // ─── Tab: Opciones del Sistema ────────────────────────────────────────────────
 
+const VARIABLES_BIENVENIDA = [
+  { var: '{{full_name}}',   desc: 'Nombre completo del usuario' },
+  { var: '{{username}}',    desc: 'Nombre de usuario (login)' },
+  { var: '{{password}}',    desc: 'Contraseña inicial asignada' },
+  { var: '{{url_sistema}}', desc: 'URL del sistema' },
+]
+
 function TabSistema() {
+  const [infoForm] = Form.useForm<SistemaInfoConfig>()
+  const [emailForm] = Form.useForm<EmailBienvenidaConfig>()
+  const [guardandoInfo, setGuardandoInfo] = useState(false)
+  const [guardandoEmail, setGuardandoEmail] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    Promise.all([
+      configuracionApi.getSistemaInfo(),
+      configuracionApi.getEmailBienvenida(),
+    ]).then(([info, email]) => {
+      infoForm.setFieldsValue(info.data)
+      emailForm.setFieldsValue(email.data)
+    }).finally(() => setLoading(false))
+  }, [])
+
+  const saveInfo = async () => {
+    setGuardandoInfo(true)
+    try {
+      await configuracionApi.saveSistemaInfo(infoForm.getFieldsValue())
+      message.success('Información del sistema guardada')
+    } catch { message.error('Error al guardar') }
+    finally { setGuardandoInfo(false) }
+  }
+
+  const saveEmail = async () => {
+    setGuardandoEmail(true)
+    try {
+      await configuracionApi.saveEmailBienvenida(emailForm.getFieldsValue())
+      message.success('Plantilla de correo guardada')
+    } catch { message.error('Error al guardar') }
+    finally { setGuardandoEmail(false) }
+  }
+
+  const insertarVariable = (v: string) => {
+    const el = document.getElementById('email-cuerpo') as HTMLTextAreaElement | null
+    if (!el) { emailForm.setFieldValue('cuerpo', (emailForm.getFieldValue('cuerpo') || '') + v); return }
+    const start = el.selectionStart ?? el.value.length
+    const end = el.selectionEnd ?? el.value.length
+    const current = emailForm.getFieldValue('cuerpo') || ''
+    const next = current.slice(0, start) + v + current.slice(end)
+    emailForm.setFieldValue('cuerpo', next)
+    setTimeout(() => { el.focus(); el.setSelectionRange(start + v.length, start + v.length) }, 0)
+  }
+
   return (
-    <div style={{ color: '#999', textAlign: 'center', padding: '48px 0' }}>
-      <SettingOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-      <div>Opciones del sistema — próximamente</div>
-    </div>
+    <Spin spinning={loading}>
+      {/* ── Información del Sistema ── */}
+      <Card
+        title={<Space><GlobalOutlined /><span>Información del Sistema</span></Space>}
+        style={{ marginBottom: 20 }}
+      >
+        <Form form={infoForm} layout="vertical">
+          <Row gutter={16}>
+            <Col xs={24} md={12}>
+              <Form.Item label="URL del Sistema" name="url_sistema">
+                <Input placeholder="https://eqms.fmre.mx" prefix={<GlobalOutlined />} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item label="Descripción" name="descripcion">
+                <Input placeholder="Sistema de Gestión QMS – FMRE" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Button type="primary" icon={<SaveOutlined />} loading={guardandoInfo} onClick={saveInfo}>
+            Guardar
+          </Button>
+        </Form>
+      </Card>
+
+      {/* ── Plantilla de Correo de Bienvenida ── */}
+      <Card title={<Space><MailOutlined /><span>Plantilla de Correo de Bienvenida</span></Space>}>
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="Variables disponibles"
+          description={
+            <Space wrap size={6} style={{ marginTop: 4 }}>
+              {VARIABLES_BIENVENIDA.map(({ var: v, desc }) => (
+                <Tooltip key={v} title={desc}>
+                  <Tag
+                    color="blue"
+                    style={{ cursor: 'pointer', fontFamily: 'monospace' }}
+                    onClick={() => insertarVariable(v)}
+                  >
+                    {v}
+                  </Tag>
+                </Tooltip>
+              ))}
+              <Text type="secondary" style={{ fontSize: 12 }}>Haz clic en una variable para insertarla en el cuerpo</Text>
+            </Space>
+          }
+        />
+        <Form form={emailForm} layout="vertical">
+          <Form.Item label="Asunto del correo" name="asunto" rules={[{ required: true }]}>
+            <Input placeholder="Bienvenido al sistema – FMRE" />
+          </Form.Item>
+          <Form.Item label="Cuerpo del correo (HTML)" name="cuerpo" rules={[{ required: true }]}>
+            <Input.TextArea
+              id="email-cuerpo"
+              rows={14}
+              style={{ fontFamily: 'monospace', fontSize: 12 }}
+              placeholder="Escribe el contenido HTML del correo..."
+            />
+          </Form.Item>
+          <Button type="primary" icon={<SaveOutlined />} loading={guardandoEmail} onClick={saveEmail}>
+            Guardar plantilla
+          </Button>
+        </Form>
+      </Card>
+    </Spin>
   )
 }
 

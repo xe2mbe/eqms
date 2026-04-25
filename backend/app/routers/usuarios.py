@@ -142,6 +142,7 @@ def desactivar_usuario(
 @router.post("/{user_id}/reenviar-correo", status_code=200)
 def reenviar_correo(
     user_id: int,
+    body: schemas.ReenviarCorreoRequest = schemas.ReenviarCorreoRequest(),
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(require_admin),
 ):
@@ -159,24 +160,37 @@ def reenviar_correo(
     if not cfg.get("habilitado"):
         raise HTTPException(400, "El envío de correo está deshabilitado en la configuración.")
 
+    # Cargar plantilla de bienvenida
+    tpl_row = db.query(models.ConfiguracionSistema).filter_by(clave="email_bienvenida").first()
+    if tpl_row and tpl_row.valor:
+        tpl = schemas.EmailBienvenidaConfig(**json.loads(tpl_row.valor))
+    else:
+        tpl = schemas.EmailBienvenidaConfig()
+
+    # Cargar URL del sistema
+    info_row = db.query(models.ConfiguracionSistema).filter_by(clave="sistema_info").first()
+    url_sistema = ""
+    if info_row and info_row.valor:
+        url_sistema = json.loads(info_row.valor).get("url_sistema", "")
+
+    # Sustituir variables en plantilla
+    variables = {
+        "full_name": user.full_name or "",
+        "username": user.username or "",
+        "password": body.password_inicial or "(ver con el administrador)",
+        "url_sistema": url_sistema,
+    }
+    asunto = tpl.asunto
+    cuerpo = tpl.cuerpo
+    for var, val in variables.items():
+        asunto = asunto.replace(f"{{{{{var}}}}}", val)
+        cuerpo = cuerpo.replace(f"{{{{{var}}}}}", val)
+
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Bienvenido al sistema QMS – FMRE"
+    msg["Subject"] = asunto
     msg["From"] = cfg.get("remitente") or cfg["usuario"]
     msg["To"] = user.email
-    html = f"""
-    <h2>Bienvenido al Sistema QMS – FMRE</h2>
-    <p>Hola <strong>{user.full_name}</strong>,</p>
-    <p>Tu cuenta ha sido creada / actualizada en el sistema de gestión QMS de la
-    <strong>Federación Mexicana de Radioexperimentadores A.C.</strong></p>
-    <table style="border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:4px 12px 4px 0"><strong>Usuario:</strong></td><td>{user.username}</td></tr>
-      <tr><td style="padding:4px 12px 4px 0"><strong>Rol:</strong></td><td>{user.role}</td></tr>
-      {'<tr><td style="padding:4px 12px 4px 0"><strong>Indicativo:</strong></td><td>' + user.indicativo + '</td></tr>' if user.indicativo else ''}
-    </table>
-    <p>Ingresa al sistema y cambia tu contraseña en el primer inicio de sesión.</p>
-    <p style="color:#999;font-size:12px">QMS – FMRE | Este es un mensaje automático.</p>
-    """
-    msg.attach(MIMEText(html, "html"))
+    msg.attach(MIMEText(cuerpo, "html"))
 
     try:
         if cfg.get("port") == 465:

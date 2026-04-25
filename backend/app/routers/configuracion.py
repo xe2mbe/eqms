@@ -20,6 +20,8 @@ router = APIRouter()
 
 SMTP_KEY = "smtp"
 RECORDATORIO_KEY = "dias_reaparicion"
+SISTEMA_INFO_KEY = "sistema_info"
+EMAIL_BIENVENIDA_KEY = "email_bienvenida"
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -106,6 +108,52 @@ def test_smtp(
         raise HTTPException(400, f"Error al enviar correo: {str(e)}")
 
     return {"ok": True, "mensaje": f"Correo enviado a {req.destinatario}"}
+
+
+# ─── Información del Sistema ──────────────────────────────────────────────────
+
+@router.get("/sistema-info", response_model=schemas.SistemaInfoConfig)
+def get_sistema_info(db: Session = Depends(get_db), _=Depends(require_admin)):
+    raw = _get_valor(db, SISTEMA_INFO_KEY)
+    if raw:
+        try:
+            return schemas.SistemaInfoConfig(**json.loads(raw))
+        except Exception:
+            pass
+    return schemas.SistemaInfoConfig()
+
+
+@router.put("/sistema-info", response_model=schemas.SistemaInfoConfig)
+def save_sistema_info(
+    body: schemas.SistemaInfoConfig,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    _set_valor(db, SISTEMA_INFO_KEY, body.model_dump_json())
+    return body
+
+
+# ─── Plantilla correo de bienvenida ───────────────────────────────────────────
+
+@router.get("/email-bienvenida", response_model=schemas.EmailBienvenidaConfig)
+def get_email_bienvenida(db: Session = Depends(get_db), _=Depends(require_admin)):
+    raw = _get_valor(db, EMAIL_BIENVENIDA_KEY)
+    if raw:
+        try:
+            return schemas.EmailBienvenidaConfig(**json.loads(raw))
+        except Exception:
+            pass
+    return schemas.EmailBienvenidaConfig()
+
+
+@router.put("/email-bienvenida", response_model=schemas.EmailBienvenidaConfig)
+def save_email_bienvenida(
+    body: schemas.EmailBienvenidaConfig,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    _set_valor(db, EMAIL_BIENVENIDA_KEY, body.model_dump_json())
+    return body
 
 
 # ─── Recordatorio ─────────────────────────────────────────────────────────────
