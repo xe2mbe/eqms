@@ -312,10 +312,10 @@ export default function LibretaRSPage() {
           plataforma_id: platSeleccionada.id,
           estado: fila.estado,
           ciudad: fila.municipio,
-          zona: fila.zona,
+          zona_id: zonas.find(z => z.codigo === fila.zona)?.id,
           pais: fila.pais,
-          tipo_reporte: sesionEvento,
-          qrz_station: sesionEstacion,
+          evento_id: eventos.find(e => e.tipo === sesionEvento)?.id,
+          estacion_id: estaciones.find(e => e.qrz === sesionEstacion)?.id,
           fecha_reporte: sesionFecha.format('YYYY-MM-DDTHH:mm:ss'),
         }
         return libretaRSApi.createReporte(payload)
@@ -368,7 +368,18 @@ export default function LibretaRSPage() {
   // ── Edición de reportes ──
   const openEditReporte = (r: ReporteRS) => {
     setEditReporteRecord(r)
-    editReporteForm.setFieldsValue({ ...r, fecha_reporte: dayjs(r.fecha_reporte) })
+    editReporteForm.setFieldsValue({
+      indicativo: r.indicativo,
+      operador: r.operador,
+      senal: r.senal,
+      estado: r.estado,
+      ciudad: r.ciudad,
+      zona_id: r.zona_id,
+      pais: r.pais,
+      url_publicacion: r.url_publicacion,
+      observaciones: r.observaciones,
+      fecha_reporte: dayjs(r.fecha_reporte),
+    })
     setEditReporteModal(true)
   }
 
@@ -552,9 +563,12 @@ export default function LibretaRSPage() {
     rst:        { title: 'RST', dataIndex: 'senal', key: 'rst', width: 60 },
     operador:   { title: 'Operador', dataIndex: 'operador', key: 'operador', render: (v: string) => v || '—' },
     zona:       { title: 'Zona', dataIndex: 'zona', key: 'zona', width: 80,
-      render: (v: string) => v
-        ? <Tag color={zonaColor(v)} style={{ color: '#fff', fontWeight: 700 }}>{v}</Tag>
-        : '—' },
+      render: (_: unknown, record: ReporteRS) => {
+        const codigo = record.zona?.codigo
+        return codigo
+          ? <Tag color={zonaColor(codigo)} style={{ color: '#fff', fontWeight: 700 }}>{codigo}</Tag>
+          : '—'
+      } },
     estado:     { title: 'Estado', dataIndex: 'estado', key: 'estado', render: (v: string) => v || '—' },
     ciudad:     { title: 'Ciudad', dataIndex: 'ciudad', key: 'ciudad', render: (v: string) => v || '—' },
     pais:       { title: 'País', dataIndex: 'pais', key: 'pais', render: (v: string) => v || '—' },
@@ -848,7 +862,13 @@ export default function LibretaRSPage() {
               <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} /></Form.Item></Col>
             <Col span={8}><Form.Item label="Estado" name="estado"><Input /></Form.Item></Col>
             <Col span={8}><Form.Item label="Ciudad" name="ciudad"><Input /></Form.Item></Col>
-            <Col span={4}><Form.Item label="Zona" name="zona"><Input /></Form.Item></Col>
+            <Col span={4}><Form.Item label="Zona" name="zona_id">
+              <Select allowClear placeholder="Zona"
+                options={zonas.filter(z => z.is_active).map(z => {
+                  const c = z.color ?? '#1677ff'
+                  return { value: z.id, label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{z.codigo}</Tag> }
+                })} />
+            </Form.Item></Col>
             <Col span={4}><Form.Item label="País" name="pais"><Input /></Form.Item></Col>
             <Col span={24}><Form.Item label="URL publicación" name="url_publicacion"><Input /></Form.Item></Col>
             <Col span={24}><Form.Item label="Observaciones" name="observaciones">

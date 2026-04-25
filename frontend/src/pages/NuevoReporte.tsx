@@ -59,7 +59,8 @@ export default function NuevoReportePage() {
       setCallsignStatus('ok')
       setCallsignMsg(`Zona: ${result.zona} – ${result.tipo}`)
       if (result.zona && result.zona !== 'Extranjero' && result.zona !== 'Error') {
-        form.setFieldValue('zona', result.zona)
+        const z = zonas.find(z => z.codigo === result.zona)
+        if (z) form.setFieldValue('zona_id', z.id)
       }
     } else {
       setCallsignStatus('error')
@@ -136,29 +137,29 @@ export default function NuevoReportePage() {
               <Select options={[59, 57, 55, 53, 51].map(v => ({ value: v, label: `${v}` }))} />
             </Form.Item>
 
-            <Form.Item label="Tipo de Evento" name="tipo_reporte" rules={[{ required: true, message: 'Requerido' }]}>
+            <Form.Item label="Tipo de Evento" name="evento_id" rules={[{ required: true, message: 'Requerido' }]}>
               <Select
                 placeholder="Selecciona el evento"
                 labelRender={({ value }) => {
-                  const ev = eventos.find(e => e.tipo === value)
+                  const ev = eventos.find(e => e.id === value)
                   const c = ev?.color ?? '#1677ff'
-                  return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{String(value)}</Tag>
+                  return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{ev?.tipo ?? String(value)}</Tag>
                 }}
                 options={eventos.map(e => {
                   const c = e.color ?? '#1677ff'
-                  return { value: e.tipo, label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{e.tipo}</Tag> }
+                  return { value: e.id, label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{e.tipo}</Tag> }
                 })}
               />
             </Form.Item>
 
-            <Form.Item label="Sistema" name="sistema">
+            <Form.Item label="Sistema" name="sistema_id">
               <Select
                 placeholder="Sistema de comunicación"
                 allowClear
                 options={sistemas.map(s => {
                   const c = s.color ?? '#1677ff'
                   return {
-                    value: s.codigo,
+                    value: s.id,
                     label: (
                       <Space size={6}>
                         <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>
@@ -187,12 +188,12 @@ export default function NuevoReportePage() {
               <Input />
             </Form.Item>
 
-            <Form.Item label="Zona" name="zona">
+            <Form.Item label="Zona" name="zona_id">
               <Select
                 placeholder="Zona FMRE"
                 allowClear
                 labelRender={({ value }) => {
-                  const z = zonas.find(z => z.codigo === value)
+                  const z = zonas.find(z => z.id === value)
                   if (!z) return <span>{String(value)}</span>
                   const c = z.color ?? '#1677ff'
                   return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{z.codigo}</Tag>
@@ -200,7 +201,7 @@ export default function NuevoReportePage() {
                 options={zonas.map(z => {
                   const c = z.color ?? '#1677ff'
                   return {
-                    value: z.codigo,
+                    value: z.id,
                     label: (
                       <Space size={6}>
                         <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{z.codigo}</Tag>
@@ -212,19 +213,19 @@ export default function NuevoReportePage() {
               />
             </Form.Item>
 
-            <Form.Item label="Estación operando" name="qrz_station">
+            <Form.Item label="Estación operando" name="estacion_id">
               <Select
                 placeholder="QRZ de la estación"
                 allowClear
                 labelRender={({ value }) => {
-                  const est = estaciones.find(e => e.qrz === value)
+                  const est = estaciones.find(e => e.id === value)
                   const c = est?.color ?? '#1677ff'
-                  return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{String(value)}</Tag>
+                  return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{est?.qrz ?? String(value)}</Tag>
                 }}
                 options={estaciones.map(e => {
                   const c = e.color ?? '#1677ff'
                   return {
-                    value: e.qrz,
+                    value: e.id,
                     label: (
                       <Space size={6}>
                         <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{e.qrz}</Tag>

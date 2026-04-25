@@ -218,14 +218,14 @@ export default function LibretaPage() {
       const { data } = await reportesApi.list({
         fecha_inicio: fecha.startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
         fecha_fin: fecha.endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
-        tipo_reporte: cfg.tipo_evento,
+        evento_id: eventos.find(e => e.tipo === cfg.tipo_evento)?.id,
         page_size: 200,
       })
       setResumen(data.items)
     } catch { /* silencioso */ } finally {
       setLoadingResumen(false)
     }
-  }, [])
+  }, [eventos])
 
   // Arrancar/detener polling cada 30s cuando la sesión está activa
   useEffect(() => {
@@ -267,8 +267,8 @@ export default function LibretaPage() {
       operador: record.operador,
       ciudad: record.ciudad,
       estado: record.estado,
-      zona: record.zona,
-      sistema: record.sistema,
+      zona_id: record.zona_id,
+      sistema_id: record.sistema_id,
       senal: record.senal,
       observaciones: record.observaciones,
     })
@@ -580,10 +580,10 @@ export default function LibretaPage() {
           senal: parseInt(fila.rst) || 59,
           estado: fila.estado,
           ciudad: fila.municipio,
-          zona: fila.zona,
-          sistema: fila.sistema || sesionConfig.sistema_default,
-          tipo_reporte: sesionConfig.tipo_evento,
-          qrz_station: sesionConfig.estacion,
+          zona_id: zonas.find(z => z.codigo === fila.zona)?.id,
+          sistema_id: sistemas.find(s => s.codigo === (fila.sistema || sesionConfig.sistema_default))?.id,
+          evento_id: eventos.find(e => e.tipo === sesionConfig.tipo_evento)?.id,
+          estacion_id: estaciones.find(e => e.qrz === sesionConfig.estacion)?.id,
           fecha_reporte: sesionConfig.fecha,
         })
       ))
@@ -1206,20 +1206,20 @@ export default function LibretaPage() {
                 render: (v: string) => v || <Text type="secondary">—</Text> },
               zona: {
                 title: 'Zona', dataIndex: 'zona', width: 80,
-                render: (v: string) => {
-                  const color = zonaColor(v)
-                  return v
-                    ? <Tag style={{ backgroundColor: color, borderColor: color, color: '#fff', fontWeight: 700 }}>{v}</Tag>
+                render: (_: unknown, record: Reporte) => {
+                  const codigo = record.zona?.codigo
+                  const color = zonaColor(codigo ?? '')
+                  return codigo
+                    ? <Tag style={{ backgroundColor: color, borderColor: color, color: '#fff', fontWeight: 700 }}>{codigo}</Tag>
                     : <Text type="secondary">—</Text>
                 },
               },
               sistema: {
                 title: 'Sistema', dataIndex: 'sistema', width: 85,
-                render: (v: string) => {
-                  if (!v) return <Text type="secondary">—</Text>
-                  const s = sistemas.find(s => s.codigo === v)
-                  const c = s?.color ?? '#1677ff'
-                  return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{v}</Tag>
+                render: (_: unknown, record: Reporte) => {
+                  if (!record.sistema) return <Text type="secondary">—</Text>
+                  const c = record.sistema.color ?? '#1677ff'
+                  return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{record.sistema.codigo}</Tag>
                 },
               },
               senal: { title: 'RST', dataIndex: 'senal', width: 55, align: 'center' as const,
@@ -1308,10 +1308,10 @@ export default function LibretaPage() {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="Zona" name="zona">
+              <Form.Item label="Zona" name="zona_id">
                 <Select placeholder="Zona" allowClear
                   labelRender={({ value }) => {
-                    const z = zonas.find(z => z.codigo === value)
+                    const z = zonas.find(z => z.id === value)
                     if (!z) return <span>{String(value)}</span>
                     const c = z.color ?? '#1677ff'
                     return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{z.codigo}</Tag>
@@ -1319,17 +1319,17 @@ export default function LibretaPage() {
                   options={zonas.map(z => {
                     const c = z.color ?? '#1677ff'
                     return {
-                      value: z.codigo,
+                      value: z.id,
                       label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{z.codigo}</Tag>,
                     }
                   })} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="Sistema" name="sistema">
+              <Form.Item label="Sistema" name="sistema_id">
                 <Select placeholder="Sistema" allowClear
                   labelRender={({ value }) => {
-                    const s = sistemas.find(s => s.codigo === value)
+                    const s = sistemas.find(s => s.id === value)
                     if (!s) return <span>{String(value)}</span>
                     const c = s.color ?? '#1677ff'
                     return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{s.codigo}</Tag>
@@ -1337,7 +1337,7 @@ export default function LibretaPage() {
                   options={sistemas.map(s => {
                     const c = s.color ?? '#1677ff'
                     return {
-                      value: s.codigo,
+                      value: s.id,
                       label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{s.codigo}</Tag>,
                     }
                   })} />

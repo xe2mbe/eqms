@@ -18,10 +18,9 @@ def list_reportes(
     page_size: int = Query(50, ge=1, le=200),
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
-    tipo_reporte: Optional[str] = None,
     evento_id: Optional[int] = None,
-    sistema: Optional[str] = None,
-    zona: Optional[str] = None,
+    zona_id: Optional[int] = None,
+    sistema_id: Optional[int] = None,
     estado: Optional[str] = None,
     indicativo: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -35,12 +34,10 @@ def list_reportes(
         q = q.filter(models.Reporte.fecha_reporte <= fecha_fin)
     if evento_id:
         q = q.filter(models.Reporte.evento_id == evento_id)
-    elif tipo_reporte:
-        q = q.filter(models.Reporte.tipo_reporte == tipo_reporte)
-    if sistema:
-        q = q.filter(models.Reporte.sistema == sistema)
-    if zona:
-        q = q.filter(models.Reporte.zona == zona)
+    if zona_id:
+        q = q.filter(models.Reporte.zona_id == zona_id)
+    if sistema_id:
+        q = q.filter(models.Reporte.sistema_id == sistema_id)
     if estado:
         q = q.filter(models.Reporte.estado.ilike(f"%{estado}%"))
     if indicativo:
@@ -94,13 +91,6 @@ def create_reporte(
             {"ind": data["indicativo"].upper()},
         ).scalar()
         data["pais"] = prefijo
-    # Sincronizar evento_id desde tipo_reporte
-    if data.get("tipo_reporte") and not data.get("evento_id"):
-        ev = db.execute(
-            text("SELECT id FROM eventos WHERE tipo = :tipo LIMIT 1"),
-            {"tipo": data["tipo_reporte"]},
-        ).scalar()
-        data["evento_id"] = ev
     reporte = models.Reporte(**data, capturado_por=current_user.id)
     db.add(reporte)
     db.commit()
@@ -136,14 +126,6 @@ def update_reporte(
     updates = body.model_dump(exclude_unset=True)
     for field, value in updates.items():
         setattr(r, field, value)
-    # Sincronizar evento_id si cambió tipo_reporte
-    if "tipo_reporte" in updates:
-        ev = db.execute(
-            text("SELECT id FROM eventos WHERE tipo = :tipo LIMIT 1"),
-            {"tipo": updates["tipo_reporte"]},
-        ).scalar()
-        r.evento_id = ev
-
     db.commit()
     db.refresh(r)
     _audit(db, current_user.id, "UPDATE", "reportes", r.id, f"Reporte actualizado: {r.indicativo}")

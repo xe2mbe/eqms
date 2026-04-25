@@ -152,11 +152,11 @@ class ReporteCreate(BaseModel):
     senal: int = 59
     estado: Optional[str] = None
     ciudad: Optional[str] = None
-    zona: Optional[str] = None
+    zona_id: Optional[int] = None
     pais: Optional[str] = None
-    sistema: Optional[str] = None
-    tipo_reporte: str
-    qrz_station: Optional[str] = None
+    sistema_id: Optional[int] = None
+    evento_id: Optional[int] = None
+    estacion_id: Optional[int] = None
     fecha_reporte: datetime
     observaciones: Optional[str] = None
 
@@ -166,11 +166,11 @@ class ReporteUpdate(BaseModel):
     senal: Optional[int] = None
     estado: Optional[str] = None
     ciudad: Optional[str] = None
-    zona: Optional[str] = None
+    zona_id: Optional[int] = None
     pais: Optional[str] = None
-    sistema: Optional[str] = None
-    tipo_reporte: Optional[str] = None
-    qrz_station: Optional[str] = None
+    sistema_id: Optional[int] = None
+    evento_id: Optional[int] = None
+    estacion_id: Optional[int] = None
     fecha_reporte: Optional[datetime] = None
     observaciones: Optional[str] = None
 
@@ -181,12 +181,15 @@ class ReporteOut(BaseModel):
     senal: int
     estado: Optional[str] = None
     ciudad: Optional[str] = None
-    zona: Optional[str] = None
+    zona_id: Optional[int] = None
+    zona: Optional["ZonaOut"] = None
     pais: Optional[str] = None
-    sistema: Optional[str] = None
-    tipo_reporte: Optional[str] = None
+    sistema_id: Optional[int] = None
+    sistema: Optional["SistemaOut"] = None
     evento_id: Optional[int] = None
-    qrz_station: Optional[str] = None
+    evento: Optional["EventoOut"] = None
+    estacion_id: Optional[int] = None
+    estacion: Optional["EstacionOut"] = None
     fecha_reporte: datetime
     observaciones: Optional[str] = None
     created_at: datetime
@@ -263,10 +266,10 @@ class ReporteRSCreate(BaseModel):
     plataforma_id: int
     estado: Optional[str] = None
     ciudad: Optional[str] = None
-    zona: Optional[str] = None
+    zona_id: Optional[int] = None
     pais: Optional[str] = None
-    tipo_reporte: Optional[str] = None
-    qrz_station: Optional[str] = None
+    evento_id: Optional[int] = None
+    estacion_id: Optional[int] = None
     url_publicacion: Optional[str] = None
     fecha_reporte: datetime
     observaciones: Optional[str] = None
@@ -280,11 +283,13 @@ class ReporteRSOut(BaseModel):
     plataforma: PlataformaRSOut
     estado: Optional[str] = None
     ciudad: Optional[str] = None
-    zona: Optional[str] = None
+    zona_id: Optional[int] = None
+    zona: Optional["ZonaOut"] = None
     pais: Optional[str] = None
-    tipo_reporte: Optional[str] = None
     evento_id: Optional[int] = None
-    qrz_station: Optional[str] = None
+    evento: Optional["EventoOut"] = None
+    estacion_id: Optional[int] = None
+    estacion: Optional["EstacionOut"] = None
     url_publicacion: Optional[str] = None
     fecha_reporte: datetime
     created_at: datetime

@@ -23,10 +23,10 @@ export interface ReporteRSPayload {
   plataforma_id: number
   estado?: string
   ciudad?: string
-  zona?: string
+  zona_id?: number
   pais?: string
-  tipo_reporte?: string
-  qrz_station?: string
+  evento_id?: number
+  estacion_id?: number
   url_publicacion?: string
   fecha_reporte: string
   observaciones?: string

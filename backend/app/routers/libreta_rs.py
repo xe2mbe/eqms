@@ -127,8 +127,8 @@ def list_reportes_rs(
     page_size: int = Query(50, ge=1, le=200),
     plataforma_id: Optional[int] = None,
     indicativo: Optional[str] = None,
-    tipo_reporte: Optional[str] = None,
     evento_id: Optional[int] = None,
+    zona_id: Optional[int] = None,
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
     db: Session = Depends(get_db),
@@ -141,8 +141,8 @@ def list_reportes_rs(
         q = q.filter(models.ReporteRS.indicativo.ilike(f"%{indicativo}%"))
     if evento_id:
         q = q.filter(models.ReporteRS.evento_id == evento_id)
-    elif tipo_reporte:
-        q = q.filter(models.ReporteRS.tipo_reporte == tipo_reporte)
+    if zona_id:
+        q = q.filter(models.ReporteRS.zona_id == zona_id)
     if fecha_inicio:
         q = q.filter(models.ReporteRS.fecha_reporte >= fecha_inicio)
     if fecha_fin:

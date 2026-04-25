@@ -49,17 +49,19 @@ def resumen(
     )
 
     sistemas = (
-        q.with_entities(models.Reporte.sistema, func.count().label("total"))
-        .filter(models.Reporte.sistema != None)
-        .group_by(models.Reporte.sistema)
+        q.join(models.Sistema, models.Reporte.sistema_id == models.Sistema.id)
+        .with_entities(models.Sistema.codigo, func.count().label("total"))
+        .filter(models.Reporte.sistema_id != None)
+        .group_by(models.Sistema.codigo)
         .order_by(func.count().desc())
         .all()
     )
 
     eventos = (
-        q.with_entities(models.Reporte.tipo_reporte, func.count().label("total"))
-        .filter(models.Reporte.tipo_reporte != None)
-        .group_by(models.Reporte.tipo_reporte)
+        q.join(models.Evento, models.Reporte.evento_id == models.Evento.id)
+        .with_entities(models.Evento.tipo, func.count().label("total"))
+        .filter(models.Reporte.evento_id != None)
+        .group_by(models.Evento.tipo)
         .order_by(func.count().desc())
         .all()
     )
@@ -96,11 +98,13 @@ def por_sistema(
     evento_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
-    q = db.query(models.Reporte.sistema, func.count().label("total")).filter(models.Reporte.sistema != None)
+    q = (db.query(models.Sistema.codigo, func.count().label("total"))
+         .join(models.Reporte, models.Reporte.sistema_id == models.Sistema.id)
+         .filter(models.Reporte.sistema_id != None))
     if fecha_inicio: q = q.filter(models.Reporte.fecha_reporte >= fecha_inicio)
     if fecha_fin:    q = q.filter(models.Reporte.fecha_reporte <= fecha_fin)
     if evento_id:    q = q.filter(models.Reporte.evento_id == evento_id)
-    rows = q.group_by(models.Reporte.sistema).order_by(func.count().desc()).all()
+    rows = q.group_by(models.Sistema.codigo).order_by(func.count().desc()).all()
     return [{"sistema": s, "total": t} for s, t in rows]
 
 
@@ -253,7 +257,7 @@ def rs_top_indicativos(
         SELECT p.nombre AS plataforma, r.indicativo,
                COUNT(*) AS total,
                COUNT(DISTINCT r.estado) AS estados,
-               COUNT(DISTINCT r.zona)   AS zonas,
+               COUNT(DISTINCT r.zona_id) AS zonas,
                MAX(r.fecha_reporte)     AS ultimo,
                rx.nombre_completo
         FROM reportes_rs r
@@ -279,15 +283,16 @@ def rs_zona_actividad(
     db: Session = Depends(get_db),
 ):
     rows = db.execute(text("""
-        SELECT p.nombre AS plataforma, r.zona,
+        SELECT p.nombre AS plataforma, z.codigo AS zona,
                COUNT(*) AS total,
                COUNT(DISTINCT r.indicativo) AS indicativos
         FROM reportes_rs r
         JOIN plataformas_rs p ON p.id = r.plataforma_id
-        WHERE r.zona IS NOT NULL
+        JOIN zonas z ON z.id = r.zona_id
+        WHERE r.zona_id IS NOT NULL
           AND (:fi IS NULL OR r.fecha_reporte >= :fi)
           AND (:ff IS NULL OR r.fecha_reporte <= :ff)
-        GROUP BY p.nombre, r.zona ORDER BY p.nombre, total DESC
+        GROUP BY p.nombre, z.codigo ORDER BY p.nombre, total DESC
     """), {"fi": fecha_inicio, "ff": _fin(fecha_fin)}).fetchall()
     return [{"plataforma": r[0], "zona": r[1], "total": r[2], "indicativos": r[3]} for r in rows]
 
@@ -404,7 +409,7 @@ def top_indicativos(
         SELECT r.indicativo,
                COUNT(*) AS total,
                COUNT(DISTINCT r.estado) AS estados,
-               COUNT(DISTINCT r.zona)   AS zonas,
+               COUNT(DISTINCT r.zona_id) AS zonas,
                MAX(r.fecha_reporte)     AS ultimo,
                rx.nombre_completo
         FROM reportes r
@@ -431,16 +436,17 @@ def zona_actividad(
 ):
     """Actividad por zona FMRE: contactos, indicativos únicos, señal promedio."""
     rows = db.execute(text("""
-        SELECT zona,
+        SELECT z.codigo AS zona,
                COUNT(*) AS total,
-               COUNT(DISTINCT indicativo) AS indicativos,
-               ROUND(AVG(senal), 1) AS senal_promedio
-        FROM reportes
-        WHERE zona IS NOT NULL
-          AND (:fi IS NULL OR fecha_reporte >= :fi)
-          AND (:ff IS NULL OR fecha_reporte <= :ff)
-          AND (:evento_id IS NULL OR evento_id = :evento_id)
-        GROUP BY zona ORDER BY total DESC
+               COUNT(DISTINCT r.indicativo) AS indicativos,
+               ROUND(AVG(r.senal), 1) AS senal_promedio
+        FROM reportes r
+        JOIN zonas z ON z.id = r.zona_id
+        WHERE r.zona_id IS NOT NULL
+          AND (:fi IS NULL OR r.fecha_reporte >= :fi)
+          AND (:ff IS NULL OR r.fecha_reporte <= :ff)
+          AND (:evento_id IS NULL OR r.evento_id = :evento_id)
+        GROUP BY z.codigo ORDER BY total DESC
     """), {"fi": fecha_inicio, "ff": _fin(fecha_fin), "evento_id": evento_id}).fetchall()
     return [{"zona": r[0], "total": r[1], "indicativos": r[2], "senal_promedio": float(r[3] or 0)} for r in rows]
 
@@ -562,13 +568,14 @@ def rst_por_zona(
 ):
     """Distribución de RST (señal) por zona: muestra calidad de propagación."""
     rows = db.execute(text("""
-        SELECT zona, senal, COUNT(*) AS total
-        FROM reportes
-        WHERE zona IS NOT NULL AND senal IS NOT NULL
-          AND (:fi IS NULL OR fecha_reporte >= :fi)
-          AND (:ff IS NULL OR fecha_reporte <= :ff)
-          AND (:evento_id IS NULL OR evento_id = :evento_id)
-        GROUP BY zona, senal ORDER BY zona, senal
+        SELECT z.codigo AS zona, r.senal, COUNT(*) AS total
+        FROM reportes r
+        JOIN zonas z ON z.id = r.zona_id
+        WHERE r.zona_id IS NOT NULL AND r.senal IS NOT NULL
+          AND (:fi IS NULL OR r.fecha_reporte >= :fi)
+          AND (:ff IS NULL OR r.fecha_reporte <= :ff)
+          AND (:evento_id IS NULL OR r.evento_id = :evento_id)
+        GROUP BY z.codigo, r.senal ORDER BY z.codigo, r.senal
     """), {"fi": fecha_inicio, "ff": fecha_fin, "evento_id": evento_id}).fetchall()
     return [{"zona": r[0], "senal": r[1], "total": r[2]} for r in rows]
 
@@ -582,13 +589,15 @@ def sistemas_por_zona(
 ):
     """Sistemas de comunicación usados por zona (infraestructura necesaria)."""
     rows = db.execute(text("""
-        SELECT zona, sistema, COUNT(*) AS total
-        FROM reportes
-        WHERE zona IS NOT NULL AND sistema IS NOT NULL
-          AND (:fi IS NULL OR fecha_reporte >= :fi)
-          AND (:ff IS NULL OR fecha_reporte <= :ff)
-          AND (:evento_id IS NULL OR evento_id = :evento_id)
-        GROUP BY zona, sistema ORDER BY zona, total DESC
+        SELECT z.codigo AS zona, s.codigo AS sistema, COUNT(*) AS total
+        FROM reportes r
+        JOIN zonas z ON z.id = r.zona_id
+        JOIN sistemas s ON s.id = r.sistema_id
+        WHERE r.zona_id IS NOT NULL AND r.sistema_id IS NOT NULL
+          AND (:fi IS NULL OR r.fecha_reporte >= :fi)
+          AND (:ff IS NULL OR r.fecha_reporte <= :ff)
+          AND (:evento_id IS NULL OR r.evento_id = :evento_id)
+        GROUP BY z.codigo, s.codigo ORDER BY z.codigo, total DESC
     """), {"fi": fecha_inicio, "ff": fecha_fin, "evento_id": evento_id}).fetchall()
     return [{"zona": r[0], "sistema": r[1], "total": r[2]} for r in rows]
 
@@ -601,12 +610,13 @@ def tendencia_eventos(
 ):
     """Tendencia mensual de reportes por tipo de evento."""
     rows = db.execute(text("""
-        SELECT DATE_TRUNC('month', fecha_reporte) AS mes,
-               tipo_reporte, COUNT(*) AS total
-        FROM reportes
-        WHERE tipo_reporte IS NOT NULL
-          AND (:fi IS NULL OR fecha_reporte >= :fi)
-          AND (:ff IS NULL OR fecha_reporte <= :ff)
-        GROUP BY mes, tipo_reporte ORDER BY mes, total DESC
+        SELECT DATE_TRUNC('month', r.fecha_reporte) AS mes,
+               e.tipo, COUNT(*) AS total
+        FROM reportes r
+        JOIN eventos e ON e.id = r.evento_id
+        WHERE r.evento_id IS NOT NULL
+          AND (:fi IS NULL OR r.fecha_reporte >= :fi)
+          AND (:ff IS NULL OR r.fecha_reporte <= :ff)
+        GROUP BY mes, e.tipo ORDER BY mes, total DESC
     """), {"fi": fecha_inicio, "ff": fecha_fin}).fetchall()
     return [{"mes": str(r[0]), "tipo": r[1], "total": r[2]} for r in rows]

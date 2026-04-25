@@ -27,12 +27,15 @@ export interface Reporte {
   senal: number
   estado?: string
   ciudad?: string
-  zona?: string
+  zona_id?: number
+  zona?: Zona
   pais?: string
-  sistema?: string
-  tipo_reporte?: string
+  sistema_id?: number
+  sistema?: Sistema
   evento_id?: number
-  qrz_station?: string
+  evento?: Evento
+  estacion_id?: number
+  estacion?: Estacion
   fecha_reporte: string
   observaciones?: string
   created_at: string
@@ -51,10 +54,9 @@ export interface PaginatedReportes {
 export interface ReporteFilters {
   fecha_inicio?: string
   fecha_fin?: string
-  tipo_reporte?: string
   evento_id?: number
-  sistema?: string
-  zona?: string
+  zona_id?: number
+  sistema_id?: number
   estado?: string
   indicativo?: string
   page?: number
@@ -149,11 +151,13 @@ export interface ReporteRS {
   plataforma: PlataformaRS
   estado?: string
   ciudad?: string
-  zona?: string
+  zona_id?: number
+  zona?: Zona
   pais?: string
-  tipo_reporte?: string
   evento_id?: number
-  qrz_station?: string
+  evento?: Evento
+  estacion_id?: number
+  estacion?: Estacion
   url_publicacion?: string
   fecha_reporte: string
   observaciones?: string

@@ -11,21 +11,21 @@ import { libretaRSApi } from '@/api/libretaRS'
 import { catalogosApi } from '@/api/catalogos'
 import { useAuthStore } from '@/store/authStore'
 import { useColPrefs } from '@/components/common/ColSettings'
-import type { ReporteRS, Evento, Zona, PlataformaRS, Estacion } from '@/types'
+import type { ReporteRS, Evento, PlataformaRS } from '@/types'
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
 
 const ALL_COL_KEYS = [
   'id', 'indicativo', 'senal', 'plataforma', 'pais', 'estado', 'zona',
-  'tipo_reporte', 'qrz_station', 'fecha_reporte', 'capturado_por_nombre',
+  'evento', 'estacion', 'fecha_reporte', 'capturado_por_nombre',
 ] as const
 type ColKey = typeof ALL_COL_KEYS[number]
 
 const COL_LABELS: Record<ColKey, string> = {
   id: 'ID', indicativo: 'Indicativo', senal: 'RST', plataforma: 'Red Social',
   pais: 'País', estado: 'Estado', zona: 'Zona',
-  tipo_reporte: 'Tipo', qrz_station: 'Estación', fecha_reporte: 'Fecha',
+  evento: 'Tipo', estacion: 'Estación', fecha_reporte: 'Fecha',
   capturado_por_nombre: 'Capturado por',
 }
 
@@ -47,21 +47,17 @@ export default function ReportesRSPage() {
   const [data, setData] = useState<ReporteRS[]>([])
   const [total, setTotal] = useState(0)
   const [eventos, setEventos] = useState<Evento[]>([])
-  const [zonas, setZonas] = useState<Zona[]>([])
   const [plataformas, setPlataformas] = useState<PlataformaRS[]>([])
-  const [estaciones, setEstaciones] = useState<Estacion[]>([])
   const [filters, setFilters] = useState<Filters>({ page: 1, page_size: 50 })
   const [tempFilters, setTempFilters] = useState<Partial<Filters>>({})
 
   const { colOrder, colVisible, colSettingsButton } = useColPrefs(
-    'reportes_rs', user?.id, ALL_COL_KEYS, LOCKED_KEYS, COL_LABELS,
+    'reportes_rs_v2', user?.id, ALL_COL_KEYS, LOCKED_KEYS, COL_LABELS,
   )
 
   useEffect(() => {
     catalogosApi.eventos().then(r => setEventos(r.data))
-    catalogosApi.zonas().then(r => setZonas(r.data))
     catalogosApi.plataformasRS().then(r => setPlataformas(r.data))
-    catalogosApi.estaciones().then(r => setEstaciones(r.data))
   }, [])
 
   useEffect(() => { fetchData() }, [filters])
@@ -123,31 +119,27 @@ export default function ReportesRSPage() {
     estado: { title: 'Estado', dataIndex: 'estado', width: 130 },
     zona: {
       title: 'Zona', dataIndex: 'zona', width: 80, align: 'center' as const,
-      render: (v: string) => {
-        if (!v) return null
-        const z = zonas.find(z => z.codigo === v)
-        return <Tag color={z?.color ?? '#1677ff'} style={{ fontWeight: 600 }}>{v}</Tag>
+      render: (_: unknown, record: ReporteRS) => {
+        const codigo = record.zona?.codigo
+        if (!codigo) return null
+        const c = record.zona?.color ?? '#1677ff'
+        return <Tag color={c} style={{ fontWeight: 600 }}>{codigo}</Tag>
       },
     },
-    tipo_reporte: {
-      title: 'Tipo', dataIndex: 'tipo_reporte', width: 160,
-      render: (v: string, record: ReporteRS) => {
-        const ev = record.evento_id
-          ? eventos.find(e => e.id === record.evento_id)
-          : eventos.find(e => e.tipo === v)
-        const label = ev?.tipo ?? v
-        if (!label) return null
-        const c = ev?.color ?? '#1677ff'
-        return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{label}</Tag>
+    evento: {
+      title: 'Tipo', dataIndex: 'evento', width: 160,
+      render: (_: unknown, record: ReporteRS) => {
+        if (!record.evento) return null
+        const c = record.evento.color ?? '#1677ff'
+        return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{record.evento.tipo}</Tag>
       },
     },
-    qrz_station: {
-      title: 'Estación', dataIndex: 'qrz_station', width: 120,
-      render: (v: string) => {
-        if (!v) return null
-        const est = estaciones.find(e => e.qrz === v)
-        const c = est?.color ?? '#1677ff'
-        return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{v}</Tag>
+    estacion: {
+      title: 'Estación', dataIndex: 'estacion', width: 120,
+      render: (_: unknown, record: ReporteRS) => {
+        if (!record.estacion) return null
+        const c = record.estacion.color ?? '#1677ff'
+        return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{record.estacion.qrz}</Tag>
       },
     },
     fecha_reporte: {

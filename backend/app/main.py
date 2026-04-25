@@ -49,9 +49,61 @@ async def lifespan(app: FastAPI):
         """))
         # reportes_rs: nuevos campos compatibles con tabla reportes
         conn.execute(text("ALTER TABLE reportes_rs ADD COLUMN IF NOT EXISTS senal INTEGER DEFAULT 59"))
-        conn.execute(text("ALTER TABLE reportes_rs ADD COLUMN IF NOT EXISTS qrz_station VARCHAR(20)"))
         conn.execute(text("ALTER TABLE reportes_rs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ"))
         conn.execute(text("ALTER TABLE plataformas_rs ADD COLUMN IF NOT EXISTS color VARCHAR(20) DEFAULT '#1677ff'"))
+
+        # FK migration: reportes
+        conn.execute(text("ALTER TABLE reportes ADD COLUMN IF NOT EXISTS zona_id INTEGER REFERENCES zonas(id)"))
+        conn.execute(text("ALTER TABLE reportes ADD COLUMN IF NOT EXISTS sistema_id INTEGER REFERENCES sistemas(id)"))
+        conn.execute(text("ALTER TABLE reportes ADD COLUMN IF NOT EXISTS estacion_id INTEGER REFERENCES estaciones(id)"))
+        conn.execute(text("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'reportes' AND column_name = 'zona'
+                ) THEN
+                    UPDATE reportes r SET zona_id = z.id
+                    FROM zonas z WHERE r.zona = z.codigo AND r.zona_id IS NULL;
+                    UPDATE reportes r SET sistema_id = s.id
+                    FROM sistemas s WHERE r.sistema = s.codigo AND r.sistema_id IS NULL;
+                    UPDATE reportes r SET sistema_id = s.id
+                    FROM sistemas s WHERE UPPER(r.sistema) = UPPER(s.codigo) AND r.sistema_id IS NULL;
+                    UPDATE reportes r SET estacion_id = e.id
+                    FROM estaciones e WHERE r.qrz_station = e.qrz AND r.estacion_id IS NULL;
+                    UPDATE reportes r SET evento_id = e.id
+                    FROM eventos e WHERE r.tipo_reporte = e.tipo AND r.evento_id IS NULL;
+                END IF;
+            END $$;
+        """))
+        conn.execute(text("ALTER TABLE reportes DROP COLUMN IF EXISTS zona"))
+        conn.execute(text("ALTER TABLE reportes DROP COLUMN IF EXISTS sistema"))
+        conn.execute(text("ALTER TABLE reportes DROP COLUMN IF EXISTS tipo_reporte"))
+        conn.execute(text("ALTER TABLE reportes DROP COLUMN IF EXISTS qrz_station"))
+
+        # FK migration: reportes_rs
+        conn.execute(text("ALTER TABLE reportes_rs ADD COLUMN IF NOT EXISTS zona_id INTEGER REFERENCES zonas(id)"))
+        conn.execute(text("ALTER TABLE reportes_rs ADD COLUMN IF NOT EXISTS estacion_id INTEGER REFERENCES estaciones(id)"))
+        conn.execute(text("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'reportes_rs' AND column_name = 'zona'
+                ) THEN
+                    UPDATE reportes_rs r SET zona_id = z.id
+                    FROM zonas z WHERE r.zona = z.codigo AND r.zona_id IS NULL;
+                    UPDATE reportes_rs r SET estacion_id = e.id
+                    FROM estaciones e WHERE r.qrz_station = e.qrz AND r.estacion_id IS NULL;
+                    UPDATE reportes_rs r SET evento_id = e.id
+                    FROM eventos e WHERE r.tipo_reporte = e.tipo AND r.evento_id IS NULL;
+                END IF;
+            END $$;
+        """))
+        conn.execute(text("ALTER TABLE reportes_rs DROP COLUMN IF EXISTS zona"))
+        conn.execute(text("ALTER TABLE reportes_rs DROP COLUMN IF EXISTS tipo_reporte"))
+        conn.execute(text("ALTER TABLE reportes_rs DROP COLUMN IF EXISTS qrz_station"))
+
         conn.commit()
 
     db = SessionLocal()

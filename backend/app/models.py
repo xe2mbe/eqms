@@ -96,12 +96,11 @@ class Reporte(Base):
     senal = Column(Integer, default=59)
     estado = Column(String(80), nullable=True, index=True)
     ciudad = Column(String(80), nullable=True)
-    zona = Column(String(20), nullable=True, index=True)
+    zona_id = Column(Integer, ForeignKey("zonas.id"), nullable=True, index=True)
     pais = Column(String(80), nullable=True, index=True)
-    sistema = Column(String(20), nullable=True, index=True)
-    tipo_reporte = Column(String(80), nullable=True, index=True)
+    sistema_id = Column(Integer, ForeignKey("sistemas.id"), nullable=True, index=True)
     evento_id = Column(Integer, ForeignKey("eventos.id"), nullable=True, index=True)
-    qrz_station = Column(String(20), nullable=True)
+    estacion_id = Column(Integer, ForeignKey("estaciones.id"), nullable=True)
     capturado_por = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     fecha_reporte = Column(DateTime(timezone=False), nullable=False, index=True)
     observaciones = Column(Text, nullable=True)
@@ -109,11 +108,12 @@ class Reporte(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     capturado_por_usuario = relationship("Usuario", back_populates="reportes", foreign_keys=[capturado_por])
+    zona = relationship("Zona", foreign_keys=[zona_id])
+    sistema = relationship("Sistema", foreign_keys=[sistema_id])
     evento = relationship("Evento", foreign_keys=[evento_id])
+    estacion = relationship("Estacion", foreign_keys=[estacion_id])
 
     __table_args__ = (
-        Index("ix_reportes_fecha_tipo", "fecha_reporte", "tipo_reporte"),
-        Index("ix_reportes_fecha_sistema", "fecha_reporte", "sistema"),
         Index("ix_reportes_indicativo_fecha", "indicativo", "fecha_reporte"),
     )
 
@@ -174,11 +174,10 @@ class ReporteRS(Base):
     plataforma_id = Column(Integer, ForeignKey("plataformas_rs.id"), nullable=False, index=True)
     estado = Column(String(80), nullable=True, index=True)
     ciudad = Column(String(80), nullable=True)
-    zona = Column(String(20), nullable=True, index=True)
+    zona_id = Column(Integer, ForeignKey("zonas.id"), nullable=True, index=True)
     pais = Column(String(80), nullable=True)
-    tipo_reporte = Column(String(80), nullable=True, index=True)
     evento_id = Column(Integer, ForeignKey("eventos.id"), nullable=True, index=True)
-    qrz_station = Column(String(20), nullable=True)
+    estacion_id = Column(Integer, ForeignKey("estaciones.id"), nullable=True)
     url_publicacion = Column(Text, nullable=True)
     capturado_por = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     fecha_reporte = Column(DateTime(timezone=False), nullable=False, index=True)
@@ -187,6 +186,9 @@ class ReporteRS(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     plataforma = relationship("PlataformaRS", back_populates="reportes_rs")
+    zona = relationship("Zona", foreign_keys=[zona_id])
+    evento = relationship("Evento", foreign_keys=[evento_id])
+    estacion = relationship("Estacion", foreign_keys=[estacion_id])
 
 
 class Radioexperimentador(Base):
