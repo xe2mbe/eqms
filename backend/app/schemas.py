@@ -398,6 +398,11 @@ class EmailBienvenidaConfig(BaseModel):
 class ReenviarCorreoRequest(BaseModel):
     password_inicial: str = ""
 
+class ResetPasswordRequest(BaseModel):
+    new_password: str = ""          # vacío = auto-generar
+    must_change_password: bool = True
+    enviar_correo: bool = False
+
 
 # ─── Audit ───────────────────────────────────────────────────────────────────
 

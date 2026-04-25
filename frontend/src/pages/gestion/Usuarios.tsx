@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import {
   Table, Button, Space, Tag, Modal, Form, Input, Select,
   Typography, Card, Popconfirm, message, Tooltip, Row, Col,
+  Alert, Checkbox, Segmented,
 } from 'antd'
 import {
   PlusOutlined, EditOutlined, LockOutlined,
-  MailOutlined, StopOutlined, CheckCircleOutlined,
+  MailOutlined, StopOutlined, CheckCircleOutlined, CopyOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import client from '@/api/client'
@@ -21,7 +22,12 @@ export default function UsuariosPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editUser, setEditUser] = useState<Usuario | null>(null)
   const [resetModal, setResetModal] = useState<Usuario | null>(null)
+  const [resetMode, setResetMode] = useState<'auto' | 'manual'>('auto')
   const [resetPwd, setResetPwd] = useState('')
+  const [resetMustChange, setResetMustChange] = useState(true)
+  const [resetSendEmail, setResetSendEmail] = useState(false)
+  const [resetResult, setResetResult] = useState<string | null>(null)
+  const [resetLoading, setResetLoading] = useState(false)
   const [form] = Form.useForm()
 
   useEffect(() => { fetchData() }, [])
@@ -76,13 +82,42 @@ export default function UsuariosPage() {
     }
   }
 
+  const openResetModal = (u: Usuario) => {
+    setResetModal(u)
+    setResetMode('auto')
+    setResetPwd('')
+    setResetMustChange(true)
+    setResetSendEmail(false)
+    setResetResult(null)
+  }
+
+  const closeResetModal = () => {
+    setResetModal(null)
+    setResetResult(null)
+  }
+
   const handleResetPassword = async () => {
-    if (!resetModal || !resetPwd) return
+    if (!resetModal) return
+    if (resetMode === 'manual' && resetPwd.length < 8) {
+      message.warning('La contraseña debe tener al menos 8 caracteres')
+      return
+    }
+    setResetLoading(true)
     try {
-      await client.post(`/usuarios/${resetModal.id}/reset-password`, { new_password: resetPwd })
-      message.success('Contraseña reseteada. El usuario debe cambiarla al próximo login.')
-      setResetModal(null); setResetPwd('')
-    } catch { message.error('Error al resetear contraseña') }
+      const { data } = await client.post<{ ok: boolean; password: string }>(
+        `/usuarios/${resetModal.id}/reset-password`,
+        {
+          new_password: resetMode === 'manual' ? resetPwd : '',
+          must_change_password: resetMustChange,
+          enviar_correo: resetSendEmail,
+        }
+      )
+      setResetResult(data.password)
+    } catch (e: any) {
+      message.error(e?.response?.data?.detail || 'Error al resetear contraseña')
+    } finally {
+      setResetLoading(false)
+    }
   }
 
   const fmt = (iso?: string) => iso ? dayjs(iso).format('DD/MM/YY HH:mm') : '—'
@@ -132,7 +167,7 @@ export default function UsuariosPage() {
           </Tooltip>
           <Tooltip title="Resetear contraseña">
             <Button size="small" icon={<LockOutlined />}
-              onClick={() => { setResetModal(r); setResetPwd('') }} />
+              onClick={() => openResetModal(r)} />
           </Tooltip>
           <Tooltip title={r.email ? 'Reenviar correo de bienvenida' : 'Sin correo registrado'}>
             <Button size="small" icon={<MailOutlined />}
@@ -244,21 +279,98 @@ export default function UsuariosPage() {
       <Modal
         title={`Resetear contraseña — ${resetModal?.full_name}`}
         open={Boolean(resetModal)}
-        onOk={handleResetPassword}
-        onCancel={() => { setResetModal(null); setResetPwd('') }}
-        okText="Resetear" cancelText="Cancelar"
-        okButtonProps={{ disabled: resetPwd.length < 8 }}
+        onCancel={closeResetModal}
+        footer={resetResult ? (
+          <Button onClick={closeResetModal}>Cerrar</Button>
+        ) : (
+          <Space>
+            <Button onClick={closeResetModal}>Cancelar</Button>
+            <Button
+              type="primary"
+              loading={resetLoading}
+              disabled={resetMode === 'manual' && resetPwd.length < 8}
+              onClick={handleResetPassword}
+            >
+              Resetear
+            </Button>
+          </Space>
+        )}
       >
-        <Form layout="vertical">
-          <Form.Item label="Nueva contraseña temporal"
-            extra="Mínimo 8 caracteres. El usuario deberá cambiarla al próximo login.">
-            <Input.Password
-              value={resetPwd}
-              onChange={e => setResetPwd(e.target.value)}
-              placeholder="Nueva contraseña..."
-            />
-          </Form.Item>
-        </Form>
+        {resetResult ? (
+          <Alert
+            type="success"
+            message="Contraseña reseteada"
+            description={
+              <div>
+                <div style={{ marginBottom: 8 }}>La nueva contraseña es:</div>
+                <Input
+                  value={resetResult}
+                  readOnly
+                  style={{ fontFamily: 'monospace', fontWeight: 600 }}
+                  addonAfter={
+                    <CopyOutlined
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(resetResult!)
+                        message.success('Contraseña copiada')
+                      }}
+                    />
+                  }
+                />
+                {resetSendEmail && (
+                  <div style={{ marginTop: 8, color: '#52c41a' }}>
+                    Correo enviado a {resetModal?.email}
+                  </div>
+                )}
+              </div>
+            }
+          />
+        ) : (
+          <Form layout="vertical" style={{ marginTop: 8 }}>
+            <Form.Item label="Modo de generación">
+              <Segmented
+                block
+                options={[
+                  { label: 'Auto-generar', value: 'auto' },
+                  { label: 'Manual', value: 'manual' },
+                ]}
+                value={resetMode}
+                onChange={(v) => { setResetMode(v as 'auto' | 'manual'); setResetPwd('') }}
+              />
+            </Form.Item>
+            {resetMode === 'manual' && (
+              <Form.Item label="Nueva contraseña" extra="Mínimo 8 caracteres">
+                <Input.Password
+                  value={resetPwd}
+                  onChange={e => setResetPwd(e.target.value)}
+                  placeholder="Nueva contraseña..."
+                />
+              </Form.Item>
+            )}
+            <Form.Item>
+              <Space direction="vertical" size={8}>
+                <Checkbox
+                  checked={resetMustChange}
+                  onChange={e => setResetMustChange(e.target.checked)}
+                >
+                  Solicitar cambio de contraseña en el próximo inicio de sesión
+                </Checkbox>
+                <Checkbox
+                  checked={resetSendEmail}
+                  onChange={e => setResetSendEmail(e.target.checked)}
+                  disabled={!resetModal?.email}
+                >
+                  Enviar correo con la nueva contraseña
+                  {!resetModal?.email && (
+                    <Text type="secondary" style={{ fontSize: 12, marginLeft: 6 }}>
+                      (sin correo registrado)
+                    </Text>
+                  )}
+                </Checkbox>
+              </Space>
+            </Form.Item>
+          </Form>
+        )}
       </Modal>
     </div>
   )
