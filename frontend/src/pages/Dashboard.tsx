@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<EstadisticaResumen | null>(null)
   const [dateRange, setDateRange] = useState<[string, string]>([
-    dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
+    '2020-01-01',
     dayjs().format('YYYY-MM-DD'),
   ])
   const [evento, setEvento] = useState<number | undefined>()

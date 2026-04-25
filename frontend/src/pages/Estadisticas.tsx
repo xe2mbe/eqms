@@ -24,7 +24,7 @@ export default function EstadisticasPage() {
   const [porSistema, setPorSistema]     = useState<{ sistema: string; total: number }[]>([])
   const [porEstado, setPorEstado]       = useState<{ estado: string; total: number }[]>([])
   const [dateRange, setDateRange]       = useState<[string, string]>([
-    dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
+    '2020-01-01',
     dayjs().format('YYYY-MM-DD'),
   ])
   const [evento, setEvento]             = useState<number | undefined>()

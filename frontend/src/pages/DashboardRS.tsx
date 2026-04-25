@@ -25,7 +25,7 @@ export default function DashboardRSPage() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<Resumen | null>(null)
   const [dateRange, setDateRange] = useState<[string, string]>([
-    dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
+    '2020-01-01',
     dayjs().format('YYYY-MM-DD'),
   ])
 

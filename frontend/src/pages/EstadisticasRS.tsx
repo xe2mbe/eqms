@@ -29,7 +29,7 @@ type MetricaTend = { periodo: string; plataforma: string; slug: string; total: n
 export default function EstadisticasRSPage() {
   const [loading, setLoading]             = useState(false)
   const [dateRange, setDateRange]         = useState<[string, string]>([
-    dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
+    '2020-01-01',
     dayjs().format('YYYY-MM-DD'),
   ])
   const [tendencia, setTendencia]         = useState<TendRow[]>([])
