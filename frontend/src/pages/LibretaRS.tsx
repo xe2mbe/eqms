@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import {
   Card, Form, Select, DatePicker, Button, Table, Typography,
-  Space, InputNumber, Input, message, Popconfirm, Modal, Alert,
-  Row, Col, AutoComplete, Divider, Tag, Tooltip,
+  Space, InputNumber, Input, message, Popconfirm, Modal,
+  Row, Col, AutoComplete, Divider, Tag, Tooltip, Badge,
 } from 'antd'
 import type { InputRef } from 'antd'
 import {
@@ -52,6 +52,7 @@ function validarIndicativo(ind: string): boolean {
   return cs === 'SWL' || INDICATIVO_RE.test(cs)
 }
 const normalizarRST = (val: string) => val.replace(/[^0-9]/g, '').slice(0, 3)
+const NOMBRES_DIA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
 // ── Tipo fila libreta RS ──────────────────────────────────────────────────────
 interface FilaRS {
@@ -112,6 +113,9 @@ export default function LibretaRSPage() {
   const [overwriteModal, setOverwriteModal] = useState(false)
   const [pendingMetricasPayload, setPendingMetricasPayload] = useState<{ payload: EstadisticaRSPayload; existingId: number } | null>(null)
 
+  // ── Modal día no permitido ──
+  const [diaEventoModal, setDiaEventoModal] = useState<{ fecha: dayjs.Dayjs; tipoEvento: string; diasConfig: number[] } | null>(null)
+
   // ── Modales edición ──
   const [editMetricaModal, setEditMetricaModal] = useState(false)
   const [editMetricaRecord, setEditMetricaRecord] = useState<EstadisticaRSRecord | null>(null)
@@ -132,6 +136,27 @@ export default function LibretaRSPage() {
     () => zonas.find(z => z.codigo.toLowerCase().includes('ext') || z.nombre.toLowerCase().includes('extranj'))?.codigo || 'Extranjero',
     [zonas]
   )
+
+  const verificarDiaEvento = useCallback((fecha: dayjs.Dayjs, tipoEvento: string): boolean => {
+    const evento = eventos.find(e => e.tipo === tipoEvento)
+    if (!evento?.recurrente || !evento.dias_semana?.length) return true
+    if (evento.dias_semana.includes(fecha.day())) return true
+    setDiaEventoModal({ fecha, tipoEvento, diasConfig: evento.dias_semana })
+    return false
+  }, [eventos])
+
+  const ocurrenciaEvento = useMemo<{ numero: number; dia: number } | null>(() => {
+    if (!sesionEvento) return null
+    const evento = eventos.find(e => e.tipo === sesionEvento)
+    if (!evento?.recurrente || !evento.dias_semana?.length) return null
+    const dia = sesionFecha.day()
+    if (!evento.dias_semana.includes(dia)) return null
+    const inicioAnio = sesionFecha.startOf('year')
+    const diasHastaFecha = sesionFecha.diff(inicioAnio, 'day')
+    const diasHastaPrimero = (dia - inicioAnio.day() + 7) % 7
+    const numero = Math.floor((diasHastaFecha - diasHastaPrimero) / 7) + 1
+    return { numero, dia }
+  }, [sesionFecha, sesionEvento, eventos])
 
   useEffect(() => {
     catalogosApi.plataformasRS().then(({ data }) => setPlataformas(data))
@@ -184,6 +209,7 @@ export default function LibretaRSPage() {
   const handleGuardarMetricas = async () => {
     if (!platSeleccionada) return
     if (!sesionEvento?.trim()) { message.warning('Selecciona un evento antes de guardar'); return }
+    if (!verificarDiaEvento(sesionFecha, sesionEvento)) return
     const values = await metricasForm.validateFields()
     const valores: Record<string, number> = {}
     for (const m of metricasActivas) valores[m.slug] = values[`m_${m.slug}`] ?? 0
@@ -237,6 +263,7 @@ export default function LibretaRSPage() {
     if (!cs) return
     if (!platSeleccionada) { message.warning('Selecciona una plataforma'); return }
     if (!sesionEvento?.trim()) { message.warning('Selecciona un evento'); return }
+    if (!verificarDiaEvento(sesionFecha, sesionEvento)) return
     if (!validarIndicativo(cs)) {
       message.error(`"${cs}" no es un indicativo válido`)
       return
@@ -644,18 +671,24 @@ export default function LibretaRSPage() {
         </Row>
       </Card>
 
-      <Alert
-        type="warning"
-        showIcon
-        style={{ marginBottom: 16 }}
-        message={`Registros de esta sesión con fecha: ${sesionFecha.format('DD/MM/YYYY')}`}
-        action={
+      <Card className="card-shadow" style={{ marginBottom: 12, background: '#f6ffed', borderColor: '#b7eb8f' }} size="small">
+        <Space size={6} wrap align="center">
+          {sesionEvento ? (
+            <Tag color="processing" style={{ fontWeight: 700, fontSize: 13 }}>📡 {sesionEvento}</Tag>
+          ) : (
+            <Tag color="default" style={{ fontWeight: 600 }}>Sin evento</Tag>
+          )}
+          {ocurrenciaEvento && (
+            <Tag color="purple" style={{ fontWeight: 700 }}>#{ocurrenciaEvento.numero} del año</Tag>
+          )}
+          <span style={{ fontWeight: 600 }}>con fecha</span>
+          <Tag color="blue" style={{ fontWeight: 600 }}>{sesionFecha.format('DD/MM/YYYY')}</Tag>
           <Button size="small" icon={<CalendarOutlined />}
             onClick={() => { setFechaTmp(sesionFecha); setDateModalOpen(true) }}>
             Cambiar
           </Button>
-        }
-      />
+        </Space>
+      </Card>
 
       {platSeleccionada && sesionEvento?.trim() && sesionEstacion ? (
         <>
@@ -779,7 +812,19 @@ export default function LibretaRSPage() {
 
           {/* ── Reportes guardados hoy ── */}
           <Card className="card-shadow"
-            title={`Reportes del ${sesionFecha.format('DD/MM/YYYY')} — ${platSeleccionada.nombre} (${totalReportes})`}
+            title={
+              <Space size={6} wrap>
+                <span style={{ fontWeight: 700 }}>Reportes guardados —</span>
+                <Tag color="processing" style={{ fontWeight: 700, fontSize: 13 }}>📡 {sesionEvento}</Tag>
+                {ocurrenciaEvento && (
+                  <Tag color="purple" style={{ fontWeight: 700 }}>#{ocurrenciaEvento.numero} del año</Tag>
+                )}
+                <span style={{ fontWeight: 600 }}>con fecha</span>
+                <Tag color="blue" style={{ fontWeight: 600 }}>{sesionFecha.format('DD/MM/YYYY')}</Tag>
+                <Tag style={{ fontWeight: 600 }}>{platSeleccionada.nombre}</Tag>
+                <Badge count={totalReportes} color="#1A569E" />
+              </Space>
+            }
             extra={colSettingsButton}>
             <Table dataSource={reportes} columns={reportesColumns} rowKey="id"
               loading={loadingReportes} size="small" pagination={{
@@ -823,7 +868,12 @@ export default function LibretaRSPage() {
       >
         <div style={{ padding: '16px 0' }}>
           <DatePicker format="DD/MM/YYYY" value={fechaTmp}
-            onChange={v => v && setFechaTmp(v)} style={{ width: '100%' }} allowClear={false} />
+            onChange={v => {
+              if (!v) return
+              setFechaTmp(v)
+              if (sesionEvento) verificarDiaEvento(v, sesionEvento)
+            }}
+            style={{ width: '100%' }} allowClear={false} />
         </div>
       </Modal>
 
@@ -876,6 +926,108 @@ export default function LibretaRSPage() {
           </Row>
         </Form>
       </Modal>
+
+      {/* ── Modal: Fecha no permitida para evento recurrente ── */}
+      {diaEventoModal && (
+        <Modal
+          open
+          footer={null}
+          onCancel={() => setDiaEventoModal(null)}
+          width={460}
+          styles={{ body: { padding: 0 }, content: { overflow: 'hidden', borderRadius: 12, padding: 0 } }}
+          closable={false}
+          centered
+        >
+          <div style={{
+            background: 'linear-gradient(135deg, #cf1322 0%, #ff4d4f 55%, #ff7a45 100%)',
+            borderRadius: '12px 12px 0 0',
+            padding: '28px 28px 20px',
+            textAlign: 'center',
+            color: '#fff',
+          }}>
+            <div style={{
+              width: 68, height: 68, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 14px',
+              fontSize: 36,
+              border: '3px solid rgba(255,255,255,0.4)',
+            }}>
+              📅
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: 1, marginBottom: 8 }}>
+              Fecha no permitida
+            </div>
+            <div style={{
+              background: 'rgba(255,255,255,0.22)', borderRadius: 20,
+              padding: '4px 18px', display: 'inline-block',
+              fontSize: 13, fontWeight: 700, letterSpacing: 0.5,
+            }}>
+              {diaEventoModal.tipoEvento}
+            </div>
+          </div>
+
+          <div style={{
+            background: '#fff2e8', borderBottom: '1px solid #ffbb96',
+            padding: '12px 22px', display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <span style={{ fontSize: 26 }}>🗓️</span>
+            <div>
+              <div style={{ fontSize: 11, color: '#874d00', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                Fecha intentada
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#d4380d', marginTop: 2 }}>
+                {NOMBRES_DIA[diaEventoModal.fecha.day()]} — {diaEventoModal.fecha.format('DD/MM/YYYY')}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ padding: '16px 22px 14px' }}>
+            <div style={{ fontSize: 11, color: '#595959', marginBottom: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+              Días configurados para este evento
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {NOMBRES_DIA.map((nombre, idx) => {
+                const esConfig = diaEventoModal.diasConfig.includes(idx)
+                const esIntentado = idx === diaEventoModal.fecha.day()
+                return (
+                  <div key={idx} style={{
+                    padding: '5px 11px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                    background: esIntentado && !esConfig ? '#ff4d4f' : esConfig ? '#52c41a' : '#f5f5f5',
+                    color: esIntentado && !esConfig ? '#fff' : esConfig ? '#fff' : '#bfbfbf',
+                    border: `2px solid ${esIntentado && !esConfig ? '#cf1322' : esConfig ? '#389e0d' : '#e0e0e0'}`,
+                  }}>
+                    {esConfig && '✓ '}{esIntentado && !esConfig && '✗ '}{nombre.slice(0, 3)}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div style={{
+            background: '#fffbe6', borderTop: '1px solid #ffe58f',
+            padding: '12px 22px', display: 'flex', alignItems: 'flex-start', gap: 10,
+          }}>
+            <span style={{ fontSize: 18, lineHeight: 1.6 }}>⚠️</span>
+            <span style={{ fontSize: 13, color: '#614700', lineHeight: 1.6 }}>
+              Cambia la fecha seleccionada para que coincida con un día configurado en este evento,
+              o para habilitar capturas en{' '}
+              <strong>{NOMBRES_DIA[diaEventoModal.fecha.day()]}</strong>,
+              contacta a un administrador para agregar este día al evento.
+            </span>
+          </div>
+
+          <div style={{ padding: '14px 22px 18px', display: 'flex', justifyContent: 'center' }}>
+            <Button
+              type="primary" danger size="large"
+              onClick={() => setDiaEventoModal(null)}
+              style={{ minWidth: 140, fontWeight: 700, borderRadius: 8 }}
+            >
+              Entendido
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

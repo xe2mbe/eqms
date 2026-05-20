@@ -25,6 +25,7 @@ import RedesSocialesPage from '@/pages/gestion/RedesSociales'
 import RadioexperimentadoresPage from '@/pages/gestion/Radioexperimentadores'
 import PerfilPage from '@/pages/Perfil'
 import PremiosPage from '@/pages/Premios'
+import ReportesPDFPage from '@/pages/gestion/ReportesPDF'
 
 export default function App() {
   const { checkAuth, isLoading } = useAuthStore()
@@ -67,6 +68,7 @@ export default function App() {
             <Route path="/gestion/estaciones"     element={<EstacionesPage />} />
             <Route path="/gestion/redes-sociales" element={<RedesSocialesPage />} />
             <Route path="/gestion/radioexperimentadores" element={<RadioexperimentadoresPage />} />
+            <Route path="/gestion/reportes-pdf"          element={<ReportesPDFPage />} />
             <Route path="/configuracion" element={<ConfiguracionPage />} />
             <Route path="/perfil" element={<PerfilPage />} />
             <Route path="/premios" element={<PremiosPage />} />

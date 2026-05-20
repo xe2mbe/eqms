@@ -39,6 +39,8 @@ class Evento(Base):
     tipo = Column(String(80), nullable=False, unique=True)
     descripcion = Column(Text, nullable=True)
     color = Column(String(20), nullable=True, default="#1677ff")
+    recurrente = Column(Boolean, default=False)
+    dias_semana = Column(JSONB, nullable=True, default=list)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -246,6 +248,23 @@ class LibretaConfigUsuario(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     usuario = relationship("Usuario", backref="libreta_config")
+
+
+class ReportePlantilla(Base):
+    __tablename__ = "reporte_plantillas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(120), nullable=False)
+    tipo = Column(String(10), nullable=False, default='rf')
+    evento_id = Column(Integer, ForeignKey("eventos.id"), nullable=True)
+    secciones = Column(JSONB, nullable=False, default=dict)
+    destinatarios = Column(JSONB, nullable=False, default=list)
+    asunto_email = Column(String(200), nullable=True, default="Estadísticas {evento} – {fecha}")
+    activa = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    evento = relationship("Evento")
 
 
 class AuditLog(Base):

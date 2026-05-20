@@ -6,7 +6,7 @@ import {
   UserOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   TeamOutlined, BookOutlined, SettingOutlined,
   AppstoreOutlined, CalendarOutlined, RadarChartOutlined,
-  ShareAltOutlined, ApiOutlined, AudioOutlined, TrophyOutlined, WifiOutlined,
+  ShareAltOutlined, ApiOutlined, AudioOutlined, TrophyOutlined, WifiOutlined, FilePdfOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
 
@@ -47,7 +47,8 @@ const menuItems = [
       { key: '/gestion/sistemas',      icon: <ApiOutlined />,       label: 'Sistemas' },
       { key: '/gestion/estaciones',    icon: <BookOutlined />,      label: 'Estaciones' },
       { key: '/gestion/redes-sociales',icon: <ShareAltOutlined />,  label: 'Redes Sociales' },
-      { key: '/gestion/radioexperimentadores', icon: <AudioOutlined />, label: 'Radioexperimentadores' },
+      { key: '/gestion/radioexperimentadores', icon: <AudioOutlined />,   label: 'Radioexperimentadores' },
+      { key: '/gestion/reportes-pdf',          icon: <FilePdfOutlined />, label: 'Reportes PDF' },
     ],
   },
   { key: '/configuracion', icon: <SettingOutlined />, label: 'Configuración' },

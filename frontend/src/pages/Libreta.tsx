@@ -47,6 +47,8 @@ function validarRST(val: string): boolean {
 }
 const normalizarRST = (val: string) => val.replace(/[^0-9]/g, '').slice(0, 3)
 
+const NOMBRES_DIA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 interface FilaLibreta {
   key: string
@@ -172,12 +174,39 @@ export default function LibretaPage() {
   const [editReporteForm] = Form.useForm()
   const [savingReporte, setSavingReporte] = useState(false)
 
+  // Modal día no permitido
+  const [diaEventoModal, setDiaEventoModal] = useState<{ fecha: dayjs.Dayjs; tipoEvento: string; diasConfig: number[] } | null>(null)
+
   // Modal editar operador (click en indicativo)
   const [editOpModal, setEditOpModal] = useState(false)
   const [editOpIndicativo, setEditOpIndicativo] = useState('')
   const [editOpForm] = Form.useForm()
   const [savingOp, setSavingOp] = useState(false)
   const [loadingOp, setLoadingOp] = useState(false)
+
+  // Número de ocurrencia del día en el año (ej. 20 → "Domingo #20 del año")
+  const ocurrenciaEvento = useMemo<{ numero: number; dia: number } | null>(() => {
+    if (!sesionConfig) return null
+    const evento = eventos.find(e => e.tipo === sesionConfig.tipo_evento)
+    if (!evento?.recurrente || !evento.dias_semana?.length) return null
+    const fecha = dayjs(sesionConfig.fecha)
+    const dia = fecha.day()
+    if (!evento.dias_semana.includes(dia)) return null
+    const inicioAnio = fecha.startOf('year')
+    const diasHastaFecha = fecha.diff(inicioAnio, 'day')
+    const diasHastaPrimero = (dia - inicioAnio.day() + 7) % 7
+    const numero = Math.floor((diasHastaFecha - diasHastaPrimero) / 7) + 1
+    return { numero, dia }
+  }, [sesionConfig, eventos])
+
+  // ── Validación día de evento recurrente ──────────────────────────────────
+  const verificarDiaEvento = useCallback((fecha: dayjs.Dayjs, tipoEvento: string): boolean => {
+    const evento = eventos.find(e => e.tipo === tipoEvento)
+    if (!evento?.recurrente || !evento.dias_semana?.length) return true
+    if (evento.dias_semana.includes(fecha.day())) return true
+    setDiaEventoModal({ fecha, tipoEvento, diasConfig: evento.dias_semana })
+    return false
+  }, [eventos])
 
   // ── Cargar catálogos + config ─────────────────────────────────────────────
   useEffect(() => {
@@ -369,13 +398,16 @@ export default function LibretaPage() {
   const iniciarSesion = async () => {
     try { await sesionForm.validateFields() } catch { return }
     const vals = sesionForm.getFieldsValue()
-    await activarSesion(vals, (vals.fecha_hora as dayjs.Dayjs).format('YYYY-MM-DDTHH:mm:ss'))
+    const fecha = vals.fecha_hora as dayjs.Dayjs
+    if (!verificarDiaEvento(fecha, vals.tipo_evento)) return
+    await activarSesion(vals, fecha.format('YYYY-MM-DDTHH:mm:ss'))
   }
 
   const handleCapturaDirecta = () => {
     setWarnModalOpen(false)
     const vals = sesionForm.getFieldsValue()
     if (!vals.tipo_evento) { setConfigVisible(true); return }
+    if (!verificarDiaEvento(fechaSeleccionada, vals.tipo_evento)) return
     activarSesion(vals, fechaSeleccionada.format('YYYY-MM-DDTHH:mm:ss'))
   }
 
@@ -746,7 +778,13 @@ export default function LibretaPage() {
         <Spin spinning={loadingConfig}>
           <div style={{ padding: '16px 0' }}>
             <DatePicker format="DD/MM/YYYY" value={fechaSeleccionada}
-              onChange={v => v && setFechaSeleccionada(v)} style={{ width: '100%' }} allowClear={false} />
+              onChange={v => {
+                if (!v) return
+                setFechaSeleccionada(v)
+                const tipoEvento = sesionForm.getFieldValue('tipo_evento') as string | undefined
+                if (tipoEvento) verificarDiaEvento(v, tipoEvento)
+              }}
+              style={{ width: '100%' }} allowClear={false} />
           </div>
         </Spin>
       </Modal>
@@ -1033,6 +1071,21 @@ export default function LibretaPage() {
       {/* Panel de captura */}
       {sesionActiva && (
         <Card className="card-shadow" style={{ marginBottom: 16, background: '#f6ffed', borderColor: '#b7eb8f' }}
+          title={sesionConfig && (
+            <Space size={6} wrap>
+              <Tag color="processing" style={{ fontWeight: 700, fontSize: 13 }}>
+                📡 {sesionConfig.tipo_evento}
+              </Tag>
+              <Tag color="blue" style={{ fontWeight: 600 }}>
+                {dayjs(sesionConfig.fecha).format('DD/MM/YYYY')}
+              </Tag>
+              {ocurrenciaEvento && (
+                <Tag color="purple" style={{ fontWeight: 700 }}>
+                  {NOMBRES_DIA[ocurrenciaEvento.dia]} #{ocurrenciaEvento.numero} del año
+                </Tag>
+              )}
+            </Space>
+          )}
           extra={
             <Tooltip title={configVisible ? 'Ocultar configuración' : 'Editar configuración'}>
               <Button size="small" icon={<SettingOutlined />}
@@ -1144,12 +1197,19 @@ export default function LibretaPage() {
           className="card-shadow"
           style={{ marginTop: 16 }}
           title={
-            <Space>
-              <span style={{ fontWeight: 700 }}>
-                Reportes guardados — {sesionConfig.tipo_evento}
-              </span>
+            <Space size={6} wrap>
+              <span style={{ fontWeight: 700 }}>Reportes guardados —</span>
+              <Tag color="processing" style={{ fontWeight: 700, fontSize: 13 }}>
+                📡 {sesionConfig.tipo_evento}
+              </Tag>
+              {ocurrenciaEvento
+                ? <Tag color="purple" style={{ fontWeight: 700 }}>#{ocurrenciaEvento.numero} del año</Tag>
+                : null}
+              <span style={{ fontWeight: 600 }}>con fecha</span>
+              <Tag color="blue" style={{ fontWeight: 600 }}>
+                {dayjs(sesionConfig.fecha).format('DD/MM/YYYY')}
+              </Tag>
               <Badge count={resumen.length} color="#1A569E" />
-              <Tag color="blue">{dayjs(sesionConfig.fecha).format('DD/MM/YYYY')}</Tag>
             </Space>
           }
           extra={
@@ -1422,6 +1482,114 @@ export default function LibretaPage() {
           </Form>
         </Spin>
       </Modal>
+
+      {/* ── Modal: Fecha no permitida para evento recurrente ── */}
+      {diaEventoModal && (
+        <Modal
+          open
+          footer={null}
+          onCancel={() => setDiaEventoModal(null)}
+          width={460}
+          styles={{ body: { padding: 0 }, content: { overflow: 'hidden', borderRadius: 12, padding: 0 } }}
+          closable={false}
+          centered
+        >
+          {/* Cabecera con gradiente */}
+          <div style={{
+            background: 'linear-gradient(135deg, #cf1322 0%, #ff4d4f 55%, #ff7a45 100%)',
+            borderRadius: '12px 12px 0 0',
+            padding: '28px 28px 20px',
+            textAlign: 'center',
+            color: '#fff',
+          }}>
+            <div style={{
+              width: 68, height: 68, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 14px',
+              fontSize: 36,
+              border: '3px solid rgba(255,255,255,0.4)',
+            }}>
+              📅
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: 1, marginBottom: 8 }}>
+              Fecha no permitida
+            </div>
+            <div style={{
+              background: 'rgba(255,255,255,0.22)', borderRadius: 20,
+              padding: '4px 18px', display: 'inline-block',
+              fontSize: 13, fontWeight: 700, letterSpacing: 0.5,
+            }}>
+              {diaEventoModal.tipoEvento}
+            </div>
+          </div>
+
+          {/* Fecha intentada */}
+          <div style={{
+            background: '#fff2e8', borderBottom: '1px solid #ffbb96',
+            padding: '12px 22px', display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <span style={{ fontSize: 26 }}>🗓️</span>
+            <div>
+              <div style={{ fontSize: 11, color: '#874d00', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                Fecha intentada
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#d4380d', marginTop: 2 }}>
+                {NOMBRES_DIA[diaEventoModal.fecha.day()]} — {diaEventoModal.fecha.format('DD/MM/YYYY')}
+              </div>
+            </div>
+          </div>
+
+          {/* Días de la semana */}
+          <div style={{ padding: '16px 22px 14px' }}>
+            <div style={{ fontSize: 11, color: '#595959', marginBottom: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+              Días configurados para este evento
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {NOMBRES_DIA.map((nombre, idx) => {
+                const esConfig = diaEventoModal.diasConfig.includes(idx)
+                const esIntentado = idx === diaEventoModal.fecha.day()
+                return (
+                  <div key={idx} style={{
+                    padding: '5px 11px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                    background: esIntentado && !esConfig ? '#ff4d4f' : esConfig ? '#52c41a' : '#f5f5f5',
+                    color: esIntentado && !esConfig ? '#fff' : esConfig ? '#fff' : '#bfbfbf',
+                    border: `2px solid ${esIntentado && !esConfig ? '#cf1322' : esConfig ? '#389e0d' : '#e0e0e0'}`,
+                    transition: 'all 0.2s',
+                  }}>
+                    {esConfig && '✓ '}{esIntentado && !esConfig && '✗ '}{nombre.slice(0, 3)}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Aviso administrador */}
+          <div style={{
+            background: '#fffbe6', borderTop: '1px solid #ffe58f',
+            padding: '12px 22px', display: 'flex', alignItems: 'flex-start', gap: 10,
+          }}>
+            <span style={{ fontSize: 18, lineHeight: 1.6 }}>⚠️</span>
+            <span style={{ fontSize: 13, color: '#614700', lineHeight: 1.6 }}>
+              Cambia la fecha seleccionada para que coincida con un día configurado en este evento,
+              o para habilitar capturas en{' '}
+              <strong>{NOMBRES_DIA[diaEventoModal.fecha.day()]}</strong>,
+              contacta a un administrador para agregar este día al evento.
+            </span>
+          </div>
+
+          {/* Footer */}
+          <div style={{ padding: '14px 22px 18px', display: 'flex', justifyContent: 'center' }}>
+            <Button
+              type="primary" danger size="large"
+              onClick={() => setDiaEventoModal(null)}
+              style={{ minWidth: 140, fontWeight: 700, borderRadius: 8 }}
+            >
+              Entendido
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

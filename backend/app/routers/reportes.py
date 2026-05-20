@@ -91,6 +91,24 @@ def create_reporte(
             {"ind": data["indicativo"].upper()},
         ).scalar()
         data["pais"] = prefijo
+    # Validar día de semana si el evento es recurrente
+    if data.get("evento_id") and data.get("fecha_reporte"):
+        evento = db.get(models.Evento, data["evento_id"])
+        if evento and evento.recurrente and evento.dias_semana:
+            # dayjs: 0=Dom,1=Lun,...,6=Sáb   Python weekday: 0=Lun,...,6=Dom
+            dia_js = (data["fecha_reporte"].weekday() + 1) % 7
+            if dia_js not in evento.dias_semana:
+                _DIAS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
+                dias_cfg  = ', '.join(_DIAS[d] for d in evento.dias_semana)
+                dia_nombre = _DIAS[dia_js]
+                raise HTTPException(
+                    422,
+                    f"La fecha ({dia_nombre} {data['fecha_reporte'].strftime('%d/%m/%Y')}) no corresponde "
+                    f"a un día de captura del evento \"{evento.tipo}\". "
+                    f"Días configurados: {dias_cfg}. "
+                    f"Contacta a un administrador para agregar {dia_nombre} al evento.",
+                )
+
     reporte = models.Reporte(**data, capturado_por=current_user.id)
     db.add(reporte)
     db.commit()

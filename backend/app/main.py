@@ -6,7 +6,7 @@ import logging, os
 
 from app.config import settings
 from app.database import Base, engine
-from app.routers import auth, reportes, usuarios, catalogos, estadisticas, operadores, configuracion, libreta, admin_db, premios, libreta_rs
+from app.routers import auth, reportes, usuarios, catalogos, estadisticas, operadores, configuracion, libreta, admin_db, premios, libreta_rs, reportes_pdf
 from app.seeds import seed_prefijos, seed_metricas_rs_default
 from app.database import SessionLocal
 from sqlalchemy import text
@@ -104,6 +104,23 @@ async def lifespan(app: FastAPI):
         conn.execute(text("ALTER TABLE reportes_rs DROP COLUMN IF EXISTS tipo_reporte"))
         conn.execute(text("ALTER TABLE reportes_rs DROP COLUMN IF EXISTS qrz_station"))
 
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS reporte_plantillas (
+                id SERIAL PRIMARY KEY,
+                nombre VARCHAR(120) NOT NULL,
+                tipo VARCHAR(10) NOT NULL DEFAULT 'rf',
+                evento_id INTEGER REFERENCES eventos(id),
+                secciones JSONB NOT NULL DEFAULT '{}',
+                destinatarios JSONB NOT NULL DEFAULT '[]',
+                asunto_email VARCHAR(200) DEFAULT 'Estadísticas {evento} – {fecha}',
+                activa BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ
+            )
+        """))
+        conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS tipo VARCHAR(10) NOT NULL DEFAULT 'rf'"))
+        conn.execute(text("ALTER TABLE eventos ADD COLUMN IF NOT EXISTS recurrente BOOLEAN DEFAULT FALSE"))
+        conn.execute(text("ALTER TABLE eventos ADD COLUMN IF NOT EXISTS dias_semana JSONB DEFAULT '[]'"))
         conn.commit()
 
     db = SessionLocal()
@@ -146,6 +163,7 @@ app.include_router(libreta.router,      prefix="/api/libreta",      tags=["Libre
 app.include_router(admin_db.router,     prefix="/api/admin/db",     tags=["Admin DB"])
 app.include_router(premios.router,      prefix="/api/premios",       tags=["Premios"])
 app.include_router(libreta_rs.router,   prefix="/api/libreta-rs",    tags=["Libreta RS"])
+app.include_router(reportes_pdf.router, prefix="/api/reportes-pdf",  tags=["Reportes PDF"])
 
 
 uploads_path = "/app/uploads"

@@ -68,6 +68,8 @@ export interface Evento {
   tipo: string
   descripcion?: string
   color?: string
+  recurrente?: boolean
+  dias_semana?: number[]
   is_active: boolean
 }
 
