@@ -116,7 +116,6 @@ export default function ReportesRSPage() {
       zona_id:         record.zona_id ?? null,
       estado:          record.estado ?? null,
       ciudad:          record.ciudad ?? null,
-      url_publicacion: record.url_publicacion ?? null,
       observaciones:   record.observaciones ?? null,
       fecha_reporte:   dayjs(record.fecha_reporte),
     })
@@ -137,7 +136,6 @@ export default function ReportesRSPage() {
         zona_id:         (values.zona_id as number) ?? undefined,
         estado:          (values.estado as string) ?? undefined,
         ciudad:          (values.ciudad as string) ?? undefined,
-        url_publicacion: (values.url_publicacion as string) ?? undefined,
         observaciones:   (values.observaciones as string) ?? undefined,
         fecha_reporte:   (values.fecha_reporte as ReturnType<typeof dayjs>).toISOString(),
       }
@@ -384,9 +382,6 @@ export default function ReportesRSPage() {
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item label="URL publicación" name="url_publicacion">
-            <Input placeholder="https://..." />
-          </Form.Item>
           <Form.Item label="Observaciones" name="observaciones">
             <Input.TextArea rows={2} />
           </Form.Item>
