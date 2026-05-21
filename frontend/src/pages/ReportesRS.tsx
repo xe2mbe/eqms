@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react'
 import {
-  Table, Button, Space, DatePicker, Input, Select,
+  Table, Button, Space, DatePicker, Input, Select, Modal, Form, InputNumber, Row, Col,
   Typography, Card, Tag, Popconfirm, message, Tooltip,
 } from 'antd'
 import {
   SearchOutlined, ClearOutlined, DeleteOutlined, EditOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
-import { libretaRSApi } from '@/api/libretaRS'
+import { libretaRSApi, type ReporteRSPayload } from '@/api/libretaRS'
 import { catalogosApi } from '@/api/catalogos'
 import { useAuthStore } from '@/store/authStore'
 import { useColPrefs } from '@/components/common/ColSettings'
-import type { ReporteRS, Evento, PlataformaRS } from '@/types'
+import type { ReporteRS, Evento, PlataformaRS, Zona, Estacion, Estado } from '@/types'
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
@@ -51,6 +51,14 @@ export default function ReportesRSPage() {
   const [filters, setFilters] = useState<Filters>({ page: 1, page_size: 50 })
   const [tempFilters, setTempFilters] = useState<Partial<Filters>>({})
 
+  const [editRecord, setEditRecord] = useState<ReporteRS | null>(null)
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [editLoading, setEditLoading] = useState(false)
+  const [editForm] = Form.useForm()
+  const [zonas, setZonas] = useState<Zona[]>([])
+  const [estaciones, setEstaciones] = useState<Estacion[]>([])
+  const [estados, setEstados] = useState<Estado[]>([])
+
   const { colOrder, colVisible, colSettingsButton } = useColPrefs(
     'reportes_rs_v3', user?.id, ALL_COL_KEYS, LOCKED_KEYS, COL_LABELS,
   )
@@ -58,6 +66,9 @@ export default function ReportesRSPage() {
   useEffect(() => {
     catalogosApi.eventos().then(r => setEventos(r.data))
     catalogosApi.plataformasRS().then(r => setPlataformas(r.data))
+    catalogosApi.zonas().then(r => setZonas(r.data))
+    catalogosApi.estaciones().then(r => setEstaciones(r.data))
+    catalogosApi.estados().then(r => setEstados(r.data))
   }, [])
 
   useEffect(() => { fetchData() }, [filters])
@@ -91,6 +102,53 @@ export default function ReportesRSPage() {
       fetchData()
     } catch {
       message.error('Error al eliminar el reporte')
+    }
+  }
+
+  const openEdit = (record: ReporteRS) => {
+    setEditRecord(record)
+    editForm.setFieldsValue({
+      indicativo:      record.indicativo,
+      senal:           record.senal,
+      plataforma_id:   record.plataforma_id,
+      evento_id:       record.evento_id ?? null,
+      estacion_id:     record.estacion_id ?? null,
+      zona_id:         record.zona_id ?? null,
+      estado:          record.estado ?? null,
+      ciudad:          record.ciudad ?? null,
+      url_publicacion: record.url_publicacion ?? null,
+      observaciones:   record.observaciones ?? null,
+      fecha_reporte:   dayjs(record.fecha_reporte),
+    })
+    setEditModalOpen(true)
+  }
+
+  const handleEditSave = async () => {
+    let values: Record<string, unknown>
+    try { values = await editForm.validateFields() } catch { return }
+    setEditLoading(true)
+    try {
+      const payload: ReporteRSPayload = {
+        indicativo:      values.indicativo as string,
+        senal:           values.senal as number,
+        plataforma_id:   values.plataforma_id as number,
+        evento_id:       (values.evento_id as number) ?? undefined,
+        estacion_id:     (values.estacion_id as number) ?? undefined,
+        zona_id:         (values.zona_id as number) ?? undefined,
+        estado:          (values.estado as string) ?? undefined,
+        ciudad:          (values.ciudad as string) ?? undefined,
+        url_publicacion: (values.url_publicacion as string) ?? undefined,
+        observaciones:   (values.observaciones as string) ?? undefined,
+        fecha_reporte:   (values.fecha_reporte as ReturnType<typeof dayjs>).toISOString(),
+      }
+      await libretaRSApi.updateReporte(editRecord!.id, payload)
+      message.success('Reporte actualizado')
+      setEditModalOpen(false)
+      fetchData()
+    } catch {
+      message.error('Error al actualizar el reporte')
+    } finally {
+      setEditLoading(false)
     }
   }
 
@@ -161,7 +219,7 @@ export default function ReportesRSPage() {
     render: (_: unknown, record: ReporteRS) => (
       <Space>
         <Tooltip title="Editar">
-          <Button size="small" icon={<EditOutlined />} disabled />
+          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)} />
         </Tooltip>
         <Popconfirm
           title="¿Eliminar este reporte?"
@@ -258,6 +316,82 @@ export default function ReportesRSPage() {
           }}
         />
       </Card>
+
+      <Modal
+        title={`Editar reporte RS — ${editRecord?.indicativo}`}
+        open={editModalOpen}
+        onOk={handleEditSave}
+        onCancel={() => setEditModalOpen(false)}
+        okText="Guardar" cancelText="Cancelar"
+        width={640}
+        confirmLoading={editLoading}
+      >
+        <Form form={editForm} layout="vertical" size="small">
+          <Row gutter={12}>
+            <Col span={8}>
+              <Form.Item label="Indicativo" name="indicativo" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="RST / Señal" name="senal">
+                <InputNumber min={1} max={599} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="Fecha / Hora" name="fecha_reporte" rules={[{ required: true }]}>
+                <DatePicker showTime format="DD/MM/YYYY HH:mm" style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item label="Red Social" name="plataforma_id" rules={[{ required: true }]}>
+                <Select options={plataformas.map(p => ({ value: p.id, label: p.nombre }))} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Evento" name="evento_id">
+                <Select allowClear showSearch optionFilterProp="label"
+                  options={eventos.map(e => ({ value: e.id, label: e.tipo }))} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item label="Estado" name="estado">
+                <Select allowClear showSearch optionFilterProp="label"
+                  options={estados.map(e => ({ value: e.nombre, label: e.nombre }))} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Zona" name="zona_id">
+                <Select allowClear showSearch optionFilterProp="label"
+                  options={zonas.map(z => ({ value: z.id, label: `${z.codigo} — ${z.nombre}` }))} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item label="Ciudad" name="ciudad">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Estación" name="estacion_id">
+                <Select allowClear showSearch optionFilterProp="label"
+                  options={estaciones.map(e => ({ value: e.id, label: e.qrz }))} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item label="URL publicación" name="url_publicacion">
+            <Input placeholder="https://..." />
+          </Form.Item>
+          <Form.Item label="Observaciones" name="observaciones">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }
