@@ -18,15 +18,15 @@ const { RangePicker } = DatePicker
 
 const ALL_COL_KEYS = [
   'id', 'indicativo', 'senal', 'plataforma', 'ciudad', 'pais', 'estado', 'zona',
-  'evento', 'estacion', 'fecha_reporte', 'capturado_por_nombre',
+  'evento', 'estacion', 'fecha_reporte', 'created_at', 'capturado_por_nombre',
 ] as const
 type ColKey = typeof ALL_COL_KEYS[number]
 
 const COL_LABELS: Record<ColKey, string> = {
   id: 'ID', indicativo: 'Indicativo', senal: 'RST', plataforma: 'Red Social',
   ciudad: 'Ciudad', pais: 'País', estado: 'Estado', zona: 'Zona',
-  evento: 'Tipo', estacion: 'Estación', fecha_reporte: 'Fecha',
-  capturado_por_nombre: 'Capturado por',
+  evento: 'Tipo', estacion: 'Estación', fecha_reporte: 'Fecha Evento',
+  created_at: 'Fecha Captura', capturado_por_nombre: 'Capturado por',
 }
 
 const LOCKED_KEYS: ColKey[] = ['indicativo']
@@ -60,7 +60,7 @@ export default function ReportesRSPage() {
   const [estados, setEstados] = useState<Estado[]>([])
 
   const { colOrder, colVisible, colSettingsButton } = useColPrefs(
-    'reportes_rs_v3', user?.id, ALL_COL_KEYS, LOCKED_KEYS, COL_LABELS,
+    'reportes_rs_v4', user?.id, ALL_COL_KEYS, LOCKED_KEYS, COL_LABELS,
   )
 
   useEffect(() => {
@@ -203,8 +203,14 @@ export default function ReportesRSPage() {
       },
     },
     fecha_reporte: {
-      title: 'Fecha', dataIndex: 'fecha_reporte', width: 140,
+      title: 'Fecha Evento', dataIndex: 'fecha_reporte', width: 140,
       render: (v: string) => dayjs(v).format('DD/MM/YYYY HH:mm'),
+    },
+    created_at: {
+      title: 'Fecha Captura', dataIndex: 'created_at', width: 140,
+      render: (v: string) => v
+        ? <span style={{ color: '#8c8c8c' }}>{dayjs(v).format('DD/MM/YYYY HH:mm')}</span>
+        : <span style={{ color: '#ccc' }}>—</span>,
     },
     capturado_por_nombre: {
       title: 'Capturado por', dataIndex: 'capturado_por_nombre', width: 140,

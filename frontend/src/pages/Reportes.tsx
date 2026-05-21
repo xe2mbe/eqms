@@ -22,7 +22,7 @@ const { RangePicker } = DatePicker
 
 const ALL_COL_KEYS = [
   'id', 'indicativo', 'senal', 'ciudad', 'pais', 'estado', 'zona',
-  'sistema', 'evento', 'estacion', 'fecha_reporte', 'capturado_por_nombre',
+  'sistema', 'evento', 'estacion', 'fecha_reporte', 'created_at', 'capturado_por_nombre',
 ] as const
 type ColKey = typeof ALL_COL_KEYS[number]
 
@@ -37,7 +37,8 @@ const COL_LABELS: Record<ColKey, string> = {
   sistema: 'Sistema',
   evento: 'Tipo',
   estacion: 'Estación',
-  fecha_reporte: 'Fecha',
+  fecha_reporte: 'Fecha Evento',
+  created_at: 'Fecha Captura',
   capturado_por_nombre: 'Capturado por',
 }
 
@@ -59,7 +60,7 @@ export default function ReportesPage() {
   const [deletingBulk, setDeletingBulk] = useState(false)
 
   const { colOrder, colVisible, colSettingsButton } = useColPrefs(
-    'reportes_v3', user?.id, ALL_COL_KEYS, LOCKED_KEYS, COL_LABELS,
+    'reportes_v4', user?.id, ALL_COL_KEYS, LOCKED_KEYS, COL_LABELS,
   )
 
   useEffect(() => {
@@ -169,8 +170,14 @@ export default function ReportesPage() {
       },
     },
     fecha_reporte: {
-      title: 'Fecha', dataIndex: 'fecha_reporte', width: 140,
+      title: 'Fecha Evento', dataIndex: 'fecha_reporte', width: 140,
       render: (v: string) => dayjs(v).format('DD/MM/YYYY HH:mm'),
+    },
+    created_at: {
+      title: 'Fecha Captura', dataIndex: 'created_at', width: 140,
+      render: (v: string) => v
+        ? <span style={{ color: '#8c8c8c' }}>{dayjs(v).format('DD/MM/YYYY HH:mm')}</span>
+        : <span style={{ color: '#ccc' }}>—</span>,
     },
     capturado_por_nombre: {
       title: 'Capturado por', dataIndex: 'capturado_por_nombre', width: 140,
