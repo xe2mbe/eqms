@@ -17,13 +17,13 @@ const { Title } = Typography
 const { RangePicker } = DatePicker
 
 const ALL_COL_KEYS = [
-  'id', 'indicativo', 'senal', 'plataforma', 'ciudad', 'pais', 'estado', 'zona',
+  'id', 'indicativo', 'operador', 'senal', 'plataforma', 'ciudad', 'pais', 'estado', 'zona',
   'evento', 'estacion', 'fecha_reporte', 'created_at', 'capturado_por_nombre',
 ] as const
 type ColKey = typeof ALL_COL_KEYS[number]
 
 const COL_LABELS: Record<ColKey, string> = {
-  id: 'ID', indicativo: 'Indicativo', senal: 'RST', plataforma: 'Red Social',
+  id: 'ID', indicativo: 'Indicativo', operador: 'Operador', senal: 'RST', plataforma: 'Red Social',
   ciudad: 'Ciudad', pais: 'País', estado: 'Estado', zona: 'Zona',
   evento: 'Tipo', estacion: 'Estación', fecha_reporte: 'Fecha Evento',
   created_at: 'Fecha Captura', capturado_por_nombre: 'Capturado por',
@@ -60,7 +60,7 @@ export default function ReportesRSPage() {
   const [estados, setEstados] = useState<Estado[]>([])
 
   const { colOrder, colVisible, colSettingsButton } = useColPrefs(
-    'reportes_rs_v4', user?.id, ALL_COL_KEYS, LOCKED_KEYS, COL_LABELS,
+    'reportes_rs_v5', user?.id, ALL_COL_KEYS, LOCKED_KEYS, COL_LABELS,
   )
 
   useEffect(() => {
@@ -155,6 +155,10 @@ export default function ReportesRSPage() {
     indicativo: {
       title: 'Indicativo', dataIndex: 'indicativo', width: 110, fixed: 'left' as const,
       render: (v: string) => <strong style={{ color: '#1A569E' }}>{v}</strong>,
+    },
+    operador: {
+      title: 'Operador', dataIndex: 'operador', width: 160,
+      render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
     },
     senal: {
       title: 'RST', dataIndex: 'senal', width: 70,
