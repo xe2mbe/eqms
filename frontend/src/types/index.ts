@@ -70,6 +70,7 @@ export interface Evento {
   color?: string
   recurrente?: boolean
   dias_semana?: number[]
+  categoria?: 'rf' | 'rs' | 'general'
   is_active: boolean
 }
 

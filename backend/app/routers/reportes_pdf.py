@@ -56,7 +56,8 @@ class SeccionesConfig(BaseModel):
 class PlantillaCreate(BaseModel):
     nombre: str
     tipo: str = 'rf'
-    evento_id: Optional[int] = None
+    evento_rf_id: Optional[int] = None
+    evento_rs_id: Optional[int] = None
     secciones: SeccionesConfig = SeccionesConfig()
     destinatarios: List[str] = []
     asunto_email: Optional[str] = "Estadísticas {evento} – {fecha}"
@@ -67,8 +68,10 @@ class PlantillaOut(BaseModel):
     id: int
     nombre: str
     tipo: str
-    evento_id: Optional[int]
-    evento_tipo: Optional[str] = None
+    evento_rf_id: Optional[int] = None
+    evento_rs_id: Optional[int] = None
+    evento_rf_tipo: Optional[str] = None
+    evento_rs_tipo: Optional[str] = None
     secciones: dict
     destinatarios: List[str]
     asunto_email: Optional[str]
@@ -86,8 +89,10 @@ def _to_out(p: models.ReportePlantilla) -> PlantillaOut:
         id=p.id,
         nombre=p.nombre,
         tipo=p.tipo or 'rf',
-        evento_id=p.evento_id,
-        evento_tipo=p.evento.tipo if p.evento else None,
+        evento_rf_id=p.evento_rf_id,
+        evento_rs_id=p.evento_rs_id,
+        evento_rf_tipo=p.evento_rf.tipo if p.evento_rf else None,
+        evento_rs_tipo=p.evento_rs.tipo if p.evento_rs else None,
         secciones=p.secciones or {},
         destinatarios=p.destinatarios or [],
         asunto_email=p.asunto_email,
@@ -109,7 +114,8 @@ def create_plantilla(body: PlantillaCreate, db: Session = Depends(get_db), _=Dep
     p = models.ReportePlantilla(
         nombre=body.nombre,
         tipo=body.tipo,
-        evento_id=body.evento_id,
+        evento_rf_id=body.evento_rf_id,
+        evento_rs_id=body.evento_rs_id,
         secciones=body.secciones.model_dump(),
         destinatarios=body.destinatarios,
         asunto_email=body.asunto_email,
@@ -128,7 +134,8 @@ def update_plantilla(pid: int, body: PlantillaCreate, db: Session = Depends(get_
         raise HTTPException(404, "Plantilla no encontrada")
     p.nombre = body.nombre
     p.tipo = body.tipo
-    p.evento_id = body.evento_id
+    p.evento_rf_id = body.evento_rf_id
+    p.evento_rs_id = body.evento_rs_id
     p.secciones = body.secciones.model_dump()
     p.destinatarios = body.destinatarios
     p.asunto_email = body.asunto_email
@@ -363,7 +370,9 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
 
     tipo = p.tipo or 'rf'
     sec  = p.secciones or {}
-    evento_nombre = p.evento.tipo if p.evento else "Todos los eventos"
+    evento_rf_nombre = p.evento_rf.tipo if p.evento_rf else "Todos los eventos"
+    evento_rs_nombre = p.evento_rs.tipo if p.evento_rs else "Todos los eventos"
+    evento_nombre = evento_rf_nombre if tipo != 'rs' else evento_rs_nombre
     fecha_str = fi.strftime('%d/%m/%Y')
     if fi.date() != ff.date():
         fecha_str += f" – {ff.strftime('%d/%m/%Y')}"
@@ -555,13 +564,13 @@ def generar_pdf(
     tipo = p.tipo or 'rf'
     data: dict = {}
     if tipo in ('rf', 'ambos'):
-        data['rf'] = _gather_rf(db, p.evento_id, fecha_inicio, fecha_fin)
+        data['rf'] = _gather_rf(db, p.evento_rf_id, fecha_inicio, fecha_fin)
     if tipo in ('rs', 'ambos'):
-        data['rs'] = _gather_rs(db, p.evento_id, fecha_inicio, fecha_fin)
+        data['rs'] = _gather_rs(db, p.evento_rs_id, fecha_inicio, fecha_fin)
 
     pdf = _build_pdf(p, data, fecha_inicio, fecha_fin)
 
-    evento = (p.evento.tipo if p.evento else "reporte").replace(' ', '_').lower()
+    evento = (p.evento_rf.tipo if p.evento_rf else p.nombre).replace(' ', '_').lower()
     fname  = f"qms_{evento}_{fecha_inicio.strftime('%Y%m%d')}.pdf"
 
     return StreamingResponse(
@@ -594,13 +603,13 @@ def enviar_pdf(
     tipo = p.tipo or 'rf'
     data: dict = {}
     if tipo in ('rf', 'ambos'):
-        data['rf'] = _gather_rf(db, p.evento_id, fecha_inicio, fecha_fin)
+        data['rf'] = _gather_rf(db, p.evento_rf_id, fecha_inicio, fecha_fin)
     if tipo in ('rs', 'ambos'):
-        data['rs'] = _gather_rs(db, p.evento_id, fecha_inicio, fecha_fin)
+        data['rs'] = _gather_rs(db, p.evento_rs_id, fecha_inicio, fecha_fin)
 
     pdf = _build_pdf(p, data, fecha_inicio, fecha_fin)
 
-    evento    = p.evento.tipo if p.evento else "reporte"
+    evento    = p.evento_rf.tipo if p.evento_rf else p.nombre
     fname     = f"qms_{evento.replace(' ', '_').lower()}_{fecha_inicio.strftime('%Y%m%d')}.pdf"
     fecha_str = fecha_inicio.strftime('%d/%m/%Y')
     asunto    = (p.asunto_email or "Estadísticas {evento} – {fecha}") \

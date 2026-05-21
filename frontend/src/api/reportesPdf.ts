@@ -21,8 +21,10 @@ export interface PlantillaOut {
   id: number
   nombre: string
   tipo: TipoReporte
-  evento_id: number | null
-  evento_tipo: string | null
+  evento_rf_id: number | null
+  evento_rs_id: number | null
+  evento_rf_tipo: string | null
+  evento_rs_tipo: string | null
   secciones: SeccionesConfig
   destinatarios: string[]
   asunto_email: string | null
@@ -33,7 +35,8 @@ export interface PlantillaOut {
 export interface PlantillaCreate {
   nombre: string
   tipo: TipoReporte
-  evento_id: number | null
+  evento_rf_id: number | null
+  evento_rs_id: number | null
   secciones: SeccionesConfig
   destinatarios: string[]
   asunto_email: string | null

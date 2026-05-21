@@ -94,6 +94,7 @@ class EventoOut(BaseModel):
     color: Optional[str] = "#1677ff"
     recurrente: bool = False
     dias_semana: List[int] = []
+    categoria: str = 'general'
     is_active: bool
     class Config:
         from_attributes = True
@@ -104,6 +105,7 @@ class EventoCreate(BaseModel):
     color: Optional[str] = "#1677ff"
     recurrente: bool = False
     dias_semana: List[int] = []
+    categoria: str = 'general'
 
 class EstacionOut(BaseModel):
     id: int

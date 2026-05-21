@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import {
-  Table, Button, Space, Tag, Modal, Form, Input,
+  Table, Button, Space, Tag, Modal, Form, Input, Select,
   Typography, Card, Popconfirm, message, Switch, ColorPicker, Checkbox,
 } from 'antd'
 import type { Color } from 'antd/es/color-picker'
@@ -45,7 +45,7 @@ export default function EventosPage() {
   const openCreate = () => {
     setEditItem(null)
     form.resetFields()
-    form.setFieldsValue({ is_active: true, recurrente: false, dias_semana: [] })
+    form.setFieldsValue({ is_active: true, recurrente: false, dias_semana: [], categoria: 'general' })
     setFormColor('#1677ff')
     setModalOpen(true)
   }
@@ -58,6 +58,7 @@ export default function EventosPage() {
       is_active:   item.is_active,
       recurrente:  item.recurrente ?? false,
       dias_semana: item.dias_semana ?? [],
+      categoria:   item.categoria ?? 'general',
     })
     setFormColor(item.color ?? '#1677ff')
     setModalOpen(true)
@@ -69,6 +70,7 @@ export default function EventosPage() {
       ...values,
       color:       formColor,
       dias_semana: values.recurrente ? (values.dias_semana ?? []) : [],
+      categoria:   values.categoria ?? 'general',
     }
     try {
       if (editItem) {
@@ -106,6 +108,18 @@ export default function EventosPage() {
       },
     },
     { title: 'Descripción', dataIndex: 'descripcion', key: 'descripcion' },
+    {
+      title: 'Tipo', dataIndex: 'categoria', key: 'categoria', width: 120,
+      render: (v: string) => {
+        const map: Record<string, { label: string; color: string }> = {
+          rf:      { label: '📡 RF',      color: 'blue' },
+          rs:      { label: '📱 RS',      color: 'purple' },
+          general: { label: '📡📱 General', color: 'default' },
+        }
+        const m = map[v ?? 'general'] ?? map.general
+        return <Tag color={m.color}>{m.label}</Tag>
+      },
+    },
     {
       title: 'Recurrencia', key: 'recurrencia', width: 220,
       render: (_: unknown, r: Evento) => {
@@ -211,6 +225,14 @@ export default function EventosPage() {
               </Checkbox.Group>
             </Form.Item>
           )}
+
+          <Form.Item label="Tipo de evento" name="categoria">
+            <Select options={[
+              { value: 'general', label: '📡📱 General (RF y RS)' },
+              { value: 'rf',      label: '📡 Radio Frecuencia (RF)' },
+              { value: 'rs',      label: '📱 Redes Sociales (RS)' },
+            ]} />
+          </Form.Item>
 
           <Form.Item label="Activo" name="is_active" valuePropName="checked">
             <Switch />

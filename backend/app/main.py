@@ -121,6 +121,19 @@ async def lifespan(app: FastAPI):
         conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS tipo VARCHAR(10) NOT NULL DEFAULT 'rf'"))
         conn.execute(text("ALTER TABLE eventos ADD COLUMN IF NOT EXISTS recurrente BOOLEAN DEFAULT FALSE"))
         conn.execute(text("ALTER TABLE eventos ADD COLUMN IF NOT EXISTS dias_semana JSONB DEFAULT '[]'"))
+        conn.execute(text("ALTER TABLE eventos ADD COLUMN IF NOT EXISTS categoria VARCHAR(10) NOT NULL DEFAULT 'general'"))
+        # Renombrar evento_id → evento_rf_id y agregar evento_rs_id en reporte_plantillas
+        conn.execute(text("""
+            DO $$ BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name='reporte_plantillas' AND column_name='evento_id'
+                ) THEN
+                    ALTER TABLE reporte_plantillas RENAME COLUMN evento_id TO evento_rf_id;
+                END IF;
+            END $$
+        """))
+        conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS evento_rs_id INTEGER REFERENCES eventos(id)"))
         conn.commit()
 
     db = SessionLocal()
