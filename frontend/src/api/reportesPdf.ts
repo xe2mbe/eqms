@@ -10,11 +10,13 @@ export interface SeccionesConfig {
   top_estaciones: number
   por_estado: boolean
   primera_vez: boolean
+  detalle_rf: boolean
   // RS
   resumen_plataformas: boolean
   top_estaciones_rs: number
   por_zona_rs: boolean
   metricas_detalle: boolean
+  detalle_rs: boolean
 }
 
 export interface PlantillaOut {
@@ -50,10 +52,12 @@ export const DEFAULT_SECCIONES: SeccionesConfig = {
   top_estaciones: 10,
   por_estado: true,
   primera_vez: false,
+  detalle_rf: false,
   resumen_plataformas: true,
   top_estaciones_rs: 10,
   por_zona_rs: true,
   metricas_detalle: false,
+  detalle_rs: false,
 }
 
 export const reportesPdfApi = {

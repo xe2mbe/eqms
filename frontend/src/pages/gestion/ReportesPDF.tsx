@@ -9,7 +9,7 @@ import {
   MailOutlined, PlusOutlined, SendOutlined,
   RadarChartOutlined, GlobalOutlined, TeamOutlined,
   BarChartOutlined, EnvironmentOutlined, StarOutlined,
-  LikeOutlined, AppstoreOutlined, TrophyOutlined,
+  LikeOutlined, AppstoreOutlined, TrophyOutlined, UnorderedListOutlined,
 } from '@ant-design/icons'
 import dayjs, { Dayjs } from 'dayjs'
 import { catalogosApi } from '@/api/catalogos'
@@ -44,13 +44,15 @@ const SECCIONES_RF: SeccionDef[] = [
   { key: 'por_estado',      label: 'Actividad por Estado', desc: 'QSOs por estado de la república',                  icon: <EnvironmentOutlined />,  tipo: 'rf' },
   { key: 'primera_vez',     label: 'Nuevas Estaciones',    desc: 'Indicativos con primera aparición en el periodo',  icon: <StarOutlined />,         tipo: 'rf' },
   { key: 'top_estaciones',  label: 'Top Estaciones RF',    desc: 'Ranking de estaciones con más QSOs',               icon: <TrophyOutlined />,       tipo: 'rf', hasNumber: true, numberKey: 'top_estaciones', numberLabel: 'Top N' },
+  { key: 'detalle_rf',      label: 'Reporte Detallado RF', desc: 'Lista completa de todos los QSOs: indicativo, señal, estado, sistema y zona', icon: <UnorderedListOutlined />, tipo: 'rf' },
 ]
 
 const SECCIONES_RS: SeccionDef[] = [
   { key: 'resumen_plataformas', label: 'Resumen Plataformas',  desc: 'Totales de reportes RS por plataforma',           icon: <AppstoreOutlined />,  tipo: 'rs' },
   { key: 'por_zona_rs',        label: 'Actividad por Zona RS', desc: 'Reportes RS agrupados por zona FMRE',             icon: <RadarChartOutlined />, tipo: 'rs' },
-  { key: 'metricas_detalle',   label: 'Métricas Detalladas',   desc: 'Likes, comentarios, alcance, etc. por plataforma',icon: <LikeOutlined />,      tipo: 'rs' },
-  { key: 'top_estaciones_rs',  label: 'Top Estaciones RS',     desc: 'Ranking de estaciones con más reportes RS',       icon: <TeamOutlined />,      tipo: 'rs', hasNumber: true, numberKey: 'top_estaciones_rs', numberLabel: 'Top N' },
+  { key: 'metricas_detalle',   label: 'Métricas Detalladas',   desc: 'Likes, comentarios, alcance, etc. por plataforma',   icon: <LikeOutlined />,           tipo: 'rs' },
+  { key: 'top_estaciones_rs',  label: 'Top Estaciones RS',     desc: 'Ranking de estaciones con más reportes RS',          icon: <TeamOutlined />,           tipo: 'rs', hasNumber: true, numberKey: 'top_estaciones_rs', numberLabel: 'Top N' },
+  { key: 'detalle_rs',         label: 'Reporte Detallado RS',  desc: 'Lista completa de todos los reportes RS: plataforma, estado, zona y URL', icon: <UnorderedListOutlined />, tipo: 'rs' },
 ]
 
 // ── Componente tarjeta de sección ─────────────────────────────────────────────
@@ -189,10 +191,12 @@ export default function ReportesPDFPage() {
       top_estaciones:      p.secciones.top_estaciones      ?? 10,
       por_estado:          p.secciones.por_estado          ?? true,
       primera_vez:         p.secciones.primera_vez         ?? false,
+      detalle_rf:          p.secciones.detalle_rf          ?? false,
       resumen_plataformas: p.secciones.resumen_plataformas ?? true,
       top_estaciones_rs:   p.secciones.top_estaciones_rs   ?? 10,
       por_zona_rs:         p.secciones.por_zona_rs         ?? true,
       metricas_detalle:    p.secciones.metricas_detalle    ?? false,
+      detalle_rs:          p.secciones.detalle_rs          ?? false,
     })
     form.setFieldsValue({
       nombre:        p.nombre,
@@ -323,10 +327,12 @@ export default function ReportesPDFPage() {
         if (s.top_estaciones > 0)  rf.push(`Top ${s.top_estaciones}`)
         if (s.por_estado)          rf.push('Estado')
         if (s.primera_vez)         rf.push('1ª Vez')
+        if (s.detalle_rf)          rf.push('Detalle')
         if (s.resumen_plataformas) rs.push('Plataformas')
         if (s.top_estaciones_rs > 0) rs.push(`Top ${s.top_estaciones_rs} RS`)
         if (s.por_zona_rs)         rs.push('Zona RS')
         if (s.metricas_detalle)    rs.push('Métricas')
+        if (s.detalle_rs)          rs.push('Detalle RS')
         return (
           <Space size={3} wrap>
             {rf.map(t => <Tag key={t} color="blue" style={{ fontSize: 11 }}>{t}</Tag>)}

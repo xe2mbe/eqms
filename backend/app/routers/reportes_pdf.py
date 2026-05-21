@@ -46,11 +46,13 @@ class SeccionesConfig(BaseModel):
     top_estaciones: int = 10
     por_estado: bool = True
     primera_vez: bool = False
+    detalle_rf: bool = False
     # RS
     resumen_plataformas: bool = True
     top_estaciones_rs: int = 10
     por_zona_rs: bool = True
     metricas_detalle: bool = False
+    detalle_rs: bool = False
 
 
 class PlantillaCreate(BaseModel):
@@ -230,6 +232,19 @@ def _gather_rf(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         ORDER BY r.indicativo
     """), p).fetchall()
 
+    detalle = db.execute(text("""
+        SELECT r.indicativo, COALESCE(rx.nombre_completo,''), r.senal,
+               COALESCE(r.estado,''), COALESCE(s.codigo,''), COALESCE(z.codigo,''),
+               r.fecha_reporte
+        FROM reportes r
+        LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
+        LEFT JOIN sistemas s ON s.id = r.sistema_id
+        LEFT JOIN zonas z ON z.id = r.zona_id
+        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
+          AND (:ev IS NULL OR r.evento_id = :ev)
+        ORDER BY r.fecha_reporte, r.indicativo
+    """), p).fetchall()
+
     return {
         "total": int(total),
         "estaciones": int(estaciones),
@@ -239,6 +254,7 @@ def _gather_rf(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         "top_ests": [{"ind": r[0], "nombre": r[1], "estado": r[2], "total": r[3]} for r in top_ests],
         "por_estado": [{"estado": r[0], "total": r[1]} for r in por_estado],
         "primera_vez": [{"ind": r[0], "nombre": r[1], "estado": r[2]} for r in primera_vez],
+        "detalle": [{"ind": r[0], "nombre": r[1], "senal": r[2], "estado": r[3], "sistema": r[4], "zona": r[5], "fecha": r[6]} for r in detalle],
     }
 
 
@@ -303,6 +319,19 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         for k, v in vals.items():
             metricas[pl_name][k] = metricas[pl_name].get(k, 0) + (v or 0)
 
+    detalle_rs = db.execute(text("""
+        SELECT r.indicativo, COALESCE(rx.nombre_completo,''), pl.nombre,
+               COALESCE(r.estado,''), COALESCE(z.codigo,''), r.fecha_reporte,
+               COALESCE(r.url_publicacion,'')
+        FROM reportes_rs r
+        LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
+        JOIN plataformas_rs pl ON pl.id = r.plataforma_id
+        LEFT JOIN zonas z ON z.id = r.zona_id
+        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
+          AND (:ev IS NULL OR r.evento_id = :ev)
+        ORDER BY r.fecha_reporte, r.indicativo
+    """), p).fetchall()
+
     return {
         "total_rs": int(total),
         "estaciones_rs": int(estaciones),
@@ -310,6 +339,7 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         "por_zona_rs": [{"zona": r[0], "nombre": r[1], "total": r[2], "ests": r[3]} for r in por_zona],
         "top_ests_rs": [{"ind": r[0], "nombre": r[1], "total": r[2]} for r in top_ests],
         "metricas": metricas,
+        "detalle_rs": [{"ind": r[0], "nombre": r[1], "plataforma": r[2], "estado": r[3], "zona": r[4], "fecha": r[5], "url": r[6]} for r in detalle_rs],
     }
 
 
@@ -330,6 +360,22 @@ def _tbl_style(has_alt: bool = True) -> TableStyle:
     if has_alt:
         base.append(('ROWBACKGROUNDS', (0, 1), (-1, -1), [COL_WHITE, FMRE_BLUE_ALT]))
     return TableStyle(base)
+
+
+def _tbl_style_detail() -> TableStyle:
+    return TableStyle([
+        ('BACKGROUND',    (0, 0), (-1, 0), FMRE_BLUE),
+        ('TEXTCOLOR',     (0, 0), (-1, 0), COL_WHITE),
+        ('FONTNAME',      (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME',      (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE',      (0, 0), (-1, -1), 8),
+        ('GRID',          (0, 0), (-1, -1), 0.3, COL_LGRAY),
+        ('TOPPADDING',    (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 4),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COL_WHITE, FMRE_BLUE_ALT]),
+    ])
 
 
 def _banner(label: str, styles) -> Table:
@@ -469,6 +515,24 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
             t.setStyle(_tbl_style())
             story.append(t)
 
+        if sec.get('detalle_rf', False) and rf.get('detalle'):
+            is_multi = fi.date() != ff.date()
+            time_lbl = 'Fecha/Hora' if is_multi else 'Hora'
+            story.append(Paragraph(
+                f"Reporte Detallado RF — {len(rf['detalle'])} QSOs", s_section))
+            rows = [['#', time_lbl, 'Indicativo', 'Operador', 'Señal', 'Estado', 'Sistema', 'Zona']]
+            for i, r in enumerate(rf['detalle'], 1):
+                ts = r['fecha'].strftime('%d/%m %H:%M') if is_multi else r['fecha'].strftime('%H:%M')
+                rows.append([str(i), ts, r['ind'], r['nombre'], str(r['senal']),
+                              r['estado'], r['sistema'], r['zona']])
+            t = Table(rows, colWidths=[0.7*cm, 1.9*cm, 2.3*cm, 5.0*cm, 1.2*cm, 3.2*cm, 1.8*cm, 1.9*cm])
+            t.setStyle(_tbl_style_detail())
+            t.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+                ('ALIGN', (4, 0), (4, -1), 'CENTER'),
+            ]))
+            story.append(t)
+
     # ── Secciones RS ─────────────────────────────────────────────────────────
     if tipo in ('rs', 'ambos'):
         rs = data.get('rs', {})
@@ -533,6 +597,22 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                 t.setStyle(_tbl_style())
                 t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
                 story.append(t)
+
+        if sec.get('detalle_rs', False) and rs.get('detalle_rs'):
+            is_multi = fi.date() != ff.date()
+            time_lbl = 'Fecha/Hora' if is_multi else 'Hora'
+            story.append(Paragraph(
+                f"Reporte Detallado RS — {len(rs['detalle_rs'])} reportes", s_section))
+            rows = [['#', time_lbl, 'Indicativo', 'Operador', 'Plataforma', 'Estado', 'Zona', 'URL']]
+            for i, r in enumerate(rs['detalle_rs'], 1):
+                ts = r['fecha'].strftime('%d/%m %H:%M') if is_multi else r['fecha'].strftime('%H:%M')
+                url = (r['url'][:28] + '…') if len(r['url']) > 28 else r['url']
+                rows.append([str(i), ts, r['ind'], r['nombre'], r['plataforma'],
+                              r['estado'], r['zona'], url])
+            t = Table(rows, colWidths=[0.7*cm, 1.9*cm, 2.3*cm, 4.0*cm, 2.5*cm, 3.2*cm, 1.6*cm, 1.8*cm])
+            t.setStyle(_tbl_style_detail())
+            t.setStyle(TableStyle([('ALIGN', (0, 0), (0, -1), 'CENTER')]))
+            story.append(t)
 
     # ── Pie de página ─────────────────────────────────────────────────────────
     story.append(Spacer(1, 0.5 * cm))
