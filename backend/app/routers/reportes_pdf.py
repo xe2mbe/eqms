@@ -33,6 +33,8 @@ router = APIRouter()
 # ─── Colores FMRE ─────────────────────────────────────────────────────────────
 FMRE_BLUE     = colors.HexColor('#1A569E')
 FMRE_BLUE_ALT = colors.HexColor('#f0f5ff')
+RS_PURPLE     = colors.HexColor('#531dab')
+RS_PURPLE_ALT = colors.HexColor('#f9f0ff')
 COL_WHITE     = colors.white
 COL_LGRAY     = colors.lightgrey
 
@@ -345,9 +347,11 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
 
 # ─── PDF helpers ──────────────────────────────────────────────────────────────
 
-def _tbl_style(has_alt: bool = True) -> TableStyle:
-    base = [
-        ('BACKGROUND',    (0, 0), (-1, 0), FMRE_BLUE),
+def _tbl_style(bg: colors.Color = None, alt: colors.Color = None) -> TableStyle:
+    bg  = bg  or FMRE_BLUE
+    alt = alt or FMRE_BLUE_ALT
+    return TableStyle([
+        ('BACKGROUND',    (0, 0), (-1, 0), bg),
         ('TEXTCOLOR',     (0, 0), (-1, 0), COL_WHITE),
         ('FONTNAME',      (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE',      (0, 0), (-1, -1), 9),
@@ -356,15 +360,15 @@ def _tbl_style(has_alt: bool = True) -> TableStyle:
         ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
         ('LEFTPADDING',   (0, 0), (-1, -1), 6),
         ('RIGHTPADDING',  (0, 0), (-1, -1), 6),
-    ]
-    if has_alt:
-        base.append(('ROWBACKGROUNDS', (0, 1), (-1, -1), [COL_WHITE, FMRE_BLUE_ALT]))
-    return TableStyle(base)
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COL_WHITE, alt]),
+    ])
 
 
-def _tbl_style_detail() -> TableStyle:
+def _tbl_style_detail(bg: colors.Color = None, alt: colors.Color = None) -> TableStyle:
+    bg  = bg  or FMRE_BLUE
+    alt = alt or FMRE_BLUE_ALT
     return TableStyle([
-        ('BACKGROUND',    (0, 0), (-1, 0), FMRE_BLUE),
+        ('BACKGROUND',    (0, 0), (-1, 0), bg),
         ('TEXTCOLOR',     (0, 0), (-1, 0), COL_WHITE),
         ('FONTNAME',      (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTNAME',      (0, 1), (-1, -1), 'Helvetica'),
@@ -374,19 +378,26 @@ def _tbl_style_detail() -> TableStyle:
         ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
         ('LEFTPADDING',   (0, 0), (-1, -1), 4),
         ('RIGHTPADDING',  (0, 0), (-1, -1), 4),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COL_WHITE, FMRE_BLUE_ALT]),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COL_WHITE, alt]),
     ])
 
 
-def _banner(label: str, styles) -> Table:
-    s = ParagraphStyle('BN', parent=styles['Normal'],
-                       textColor=COL_WHITE, fontSize=12, fontName='Helvetica-Bold',
-                       alignment=TA_CENTER)
-    t = Table([[Paragraph(label, s)]], colWidths=[17 * cm])
+def _banner(label: str, tipo_tag: str, bg: colors.Color, styles) -> Table:
+    s_tag = ParagraphStyle('BN_TAG', parent=styles['Normal'],
+                           textColor=COL_WHITE, fontSize=11, fontName='Helvetica-Bold',
+                           alignment=TA_CENTER)
+    s_lbl = ParagraphStyle('BN_LBL', parent=styles['Normal'],
+                           textColor=COL_WHITE, fontSize=12, fontName='Helvetica-Bold',
+                           alignment=TA_CENTER)
+    dark = colors.HexColor('#0f3d6e') if tipo_tag == 'RF' else colors.HexColor('#3b1891')
+    t = Table([[Paragraph(tipo_tag, s_tag), Paragraph(label, s_lbl)]],
+              colWidths=[1.8 * cm, 15.2 * cm])
     t.setStyle(TableStyle([
-        ('BACKGROUND',    (0, 0), (-1, -1), FMRE_BLUE),
-        ('TOPPADDING',    (0, 0), (-1, -1), 7),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+        ('BACKGROUND',    (0, 0), (0, 0), dark),
+        ('BACKGROUND',    (1, 0), (1, 0), bg),
+        ('TOPPADDING',    (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     return t
 
@@ -409,6 +420,9 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                                spaceAfter=6, alignment=TA_CENTER)
     s_section = ParagraphStyle('H', parent=styles['Heading2'],
                                textColor=FMRE_BLUE, fontSize=12,
+                               spaceBefore=14, spaceAfter=6)
+    s_sec_rs  = ParagraphStyle('HRS', parent=styles['Heading2'],
+                               textColor=RS_PURPLE, fontSize=12,
                                spaceBefore=14, spaceAfter=6)
     s_footer  = ParagraphStyle('F', parent=styles['Normal'],
                                fontSize=8, textColor=colors.grey,
@@ -436,7 +450,7 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
         rf = data.get('rf', {})
 
         if tipo == 'ambos':
-            story.append(_banner("Reportes RF", styles))
+            story.append(_banner("Reportes de Radio Frecuencia", "RF", FMRE_BLUE, styles))
             story.append(Spacer(1, 0.3 * cm))
 
         if sec.get('resumen_general', True):
@@ -516,16 +530,13 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
             story.append(t)
 
         if sec.get('detalle_rf', False) and rf.get('detalle'):
-            is_multi = fi.date() != ff.date()
-            time_lbl = 'Fecha/Hora' if is_multi else 'Hora'
             story.append(Paragraph(
                 f"Reporte Detallado RF — {len(rf['detalle'])} QSOs", s_section))
-            rows = [['#', time_lbl, 'Indicativo', 'Operador', 'Señal', 'Estado', 'Sistema', 'Zona']]
+            rows = [['#', 'Fecha', 'Indicativo', 'Operador', 'Señal', 'Estado', 'Sistema', 'Zona']]
             for i, r in enumerate(rf['detalle'], 1):
-                ts = r['fecha'].strftime('%d/%m %H:%M') if is_multi else r['fecha'].strftime('%H:%M')
-                rows.append([str(i), ts, r['ind'], r['nombre'], str(r['senal']),
-                              r['estado'], r['sistema'], r['zona']])
-            t = Table(rows, colWidths=[0.7*cm, 1.9*cm, 2.3*cm, 5.0*cm, 1.2*cm, 3.2*cm, 1.8*cm, 1.9*cm])
+                rows.append([str(i), r['fecha'].strftime('%d/%m/%Y'), r['ind'], r['nombre'],
+                              str(r['senal']), r['estado'], r['sistema'], r['zona']])
+            t = Table(rows, colWidths=[0.7*cm, 2.0*cm, 2.3*cm, 4.8*cm, 1.2*cm, 3.0*cm, 1.5*cm, 1.5*cm])
             t.setStyle(_tbl_style_detail())
             t.setStyle(TableStyle([
                 ('ALIGN', (0, 0), (0, -1), 'CENTER'),
@@ -539,17 +550,17 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
 
         if tipo == 'ambos':
             story.append(Spacer(1, 0.5 * cm))
-            story.append(_banner("Redes Sociales", styles))
+            story.append(_banner("Redes Sociales", "RS", RS_PURPLE, styles))
             story.append(Spacer(1, 0.3 * cm))
 
         if sec.get('resumen_plataformas', True):
-            story.append(Paragraph("Resumen Redes Sociales", s_section))
+            story.append(Paragraph("Resumen Redes Sociales", s_sec_rs))
             t = Table([
                 ['Métrica', 'Valor'],
                 ['Total reportes RS',           str(rs.get('total_rs', 0))],
                 ['Estaciones participantes RS',  str(rs.get('estaciones_rs', 0))],
             ], colWidths=[13 * cm, 4 * cm])
-            t.setStyle(_tbl_style())
+            t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
             t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
             story.append(t)
 
@@ -559,28 +570,28 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                 for r in rs['por_plataforma']:
                     rows.append([r['nombre'], str(r['cnt'])])
                 t = Table(rows, colWidths=[13 * cm, 4 * cm])
-                t.setStyle(_tbl_style())
+                t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
                 t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
                 story.append(t)
 
         if sec.get('por_zona_rs', True) and rs.get('por_zona_rs'):
-            story.append(Paragraph("Actividad por Zona (RS)", s_section))
+            story.append(Paragraph("Actividad por Zona (RS)", s_sec_rs))
             rows = [['Zona', 'Nombre', 'Reportes', 'Estaciones']]
             for r in rs['por_zona_rs']:
                 rows.append([r['zona'], r['nombre'], str(r['total']), str(r['ests'])])
             t = Table(rows, colWidths=[3 * cm, 8 * cm, 3 * cm, 3 * cm])
-            t.setStyle(_tbl_style())
+            t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
             t.setStyle(TableStyle([('ALIGN', (2, 0), (-1, -1), 'CENTER')]))
             story.append(t)
 
         top_n_rs = int(sec.get('top_estaciones_rs', 10))
         if top_n_rs > 0 and rs.get('top_ests_rs'):
-            story.append(Paragraph(f"Top {top_n_rs} Estaciones (RS)", s_section))
+            story.append(Paragraph(f"Top {top_n_rs} Estaciones (RS)", s_sec_rs))
             rows = [['#', 'Indicativo', 'Operador', 'Reportes']]
             for i, r in enumerate(rs['top_ests_rs'][:top_n_rs], 1):
                 rows.append([str(i), r['ind'], r['nombre'], str(r['total'])])
             t = Table(rows, colWidths=[1 * cm, 3 * cm, 9.5 * cm, 3.5 * cm])
-            t.setStyle(_tbl_style())
+            t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
             t.setStyle(TableStyle([
                 ('ALIGN', (0, 0), (0, -1), 'CENTER'),
                 ('ALIGN', (3, 0), (3, -1), 'CENTER'),
@@ -589,28 +600,24 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
 
         if sec.get('metricas_detalle', False) and rs.get('metricas'):
             for pl_name, vals in rs['metricas'].items():
-                story.append(Paragraph(f"Métricas – {pl_name}", s_section))
+                story.append(Paragraph(f"Métricas – {pl_name}", s_sec_rs))
                 rows = [['Métrica', 'Total']]
                 for k, v in sorted(vals.items()):
                     rows.append([k.replace('_', ' ').title(), str(int(v))])
                 t = Table(rows, colWidths=[13 * cm, 4 * cm])
-                t.setStyle(_tbl_style())
+                t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
                 t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
                 story.append(t)
 
         if sec.get('detalle_rs', False) and rs.get('detalle_rs'):
-            is_multi = fi.date() != ff.date()
-            time_lbl = 'Fecha/Hora' if is_multi else 'Hora'
             story.append(Paragraph(
-                f"Reporte Detallado RS — {len(rs['detalle_rs'])} reportes", s_section))
-            rows = [['#', time_lbl, 'Indicativo', 'Operador', 'Plataforma', 'Estado', 'Zona', 'URL']]
+                f"Reporte Detallado RS — {len(rs['detalle_rs'])} reportes", s_sec_rs))
+            rows = [['#', 'Fecha', 'Indicativo', 'Operador', 'Plataforma', 'Estado', 'Zona']]
             for i, r in enumerate(rs['detalle_rs'], 1):
-                ts = r['fecha'].strftime('%d/%m %H:%M') if is_multi else r['fecha'].strftime('%H:%M')
-                url = (r['url'][:28] + '…') if len(r['url']) > 28 else r['url']
-                rows.append([str(i), ts, r['ind'], r['nombre'], r['plataforma'],
-                              r['estado'], r['zona'], url])
-            t = Table(rows, colWidths=[0.7*cm, 1.9*cm, 2.3*cm, 4.0*cm, 2.5*cm, 3.2*cm, 1.6*cm, 1.8*cm])
-            t.setStyle(_tbl_style_detail())
+                rows.append([str(i), r['fecha'].strftime('%d/%m/%Y'), r['ind'], r['nombre'],
+                              r['plataforma'], r['estado'], r['zona']])
+            t = Table(rows, colWidths=[0.7*cm, 2.0*cm, 2.3*cm, 4.3*cm, 2.5*cm, 3.0*cm, 2.2*cm])
+            t.setStyle(_tbl_style_detail(RS_PURPLE, RS_PURPLE_ALT))
             t.setStyle(TableStyle([('ALIGN', (0, 0), (0, -1), 'CENTER')]))
             story.append(t)
 
