@@ -424,6 +424,7 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
     s_sec_rs  = ParagraphStyle('HRS', parent=styles['Heading2'],
                                textColor=RS_PURPLE, fontSize=12,
                                spaceBefore=14, spaceAfter=6)
+    s_cell    = ParagraphStyle('CELL', fontName='Helvetica', fontSize=8, leading=10)
     s_footer  = ParagraphStyle('F', parent=styles['Normal'],
                                fontSize=8, textColor=colors.grey,
                                alignment=TA_CENTER)
@@ -534,13 +535,17 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                 f"Reporte Detallado RF — {len(rf['detalle'])} QSOs", s_section))
             rows = [['#', 'Fecha', 'Indicativo', 'Operador', 'Señal', 'Estado', 'Sistema', 'Zona']]
             for i, r in enumerate(rf['detalle'], 1):
-                rows.append([str(i), r['fecha'].strftime('%d/%m/%Y'), r['ind'], r['nombre'],
-                              str(r['senal']), r['estado'], r['sistema'], r['zona']])
-            t = Table(rows, colWidths=[0.7*cm, 2.0*cm, 2.3*cm, 4.8*cm, 1.2*cm, 3.0*cm, 1.5*cm, 1.5*cm])
+                rows.append([str(i), r['fecha'].strftime('%d/%m/%Y'), r['ind'],
+                              Paragraph(r['nombre'] or '', s_cell),
+                              str(r['senal']),
+                              Paragraph(r['estado'] or '', s_cell),
+                              r['sistema'], r['zona']])
+            t = Table(rows, colWidths=[0.5*cm, 2.0*cm, 2.2*cm, 4.3*cm, 1.0*cm, 4.0*cm, 1.5*cm, 1.5*cm])
             t.setStyle(_tbl_style_detail())
             t.setStyle(TableStyle([
-                ('ALIGN', (0, 0), (0, -1), 'CENTER'),
-                ('ALIGN', (4, 0), (4, -1), 'CENTER'),
+                ('ALIGN',  (0, 0), (0, -1), 'CENTER'),
+                ('ALIGN',  (4, 0), (4, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ]))
             story.append(t)
 
@@ -614,11 +619,17 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                 f"Reporte Detallado RS — {len(rs['detalle_rs'])} reportes", s_sec_rs))
             rows = [['#', 'Fecha', 'Indicativo', 'Operador', 'Plataforma', 'Estado', 'Zona']]
             for i, r in enumerate(rs['detalle_rs'], 1):
-                rows.append([str(i), r['fecha'].strftime('%d/%m/%Y'), r['ind'], r['nombre'],
-                              r['plataforma'], r['estado'], r['zona']])
-            t = Table(rows, colWidths=[0.7*cm, 2.0*cm, 2.3*cm, 4.3*cm, 2.5*cm, 3.0*cm, 2.2*cm])
+                rows.append([str(i), r['fecha'].strftime('%d/%m/%Y'), r['ind'],
+                              Paragraph(r['nombre'] or '', s_cell),
+                              Paragraph(r['plataforma'] or '', s_cell),
+                              Paragraph(r['estado'] or '', s_cell),
+                              r['zona']])
+            t = Table(rows, colWidths=[0.5*cm, 2.0*cm, 2.0*cm, 3.5*cm, 2.8*cm, 4.2*cm, 2.0*cm])
             t.setStyle(_tbl_style_detail(RS_PURPLE, RS_PURPLE_ALT))
-            t.setStyle(TableStyle([('ALIGN', (0, 0), (0, -1), 'CENTER')]))
+            t.setStyle(TableStyle([
+                ('ALIGN',  (0, 0), (0, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
             story.append(t)
 
     # ── Pie de página ─────────────────────────────────────────────────────────
