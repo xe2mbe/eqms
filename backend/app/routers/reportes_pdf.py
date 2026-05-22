@@ -51,6 +51,7 @@ class SeccionesConfig(BaseModel):
     detalle_rf: bool = False
     # RS
     resumen_plataformas: bool = True
+    desglose_plataformas: bool = True
     top_estaciones_rs: int = 10
     por_zona_rs: bool = True
     metricas_detalle: bool = False
@@ -334,6 +335,81 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         ORDER BY r.fecha_reporte, r.indicativo
     """), p).fetchall()
 
+    # Per-platform breakdown
+    platforms_in_range = db.execute(text("""
+        SELECT DISTINCT pl.id, pl.nombre
+        FROM reportes_rs r
+        JOIN plataformas_rs pl ON pl.id = r.plataforma_id
+        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
+          AND (:ev IS NULL OR r.evento_id = :ev)
+        ORDER BY pl.nombre
+    """), p).fetchall()
+
+    por_plataforma_data: dict = {}
+    for pl_id, pl_nombre in platforms_in_range:
+        pp = {"fi": fi, "ff": ff, "ev": evento_id, "pl": pl_id}
+
+        pl_total = db.execute(text("""
+            SELECT COUNT(*) FROM reportes_rs
+            WHERE plataforma_id = :pl AND fecha_reporte >= :fi AND fecha_reporte <= :ff
+              AND (:ev IS NULL OR evento_id = :ev)
+        """), pp).scalar() or 0
+
+        pl_estaciones = db.execute(text("""
+            SELECT COUNT(DISTINCT indicativo) FROM reportes_rs
+            WHERE plataforma_id = :pl AND fecha_reporte >= :fi AND fecha_reporte <= :ff
+              AND (:ev IS NULL OR evento_id = :ev)
+        """), pp).scalar() or 0
+
+        pl_top_ests = db.execute(text("""
+            SELECT r.indicativo, COALESCE(rx.nombre_completo,''), COUNT(*) AS total
+            FROM reportes_rs r
+            LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
+            WHERE r.plataforma_id = :pl AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
+              AND (:ev IS NULL OR r.evento_id = :ev)
+            GROUP BY r.indicativo, rx.nombre_completo
+            ORDER BY total DESC LIMIT 50
+        """), pp).fetchall()
+
+        pl_por_zona = db.execute(text("""
+            SELECT z.codigo, z.nombre, COUNT(*) AS total, COUNT(DISTINCT r.indicativo) AS ests
+            FROM reportes_rs r JOIN zonas z ON z.id = r.zona_id
+            WHERE r.plataforma_id = :pl AND r.zona_id IS NOT NULL
+              AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
+              AND (:ev IS NULL OR r.evento_id = :ev)
+            GROUP BY z.codigo, z.nombre ORDER BY total DESC
+        """), pp).fetchall()
+
+        pl_metricas_rows = db.execute(text("""
+            SELECT e.valores FROM estadisticas_rs e
+            WHERE e.plataforma_id = :pl
+              AND e.fecha_reporte >= :fi AND e.fecha_reporte <= :ff
+        """), pp).fetchall()
+        pl_metricas: dict = {}
+        for row in pl_metricas_rows:
+            for k, v in (row[0] or {}).items():
+                pl_metricas[k] = pl_metricas.get(k, 0) + (v or 0)
+
+        pl_detalle = db.execute(text("""
+            SELECT r.indicativo, COALESCE(rx.nombre_completo,''),
+                   COALESCE(r.estado,''), COALESCE(z.codigo,''), r.fecha_reporte
+            FROM reportes_rs r
+            LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
+            LEFT JOIN zonas z ON z.id = r.zona_id
+            WHERE r.plataforma_id = :pl AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
+              AND (:ev IS NULL OR r.evento_id = :ev)
+            ORDER BY r.fecha_reporte, r.indicativo
+        """), pp).fetchall()
+
+        por_plataforma_data[pl_nombre] = {
+            "total":     int(pl_total),
+            "estaciones": int(pl_estaciones),
+            "top_ests":  [{"ind": r[0], "nombre": r[1], "total": r[2]} for r in pl_top_ests],
+            "por_zona":  [{"zona": r[0], "nombre": r[1], "total": r[2], "ests": r[3]} for r in pl_por_zona],
+            "metricas":  pl_metricas,
+            "detalle":   [{"ind": r[0], "nombre": r[1], "estado": r[2], "zona": r[3], "fecha": r[4]} for r in pl_detalle],
+        }
+
     return {
         "total_rs": int(total),
         "estaciones_rs": int(estaciones),
@@ -342,6 +418,7 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         "top_ests_rs": [{"ind": r[0], "nombre": r[1], "total": r[2]} for r in top_ests],
         "metricas": metricas,
         "detalle_rs": [{"ind": r[0], "nombre": r[1], "plataforma": r[2], "estado": r[3], "zona": r[4], "fecha": r[5], "url": r[6]} for r in detalle_rs],
+        "por_plataforma_data": por_plataforma_data,
     }
 
 
@@ -398,6 +475,26 @@ def _banner(label: str, tipo_tag: str, bg: colors.Color, styles) -> Table:
         ('TOPPADDING',    (0, 0), (-1, -1), 8),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
         ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    return t
+
+
+def _pl_banner(label: str, bg: colors.Color, styles) -> Table:
+    dark = colors.HexColor('#3b1891') if bg == RS_PURPLE else colors.HexColor('#0f3d6e')
+    s_icon = ParagraphStyle('PLI', parent=styles['Normal'],
+                            textColor=COL_WHITE, fontSize=10, fontName='Helvetica-Bold',
+                            alignment=TA_CENTER)
+    s_lbl  = ParagraphStyle('PLL', parent=styles['Normal'],
+                            textColor=COL_WHITE, fontSize=11, fontName='Helvetica-Bold')
+    t = Table([[Paragraph('>>', s_icon), Paragraph(f' {label}', s_lbl)]],
+              colWidths=[1.2 * cm, 15.8 * cm])
+    t.setStyle(TableStyle([
+        ('BACKGROUND',    (0, 0), (0, 0), dark),
+        ('BACKGROUND',    (1, 0), (1, 0), bg),
+        ('TOPPADDING',    (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING',   (1, 0), (1, 0), 8),
     ]))
     return t
 
@@ -558,6 +655,7 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
             story.append(_banner("Redes Sociales", "RS", RS_PURPLE, styles))
             story.append(Spacer(1, 0.3 * cm))
 
+        # ── Resumen global ────────────────────────────────────────────────
         if sec.get('resumen_plataformas', True):
             story.append(Paragraph("Resumen Redes Sociales", s_sec_rs))
             t = Table([
@@ -571,66 +669,145 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
 
             if rs.get('por_plataforma'):
                 story.append(Spacer(1, 0.3 * cm))
-                rows = [['Plataforma', 'Reportes']]
+                rows = [['Plataforma', 'Reportes', 'Estaciones']]
                 for r in rs['por_plataforma']:
-                    rows.append([r['nombre'], str(r['cnt'])])
-                t = Table(rows, colWidths=[13 * cm, 4 * cm])
+                    pl_d = rs.get('por_plataforma_data', {}).get(r['nombre'], {})
+                    rows.append([r['nombre'], str(r['cnt']), str(pl_d.get('estaciones', '—'))])
+                t = Table(rows, colWidths=[11 * cm, 3 * cm, 3 * cm])
+                t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
+                t.setStyle(TableStyle([
+                    ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ]))
+                story.append(t)
+
+        # ── Desglose por plataforma ───────────────────────────────────────
+        if sec.get('desglose_plataformas', True):
+            top_n_rs = int(sec.get('top_estaciones_rs', 10))
+            for pl_nombre, pl_d in rs.get('por_plataforma_data', {}).items():
+                story.append(Spacer(1, 0.4 * cm))
+                story.append(_pl_banner(pl_nombre, RS_PURPLE, styles))
+                story.append(Spacer(1, 0.2 * cm))
+
+                # Resumen plataforma
+                story.append(Paragraph(f"Estadísticas — {pl_nombre}", s_sec_rs))
+                t = Table([
+                    ['Métrica', 'Valor'],
+                    ['Total reportes',          str(pl_d['total'])],
+                    ['Estaciones participantes', str(pl_d['estaciones'])],
+                ], colWidths=[13 * cm, 4 * cm])
                 t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
                 t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
                 story.append(t)
 
-        if sec.get('por_zona_rs', True) and rs.get('por_zona_rs'):
-            story.append(Paragraph("Actividad por Zona (RS)", s_sec_rs))
-            rows = [['Zona', 'Nombre', 'Reportes', 'Estaciones']]
-            for r in rs['por_zona_rs']:
-                rows.append([r['zona'], r['nombre'], str(r['total']), str(r['ests'])])
-            t = Table(rows, colWidths=[3 * cm, 8 * cm, 3 * cm, 3 * cm])
-            t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
-            t.setStyle(TableStyle([('ALIGN', (2, 0), (-1, -1), 'CENTER')]))
-            story.append(t)
+                # Top estaciones de esta plataforma
+                if top_n_rs > 0 and pl_d.get('top_ests'):
+                    story.append(Paragraph(f"Top {top_n_rs} Estaciones — {pl_nombre}", s_sec_rs))
+                    rows = [['#', 'Indicativo', 'Operador', 'Reportes']]
+                    for i, r in enumerate(pl_d['top_ests'][:top_n_rs], 1):
+                        rows.append([str(i), r['ind'], r['nombre'], str(r['total'])])
+                    t = Table(rows, colWidths=[1 * cm, 3 * cm, 9.5 * cm, 3.5 * cm])
+                    t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
+                    t.setStyle(TableStyle([
+                        ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+                        ('ALIGN', (3, 0), (3, -1), 'CENTER'),
+                    ]))
+                    story.append(t)
 
-        top_n_rs = int(sec.get('top_estaciones_rs', 10))
-        if top_n_rs > 0 and rs.get('top_ests_rs'):
-            story.append(Paragraph(f"Top {top_n_rs} Estaciones (RS)", s_sec_rs))
-            rows = [['#', 'Indicativo', 'Operador', 'Reportes']]
-            for i, r in enumerate(rs['top_ests_rs'][:top_n_rs], 1):
-                rows.append([str(i), r['ind'], r['nombre'], str(r['total'])])
-            t = Table(rows, colWidths=[1 * cm, 3 * cm, 9.5 * cm, 3.5 * cm])
-            t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
-            t.setStyle(TableStyle([
-                ('ALIGN', (0, 0), (0, -1), 'CENTER'),
-                ('ALIGN', (3, 0), (3, -1), 'CENTER'),
-            ]))
-            story.append(t)
+                # Actividad por zona de esta plataforma
+                if sec.get('por_zona_rs', True) and pl_d.get('por_zona'):
+                    story.append(Paragraph(f"Actividad por Zona — {pl_nombre}", s_sec_rs))
+                    rows = [['Zona', 'Nombre', 'Reportes', 'Estaciones']]
+                    for r in pl_d['por_zona']:
+                        rows.append([r['zona'], r['nombre'], str(r['total']), str(r['ests'])])
+                    t = Table(rows, colWidths=[3 * cm, 8 * cm, 3 * cm, 3 * cm])
+                    t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
+                    t.setStyle(TableStyle([('ALIGN', (2, 0), (-1, -1), 'CENTER')]))
+                    story.append(t)
 
-        if sec.get('metricas_detalle', False) and rs.get('metricas'):
-            for pl_name, vals in rs['metricas'].items():
-                story.append(Paragraph(f"Métricas – {pl_name}", s_sec_rs))
-                rows = [['Métrica', 'Total']]
-                for k, v in sorted(vals.items()):
-                    rows.append([k.replace('_', ' ').title(), str(int(v))])
-                t = Table(rows, colWidths=[13 * cm, 4 * cm])
+                # Métricas de esta plataforma
+                if sec.get('metricas_detalle', False) and pl_d.get('metricas'):
+                    story.append(Paragraph(f"Métricas — {pl_nombre}", s_sec_rs))
+                    rows = [['Métrica', 'Total']]
+                    for k, v in sorted(pl_d['metricas'].items()):
+                        rows.append([k.replace('_', ' ').title(), str(int(v))])
+                    t = Table(rows, colWidths=[13 * cm, 4 * cm])
+                    t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
+                    t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
+                    story.append(t)
+
+                # Detalle de esta plataforma (sin columna Plataforma)
+                if sec.get('detalle_rs', False) and pl_d.get('detalle'):
+                    story.append(Paragraph(
+                        f"Reporte Detallado — {pl_nombre} — {len(pl_d['detalle'])} reportes",
+                        s_sec_rs))
+                    rows = [['#', 'Fecha', 'Indicativo', 'Operador', 'Estado', 'Zona']]
+                    for i, r in enumerate(pl_d['detalle'], 1):
+                        rows.append([str(i), r['fecha'].strftime('%d/%m/%Y'), r['ind'],
+                                     Paragraph(r['nombre'] or '', s_cell),
+                                     Paragraph(r['estado'] or '', s_cell),
+                                     r['zona']])
+                    t = Table(rows, colWidths=[0.5*cm, 2.0*cm, 2.5*cm, 5.0*cm, 4.5*cm, 2.5*cm])
+                    t.setStyle(_tbl_style_detail(RS_PURPLE, RS_PURPLE_ALT))
+                    t.setStyle(TableStyle([
+                        ('ALIGN',  (0, 0), (0, -1), 'CENTER'),
+                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ]))
+                    story.append(t)
+
+        else:
+            # ── Modo global (sin desglose) ────────────────────────────────
+            if sec.get('por_zona_rs', True) and rs.get('por_zona_rs'):
+                story.append(Paragraph("Actividad por Zona (RS)", s_sec_rs))
+                rows = [['Zona', 'Nombre', 'Reportes', 'Estaciones']]
+                for r in rs['por_zona_rs']:
+                    rows.append([r['zona'], r['nombre'], str(r['total']), str(r['ests'])])
+                t = Table(rows, colWidths=[3 * cm, 8 * cm, 3 * cm, 3 * cm])
                 t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
-                t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
+                t.setStyle(TableStyle([('ALIGN', (2, 0), (-1, -1), 'CENTER')]))
                 story.append(t)
 
-        if sec.get('detalle_rs', False) and rs.get('detalle_rs'):
-            story.append(Paragraph(
-                f"Reporte Detallado RS — {len(rs['detalle_rs'])} reportes", s_sec_rs))
-            rows = [['#', 'Fecha', 'Indicativo', 'Operador', 'Plataforma', 'Estado', 'Zona']]
-            for i, r in enumerate(rs['detalle_rs'], 1):
-                rows.append([str(i), r['fecha'].strftime('%d/%m/%Y'), r['ind'],
-                              Paragraph(r['nombre'] or '', s_cell),
-                              Paragraph(r['plataforma'] or '', s_cell),
-                              Paragraph(r['estado'] or '', s_cell),
-                              r['zona']])
-            t = Table(rows, colWidths=[0.5*cm, 2.0*cm, 2.0*cm, 3.5*cm, 2.8*cm, 4.2*cm, 2.0*cm])
-            t.setStyle(_tbl_style_detail(RS_PURPLE, RS_PURPLE_ALT))
-            t.setStyle(TableStyle([
-                ('ALIGN',  (0, 0), (0, -1), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ]))
-            story.append(t)
+            top_n_rs = int(sec.get('top_estaciones_rs', 10))
+            if top_n_rs > 0 and rs.get('top_ests_rs'):
+                story.append(Paragraph(f"Top {top_n_rs} Estaciones (RS)", s_sec_rs))
+                rows = [['#', 'Indicativo', 'Operador', 'Reportes']]
+                for i, r in enumerate(rs['top_ests_rs'][:top_n_rs], 1):
+                    rows.append([str(i), r['ind'], r['nombre'], str(r['total'])])
+                t = Table(rows, colWidths=[1 * cm, 3 * cm, 9.5 * cm, 3.5 * cm])
+                t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
+                t.setStyle(TableStyle([
+                    ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+                    ('ALIGN', (3, 0), (3, -1), 'CENTER'),
+                ]))
+                story.append(t)
+
+            if sec.get('metricas_detalle', False) and rs.get('metricas'):
+                for pl_name, vals in rs['metricas'].items():
+                    story.append(Paragraph(f"Métricas – {pl_name}", s_sec_rs))
+                    rows = [['Métrica', 'Total']]
+                    for k, v in sorted(vals.items()):
+                        rows.append([k.replace('_', ' ').title(), str(int(v))])
+                    t = Table(rows, colWidths=[13 * cm, 4 * cm])
+                    t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
+                    t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
+                    story.append(t)
+
+            if sec.get('detalle_rs', False) and rs.get('detalle_rs'):
+                story.append(Paragraph(
+                    f"Reporte Detallado RS — {len(rs['detalle_rs'])} reportes", s_sec_rs))
+                rows = [['#', 'Fecha', 'Indicativo', 'Operador', 'Plataforma', 'Estado', 'Zona']]
+                for i, r in enumerate(rs['detalle_rs'], 1):
+                    rows.append([str(i), r['fecha'].strftime('%d/%m/%Y'), r['ind'],
+                                  Paragraph(r['nombre'] or '', s_cell),
+                                  Paragraph(r['plataforma'] or '', s_cell),
+                                  Paragraph(r['estado'] or '', s_cell),
+                                  r['zona']])
+                t = Table(rows, colWidths=[0.5*cm, 2.0*cm, 2.0*cm, 3.5*cm, 2.8*cm, 4.2*cm, 2.0*cm])
+                t.setStyle(_tbl_style_detail(RS_PURPLE, RS_PURPLE_ALT))
+                t.setStyle(TableStyle([
+                    ('ALIGN',  (0, 0), (0, -1), 'CENTER'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ]))
+                story.append(t)
 
     # ── Pie de página ─────────────────────────────────────────────────────────
     story.append(Spacer(1, 0.5 * cm))

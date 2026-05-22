@@ -17,6 +17,7 @@ export interface SeccionesConfig {
   por_zona_rs: boolean
   metricas_detalle: boolean
   detalle_rs: boolean
+  desglose_plataformas: boolean
 }
 
 export interface PlantillaOut {
@@ -58,6 +59,7 @@ export const DEFAULT_SECCIONES: SeccionesConfig = {
   por_zona_rs: true,
   metricas_detalle: false,
   detalle_rs: false,
+  desglose_plataformas: true,
 }
 
 export const reportesPdfApi = {

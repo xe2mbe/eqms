@@ -10,6 +10,7 @@ import {
   RadarChartOutlined, GlobalOutlined, TeamOutlined,
   BarChartOutlined, EnvironmentOutlined, StarOutlined,
   LikeOutlined, AppstoreOutlined, TrophyOutlined, UnorderedListOutlined,
+  ApartmentOutlined,
 } from '@ant-design/icons'
 import dayjs, { Dayjs } from 'dayjs'
 import { catalogosApi } from '@/api/catalogos'
@@ -52,7 +53,8 @@ const SECCIONES_RS: SeccionDef[] = [
   { key: 'por_zona_rs',        label: 'Actividad por Zona RS', desc: 'Reportes RS agrupados por zona FMRE',             icon: <RadarChartOutlined />, tipo: 'rs' },
   { key: 'metricas_detalle',   label: 'Métricas Detalladas',   desc: 'Likes, comentarios, alcance, etc. por plataforma',   icon: <LikeOutlined />,           tipo: 'rs' },
   { key: 'top_estaciones_rs',  label: 'Top Estaciones RS',     desc: 'Ranking de estaciones con más reportes RS',          icon: <TeamOutlined />,           tipo: 'rs', hasNumber: true, numberKey: 'top_estaciones_rs', numberLabel: 'Top N' },
-  { key: 'detalle_rs',         label: 'Reporte Detallado RS',  desc: 'Lista completa de todos los reportes RS: plataforma, estado, zona y URL', icon: <UnorderedListOutlined />, tipo: 'rs' },
+  { key: 'detalle_rs',          label: 'Reporte Detallado RS',   desc: 'Lista completa de todos los reportes RS: plataforma, estado, zona y URL',              icon: <UnorderedListOutlined />, tipo: 'rs' },
+  { key: 'desglose_plataformas', label: 'Desglose por Plataforma', desc: 'Separa las estadísticas RS por cada red social con su propio resumen y detalle',       icon: <ApartmentOutlined />,     tipo: 'rs' },
 ]
 
 // ── Componente tarjeta de sección ─────────────────────────────────────────────
@@ -197,6 +199,7 @@ export default function ReportesPDFPage() {
       por_zona_rs:         p.secciones.por_zona_rs         ?? true,
       metricas_detalle:    p.secciones.metricas_detalle    ?? false,
       detalle_rs:          p.secciones.detalle_rs          ?? false,
+      desglose_plataformas: p.secciones.desglose_plataformas ?? true,
     })
     form.setFieldsValue({
       nombre:        p.nombre,
@@ -333,6 +336,7 @@ export default function ReportesPDFPage() {
         if (s.por_zona_rs)         rs.push('Zona RS')
         if (s.metricas_detalle)    rs.push('Métricas')
         if (s.detalle_rs)          rs.push('Detalle RS')
+        if (s.desglose_plataformas) rs.push('Desglose')
         return (
           <Space size={3} wrap>
             {rf.map(t => <Tag key={t} color="blue" style={{ fontSize: 11 }}>{t}</Tag>)}
