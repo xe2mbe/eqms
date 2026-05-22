@@ -332,6 +332,14 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         for k, v in vals.items():
             metricas[pl_name][k] = metricas[pl_name].get(k, 0) + (v or 0)
 
+    por_estado_rs = db.execute(text("""
+        SELECT estado, COUNT(*) AS total FROM reportes_rs
+        WHERE estado IS NOT NULL AND estado <> ''
+          AND fecha_reporte >= :fi AND fecha_reporte <= :ff
+          AND (:ev IS NULL OR evento_id = :ev)
+        GROUP BY estado ORDER BY total DESC LIMIT 32
+    """), p).fetchall()
+
     detalle_rs = db.execute(text("""
         SELECT r.indicativo, COALESCE(rx.nombre_completo,''), pl.nombre,
                COALESCE(r.estado,''), COALESCE(z.codigo,''), r.fecha_reporte,
@@ -406,6 +414,14 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
             ORDER BY orden, id
         """), {"pl": pl_id}).fetchall()
 
+        pl_por_estado = db.execute(text("""
+            SELECT estado, COUNT(*) AS total FROM reportes_rs
+            WHERE plataforma_id = :pl AND estado IS NOT NULL AND estado <> ''
+              AND fecha_reporte >= :fi AND fecha_reporte <= :ff
+              AND (:ev IS NULL OR evento_id = :ev)
+            GROUP BY estado ORDER BY total DESC LIMIT 32
+        """), pp).fetchall()
+
         pl_detalle = db.execute(text("""
             SELECT r.indicativo, COALESCE(rx.nombre_completo,''),
                    COALESCE(r.estado,''), COALESCE(z.codigo,''), r.fecha_reporte
@@ -424,6 +440,7 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
             "por_zona":     [{"zona": r[0], "nombre": r[1], "total": r[2], "ests": r[3]} for r in pl_por_zona],
             "metricas":     pl_metricas,
             "metricas_defs": [{"slug": r[0], "nombre": r[1]} for r in pl_metricas_defs],
+            "por_estado":   [{"estado": r[0], "total": r[1]} for r in pl_por_estado],
             "detalle":      [{"ind": r[0], "nombre": r[1], "estado": r[2], "zona": r[3], "fecha": r[4]} for r in pl_detalle],
         }
 
@@ -440,6 +457,7 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         "top_ests_rs": [{"ind": r[0], "nombre": r[1], "total": r[2]} for r in top_ests],
         "metricas": metricas,
         "metricas_defs_by_platform": metricas_defs_by_platform,
+        "por_estado_rs": [{"estado": r[0], "total": r[1]} for r in por_estado_rs],
         "detalle_rs": [{"ind": r[0], "nombre": r[1], "plataforma": r[2], "estado": r[3], "zona": r[4], "fecha": r[5], "url": r[6]} for r in detalle_rs],
         "por_plataforma_data": por_plataforma_data,
     }
@@ -642,20 +660,26 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
 
         if sec.get('por_estado', True) and rf.get('por_estado'):
             story.append(Paragraph("Actividad por Estado", s_section))
+            total_rf_qsos2 = rf.get('total', 0) or 1
             rows_est = rf['por_estado']
             half = (len(rows_est) + 1) // 2
             left, right = rows_est[:half], rows_est[half:]
-            tbl = [['Estado', 'QSOs', 'Estado', 'QSOs']]
+            tbl = [['Estado', 'QSOs', '%', 'Estado', 'QSOs', '%']]
             for i in range(half):
                 lr = left[i]
-                rr = right[i] if i < len(right) else {'estado': '', 'total': ''}
-                tbl.append([lr['estado'], str(lr['total']), rr['estado'], str(rr.get('total', ''))])
-            t = Table(tbl, colWidths=[6.5 * cm, 2 * cm, 6.5 * cm, 2 * cm])
+                rr = right[i] if i < len(right) else None
+                lr_pct = f"{lr['total'] / total_rf_qsos2 * 100:.1f}%"
+                rr_estado = rr['estado'] if rr else ''
+                rr_total  = str(rr['total']) if rr else ''
+                rr_pct    = f"{rr['total'] / total_rf_qsos2 * 100:.1f}%" if rr else ''
+                tbl.append([lr['estado'], str(lr['total']), lr_pct,
+                             rr_estado, rr_total, rr_pct])
+            t = Table(tbl, colWidths=[4.5*cm, 2*cm, 1.5*cm, 4.5*cm, 2*cm, 2.5*cm])
             t.setStyle(_tbl_style())
             t.setStyle(TableStyle([
-                ('ALIGN',     (1, 0), (1, -1), 'CENTER'),
-                ('ALIGN',     (3, 0), (3, -1), 'CENTER'),
-                ('LINEAFTER', (1, 0), (1, -1), 0.8, FMRE_BLUE),
+                ('ALIGN',     (1, 0), (2, -1), 'CENTER'),
+                ('ALIGN',     (4, 0), (5, -1), 'CENTER'),
+                ('LINEAFTER', (2, 0), (2, -1), 0.8, FMRE_BLUE),
             ]))
             story.append(t)
 
@@ -780,6 +804,31 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                     t.setStyle(TableStyle([('ALIGN', (2, 0), (-1, -1), 'CENTER')]))
                     story.append(t)
 
+                # Actividad por estado de esta plataforma
+                if pl_d.get('por_estado'):
+                    story.append(Paragraph(f"Actividad por Estado — {pl_nombre}", s_sec_pl))
+                    total_pl = pl_d['total'] or 1
+                    rows_est = pl_d['por_estado']
+                    half = (len(rows_est) + 1) // 2
+                    left_e, right_e = rows_est[:half], rows_est[half:]
+                    tbl = [['Estado', 'Rep.', '%', 'Estado', 'Rep.', '%']]
+                    for i in range(half):
+                        lr = left_e[i]
+                        rr = right_e[i] if i < len(right_e) else None
+                        tbl.append([
+                            lr['estado'], str(lr['total']), f"{lr['total']/total_pl*100:.1f}%",
+                            rr['estado'] if rr else '', str(rr['total']) if rr else '',
+                            f"{rr['total']/total_pl*100:.1f}%" if rr else '',
+                        ])
+                    t = Table(tbl, colWidths=[4.5*cm, 1.8*cm, 1.5*cm, 4.5*cm, 1.8*cm, 2.9*cm])
+                    t.setStyle(_tbl_style(pl_bg, pl_alt))
+                    t.setStyle(TableStyle([
+                        ('ALIGN',     (1, 0), (2, -1), 'CENTER'),
+                        ('ALIGN',     (4, 0), (5, -1), 'CENTER'),
+                        ('LINEAFTER', (2, 0), (2, -1), 0.8, pl_bg),
+                    ]))
+                    story.append(t)
+
                 # Detalle de esta plataforma (sin columna Plataforma)
                 if sec.get('detalle_rs', False) and pl_d.get('detalle'):
                     story.append(Paragraph(
@@ -824,6 +873,30 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                 t = Table(rows, colWidths=[3 * cm, 11 * cm, 3 * cm])
                 t.setStyle(_tbl_style(RS_TEAL, RS_TEAL_ALT))
                 t.setStyle(TableStyle([('ALIGN', (2, 0), (-1, -1), 'CENTER')]))
+                story.append(t)
+
+            if rs.get('por_estado_rs'):
+                story.append(Paragraph("Actividad por Estado (RS)", s_sec_rs))
+                total_rs2 = rs.get('total_rs', 0) or 1
+                rows_est = rs['por_estado_rs']
+                half = (len(rows_est) + 1) // 2
+                left_e, right_e = rows_est[:half], rows_est[half:]
+                tbl = [['Estado', 'Rep.', '%', 'Estado', 'Rep.', '%']]
+                for i in range(half):
+                    lr = left_e[i]
+                    rr = right_e[i] if i < len(right_e) else None
+                    tbl.append([
+                        lr['estado'], str(lr['total']), f"{lr['total']/total_rs2*100:.1f}%",
+                        rr['estado'] if rr else '', str(rr['total']) if rr else '',
+                        f"{rr['total']/total_rs2*100:.1f}%" if rr else '',
+                    ])
+                t = Table(tbl, colWidths=[4.5*cm, 1.8*cm, 1.5*cm, 4.5*cm, 1.8*cm, 2.9*cm])
+                t.setStyle(_tbl_style(RS_TEAL, RS_TEAL_ALT))
+                t.setStyle(TableStyle([
+                    ('ALIGN',     (1, 0), (2, -1), 'CENTER'),
+                    ('ALIGN',     (4, 0), (5, -1), 'CENTER'),
+                    ('LINEAFTER', (2, 0), (2, -1), 0.8, RS_TEAL),
+                ]))
                 story.append(t)
 
             top_n_rs = int(sec.get('top_estaciones_rs', 10))
