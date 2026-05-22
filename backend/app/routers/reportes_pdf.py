@@ -390,6 +390,12 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
             for k, v in (row[0] or {}).items():
                 pl_metricas[k] = pl_metricas.get(k, 0) + (v or 0)
 
+        pl_metricas_defs = db.execute(text("""
+            SELECT slug, nombre FROM metricas_rs
+            WHERE plataforma_id = :pl AND is_active = true
+            ORDER BY orden, id
+        """), {"pl": pl_id}).fetchall()
+
         pl_detalle = db.execute(text("""
             SELECT r.indicativo, COALESCE(rx.nombre_completo,''),
                    COALESCE(r.estado,''), COALESCE(z.codigo,''), r.fecha_reporte
@@ -402,13 +408,19 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         """), pp).fetchall()
 
         por_plataforma_data[pl_nombre] = {
-            "total":     int(pl_total),
-            "estaciones": int(pl_estaciones),
-            "top_ests":  [{"ind": r[0], "nombre": r[1], "total": r[2]} for r in pl_top_ests],
-            "por_zona":  [{"zona": r[0], "nombre": r[1], "total": r[2], "ests": r[3]} for r in pl_por_zona],
-            "metricas":  pl_metricas,
-            "detalle":   [{"ind": r[0], "nombre": r[1], "estado": r[2], "zona": r[3], "fecha": r[4]} for r in pl_detalle],
+            "total":        int(pl_total),
+            "estaciones":   int(pl_estaciones),
+            "top_ests":     [{"ind": r[0], "nombre": r[1], "total": r[2]} for r in pl_top_ests],
+            "por_zona":     [{"zona": r[0], "nombre": r[1], "total": r[2], "ests": r[3]} for r in pl_por_zona],
+            "metricas":     pl_metricas,
+            "metricas_defs": [{"slug": r[0], "nombre": r[1]} for r in pl_metricas_defs],
+            "detalle":      [{"ind": r[0], "nombre": r[1], "estado": r[2], "zona": r[3], "fecha": r[4]} for r in pl_detalle],
         }
+
+    metricas_defs_by_platform = {
+        pl_nombre: pl_data["metricas_defs"]
+        for pl_nombre, pl_data in por_plataforma_data.items()
+    }
 
     return {
         "total_rs": int(total),
@@ -417,6 +429,7 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         "por_zona_rs": [{"zona": r[0], "nombre": r[1], "total": r[2], "ests": r[3]} for r in por_zona],
         "top_ests_rs": [{"ind": r[0], "nombre": r[1], "total": r[2]} for r in top_ests],
         "metricas": metricas,
+        "metricas_defs_by_platform": metricas_defs_by_platform,
         "detalle_rs": [{"ind": r[0], "nombre": r[1], "plataforma": r[2], "estado": r[3], "zona": r[4], "fecha": r[5], "url": r[6]} for r in detalle_rs],
         "por_plataforma_data": por_plataforma_data,
     }
@@ -688,10 +701,10 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                 story.append(_pl_banner(pl_nombre, RS_PURPLE, styles))
                 story.append(Spacer(1, 0.2 * cm))
 
-                # Resumen plataforma
-                story.append(Paragraph(f"Estadísticas — {pl_nombre}", s_sec_rs))
+                # Participación de esta plataforma
+                story.append(Paragraph(f"Participación — {pl_nombre}", s_sec_rs))
                 t = Table([
-                    ['Métrica', 'Valor'],
+                    ['Participación', 'Total'],
                     ['Total reportes',          str(pl_d['total'])],
                     ['Estaciones participantes', str(pl_d['estaciones'])],
                 ], colWidths=[13 * cm, 4 * cm])
@@ -724,12 +737,13 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                     t.setStyle(TableStyle([('ALIGN', (2, 0), (-1, -1), 'CENTER')]))
                     story.append(t)
 
-                # Métricas de esta plataforma
-                if sec.get('metricas_detalle', False) and pl_d.get('metricas'):
+                # Métricas reales de esta plataforma (solo si tiene métricas configuradas)
+                if pl_d.get('metricas_defs'):
                     story.append(Paragraph(f"Métricas — {pl_nombre}", s_sec_rs))
                     rows = [['Métrica', 'Total']]
-                    for k, v in sorted(pl_d['metricas'].items()):
-                        rows.append([k.replace('_', ' ').title(), str(int(v))])
+                    for defn in pl_d['metricas_defs']:
+                        val = pl_d.get('metricas', {}).get(defn['slug'], 0)
+                        rows.append([defn['nombre'], str(int(val))])
                     t = Table(rows, colWidths=[13 * cm, 4 * cm])
                     t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
                     t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
@@ -756,6 +770,21 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
 
         else:
             # ── Modo global (sin desglose) ────────────────────────────────
+            if sec.get('metricas_detalle', False) and rs.get('metricas'):
+                for pl_name, vals in rs['metricas'].items():
+                    defs = rs.get('metricas_defs_by_platform', {}).get(pl_name, [])
+                    if not defs:
+                        continue
+                    story.append(Paragraph(f"Métricas — {pl_name}", s_sec_rs))
+                    rows = [['Métrica', 'Total']]
+                    for defn in defs:
+                        val = vals.get(defn['slug'], 0)
+                        rows.append([defn['nombre'], str(int(val))])
+                    t = Table(rows, colWidths=[13 * cm, 4 * cm])
+                    t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
+                    t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
+                    story.append(t)
+
             if sec.get('por_zona_rs', True) and rs.get('por_zona_rs'):
                 story.append(Paragraph("Actividad por Zona (RS)", s_sec_rs))
                 rows = [['Zona', 'Nombre', 'Reportes', 'Estaciones']]
@@ -779,17 +808,6 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                     ('ALIGN', (3, 0), (3, -1), 'CENTER'),
                 ]))
                 story.append(t)
-
-            if sec.get('metricas_detalle', False) and rs.get('metricas'):
-                for pl_name, vals in rs['metricas'].items():
-                    story.append(Paragraph(f"Métricas – {pl_name}", s_sec_rs))
-                    rows = [['Métrica', 'Total']]
-                    for k, v in sorted(vals.items()):
-                        rows.append([k.replace('_', ' ').title(), str(int(v))])
-                    t = Table(rows, colWidths=[13 * cm, 4 * cm])
-                    t.setStyle(_tbl_style(RS_PURPLE, RS_PURPLE_ALT))
-                    t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
-                    story.append(t)
 
             if sec.get('detalle_rs', False) and rs.get('detalle_rs'):
                 story.append(Paragraph(
