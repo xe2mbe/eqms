@@ -611,15 +611,33 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
         top_n = int(sec.get('top_estaciones', 10))
         if top_n > 0 and rf.get('top_ests'):
             story.append(Paragraph(f"Top {top_n} Estaciones — Acumulado hasta {ff.strftime('%d/%m/%Y')}", s_section))
+            regular = [r for r in rf['top_ests'] if not r['ind'].upper().startswith('SWL')]
+            swl_ests = [r for r in rf['top_ests'] if r['ind'].upper().startswith('SWL')]
             rows = [['#', 'Indicativo', 'Operador', 'Estado', 'QSOs']]
-            for i, r in enumerate(rf['top_ests'][:top_n], 1):
+            for i, r in enumerate(regular[:top_n], 1):
                 rows.append([str(i), r['ind'], r['nombre'], r['estado'], str(r['total'])])
+            sep_idx = None
+            if swl_ests:
+                sep_idx = len(rows)
+                rows.append(['', '', 'Escuchas  —  SWL', '', ''])
+                for r in swl_ests:
+                    rows.append(['—', r['ind'], r['nombre'], r['estado'], str(r['total'])])
             t = Table(rows, colWidths=[1 * cm, 3 * cm, 6.5 * cm, 4 * cm, 2.5 * cm])
             t.setStyle(_tbl_style())
             t.setStyle(TableStyle([
                 ('ALIGN', (0, 0), (0, -1), 'CENTER'),
                 ('ALIGN', (4, 0), (4, -1), 'CENTER'),
             ]))
+            if sep_idx is not None:
+                t.setStyle(TableStyle([
+                    ('BACKGROUND',  (0, sep_idx), (-1, sep_idx), colors.HexColor('#d6e4ff')),
+                    ('TEXTCOLOR',   (0, sep_idx), (-1, sep_idx), FMRE_BLUE),
+                    ('FONTNAME',    (0, sep_idx), (-1, sep_idx), 'Helvetica-BoldOblique'),
+                    ('SPAN',        (0, sep_idx), (-1, sep_idx)),
+                    ('ALIGN',       (0, sep_idx), (-1, sep_idx), 'CENTER'),
+                    ('TOPPADDING',  (0, sep_idx), (-1, sep_idx), 4),
+                    ('BOTTOMPADDING', (0, sep_idx), (-1, sep_idx), 4),
+                ]))
             story.append(t)
 
         if sec.get('por_estado', True) and rf.get('por_estado'):
