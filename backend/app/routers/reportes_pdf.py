@@ -690,13 +690,15 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
 
             if rs.get('por_plataforma'):
                 story.append(Spacer(1, 0.3 * cm))
-                rows = [['Plataforma', 'Estaciones']]
+                total_rs_cnt = rs.get('total_rs', 0) or 1
+                rows = [['Plataforma', 'Estaciones', '%']]
                 for r in rs['por_plataforma']:
                     pl_d = rs.get('por_plataforma_data', {}).get(r['nombre'], {})
-                    rows.append([r['nombre'], str(pl_d.get('estaciones', '—'))])
-                t = Table(rows, colWidths=[14 * cm, 3 * cm])
+                    pct = f"{r['cnt'] / total_rs_cnt * 100:.1f}%"
+                    rows.append([r['nombre'], str(pl_d.get('estaciones', '—')), pct])
+                t = Table(rows, colWidths=[11 * cm, 3 * cm, 3 * cm])
                 t.setStyle(_tbl_style(RS_TEAL, RS_TEAL_ALT))
-                t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
+                t.setStyle(TableStyle([('ALIGN', (1, 0), (-1, -1), 'CENTER')]))
                 story.append(t)
 
         # ── Desglose por plataforma ───────────────────────────────────────
