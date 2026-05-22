@@ -1,4 +1,5 @@
 import io
+import os
 import ssl
 import smtplib
 from datetime import datetime
@@ -29,6 +30,8 @@ from app.auth import get_current_user, require_admin
 from app.routers.configuracion import _load_smtp
 
 router = APIRouter()
+
+LOGO_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'LogoFMRE.png')
 
 # ─── Colores FMRE ─────────────────────────────────────────────────────────────
 FMRE_BLUE     = colors.HexColor('#1A569E')
@@ -548,6 +551,25 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                             topMargin=2 * cm, bottomMargin=2 * cm,
                             title=p.nombre)
 
+    gen_time = datetime.now().strftime('%d/%m/%Y %H:%M')
+
+    def _footer_cb(canvas, doc):
+        canvas.saveState()
+        canvas.setFont('Helvetica', 7.5)
+        canvas.setFillColor(colors.grey)
+        y = 0.65 * cm
+        canvas.drawString(doc.leftMargin, y,
+                          f"Generado por QMS – FMRE  ·  {gen_time}")
+        canvas.drawCentredString(doc.pagesize[0] / 2, y,
+                                 f"Página {canvas.getPageNumber()}")
+        if os.path.exists(LOGO_PATH):
+            canvas.drawImage(LOGO_PATH,
+                             doc.pagesize[0] - doc.rightMargin - 1.4 * cm,
+                             0.25 * cm,
+                             width=1.4 * cm, height=1.0 * cm,
+                             preserveAspectRatio=True, anchor='sw', mask='auto')
+        canvas.restoreState()
+
     styles = getSampleStyleSheet()
     s_title   = ParagraphStyle('T', parent=styles['Title'],
                                textColor=FMRE_BLUE, fontSize=20,
@@ -576,6 +598,7 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
         fecha_str += f" – {ff.strftime('%d/%m/%Y')}"
 
     story = []
+    details_story = []   # secciones detalladas van al final del reporte
 
     # ── Encabezado ────────────────────────────────────────────────────────────
     story.append(Paragraph("Federación Mexicana de Radioexperimentadores A.C.", s_sub))
@@ -694,7 +717,7 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
             story.append(t)
 
         if sec.get('detalle_rf', False) and rf.get('detalle'):
-            story.append(Paragraph(
+            details_story.append(Paragraph(
                 f"Reporte Detallado RF — {len(rf['detalle'])} QSOs", s_section))
             rows = [['#', 'Fecha', 'Indicativo', 'Operador', 'Señal', 'Estado', 'Sistema', 'Zona']]
             for i, r in enumerate(rf['detalle'], 1):
@@ -710,7 +733,7 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                 ('ALIGN',  (4, 0), (4, -1), 'CENTER'),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ]))
-            story.append(t)
+            details_story.append(t)
 
     # ── Secciones RS ─────────────────────────────────────────────────────────
     if tipo in ('rs', 'ambos'):
@@ -829,9 +852,9 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                     ]))
                     story.append(t)
 
-                # Detalle de esta plataforma (sin columna Plataforma)
+                # Detalle de esta plataforma → va al final del reporte
                 if sec.get('detalle_rs', False) and pl_d.get('detalle'):
-                    story.append(Paragraph(
+                    details_story.append(Paragraph(
                         f"Reporte Detallado — {pl_nombre} — {len(pl_d['detalle'])} reportes",
                         s_sec_pl))
                     rows = [['#', 'Fecha', 'Indicativo', 'Operador', 'Estado', 'Zona']]
@@ -846,7 +869,7 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                         ('ALIGN',  (0, 0), (0, -1), 'CENTER'),
                         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                     ]))
-                    story.append(t)
+                    details_story.append(t)
 
         else:
             # ── Modo global (sin desglose) ────────────────────────────────
@@ -914,7 +937,7 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                 story.append(t)
 
             if sec.get('detalle_rs', False) and rs.get('detalle_rs'):
-                story.append(Paragraph(
+                details_story.append(Paragraph(
                     f"Reporte Detallado RS — {len(rs['detalle_rs'])} reportes", s_sec_rs))
                 rows = [['#', 'Fecha', 'Indicativo', 'Operador', 'Plataforma', 'Estado', 'Zona']]
                 for i, r in enumerate(rs['detalle_rs'], 1):
@@ -929,17 +952,19 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                     ('ALIGN',  (0, 0), (0, -1), 'CENTER'),
                     ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ]))
-                story.append(t)
+                details_story.append(t)
 
-    # ── Pie de página ─────────────────────────────────────────────────────────
-    story.append(Spacer(1, 0.5 * cm))
-    story.append(HRFlowable(width="100%", thickness=0.5, color=COL_LGRAY, spaceAfter=6))
-    story.append(Paragraph(
-        f"Generado por QMS – FMRE  ·  {datetime.now().strftime('%d/%m/%Y %H:%M')}",
-        s_footer,
-    ))
+    # ── Secciones detalladas al final ────────────────────────────────────────
+    if details_story:
+        story.append(Spacer(1, 0.4 * cm))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=FMRE_BLUE, spaceAfter=8))
+        s_det_title = ParagraphStyle('DT', parent=styles['Heading1'],
+                                     textColor=FMRE_BLUE, fontSize=14,
+                                     spaceBefore=6, spaceAfter=10, alignment=TA_CENTER)
+        story.append(Paragraph("Reportes Detallados", s_det_title))
+        story.extend(details_story)
 
-    doc.build(story)
+    doc.build(story, onFirstPage=_footer_cb, onLaterPages=_footer_cb)
     buf.seek(0)
     return buf.read()
 
