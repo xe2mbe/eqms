@@ -715,8 +715,7 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                 story.append(Paragraph(f"Participación — {pl_nombre}", s_sec_pl))
                 t = Table([
                     ['Participación', 'Total'],
-                    ['Total reportes',          str(pl_d['total'])],
-                    ['Estaciones participantes', str(pl_d['estaciones'])],
+                    ['Total reportes', str(pl_d['total'])],
                 ], colWidths=[13 * cm, 4 * cm])
                 t.setStyle(_tbl_style(pl_bg, pl_alt))
                 t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
