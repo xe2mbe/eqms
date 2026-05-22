@@ -743,6 +743,18 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                 t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
                 story.append(t)
 
+                # Métricas reales de esta plataforma (solo si tiene métricas configuradas)
+                if pl_d.get('metricas_defs'):
+                    story.append(Paragraph(f"Métricas — {pl_nombre}", s_sec_pl))
+                    rows = [['Métrica', 'Total']]
+                    for defn in pl_d['metricas_defs']:
+                        val = pl_d.get('metricas', {}).get(defn['slug'], 0)
+                        rows.append([defn['nombre'], str(int(val))])
+                    t = Table(rows, colWidths=[13 * cm, 4 * cm])
+                    t.setStyle(_tbl_style(pl_bg, pl_alt))
+                    t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
+                    story.append(t)
+
                 # Top estaciones de esta plataforma
                 if top_n_rs > 0 and pl_d.get('top_ests'):
                     story.append(Paragraph(f"Top {top_n_rs} Estaciones {pl_nombre} — Acumulado hasta {ff.strftime('%d/%m/%Y')}", s_sec_pl))
@@ -766,18 +778,6 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                     t = Table(rows, colWidths=[3 * cm, 11 * cm, 3 * cm])
                     t.setStyle(_tbl_style(pl_bg, pl_alt))
                     t.setStyle(TableStyle([('ALIGN', (2, 0), (-1, -1), 'CENTER')]))
-                    story.append(t)
-
-                # Métricas reales de esta plataforma (solo si tiene métricas configuradas)
-                if pl_d.get('metricas_defs'):
-                    story.append(Paragraph(f"Métricas — {pl_nombre}", s_sec_pl))
-                    rows = [['Métrica', 'Total']]
-                    for defn in pl_d['metricas_defs']:
-                        val = pl_d.get('metricas', {}).get(defn['slug'], 0)
-                        rows.append([defn['nombre'], str(int(val))])
-                    t = Table(rows, colWidths=[13 * cm, 4 * cm])
-                    t.setStyle(_tbl_style(pl_bg, pl_alt))
-                    t.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'CENTER')]))
                     story.append(t)
 
                 # Detalle de esta plataforma (sin columna Plataforma)
