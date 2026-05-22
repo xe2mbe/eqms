@@ -587,10 +587,12 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
 
         if sec.get('por_zona', True) and rf.get('por_zona'):
             story.append(Paragraph("Actividad por Zona", s_section))
-            rows = [['Zona', 'Nombre', 'QSOs', 'Estaciones']]
+            total_rf_qsos = rf.get('total', 0) or 1
+            rows = [['Zona', 'Nombre', 'QSOs', '%', 'Estaciones']]
             for r in rf['por_zona']:
-                rows.append([r['zona'], r['nombre'], str(r['total']), str(r['ests'])])
-            t = Table(rows, colWidths=[3 * cm, 8 * cm, 3 * cm, 3 * cm])
+                pct = f"{r['total'] / total_rf_qsos * 100:.1f}%"
+                rows.append([r['zona'], r['nombre'], str(r['total']), pct, str(r['ests'])])
+            t = Table(rows, colWidths=[3 * cm, 7 * cm, 2.5 * cm, 2 * cm, 2.5 * cm])
             t.setStyle(_tbl_style())
             t.setStyle(TableStyle([('ALIGN', (2, 0), (-1, -1), 'CENTER')]))
             story.append(t)
