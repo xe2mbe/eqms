@@ -215,7 +215,7 @@ def _gather_rf(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         SELECT r.indicativo, COALESCE(rx.nombre_completo,''), COALESCE(r.estado,''), COUNT(*) AS total
         FROM reportes r
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
-        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
+        WHERE r.fecha_reporte <= :ff
           AND (:ev IS NULL OR r.evento_id = :ev)
         GROUP BY r.indicativo, rx.nombre_completo, r.estado
         ORDER BY total DESC LIMIT 50
@@ -310,7 +310,7 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         SELECT r.indicativo, COALESCE(rx.nombre_completo,''), COUNT(*) AS total
         FROM reportes_rs r
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
-        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
+        WHERE r.fecha_reporte <= :ff
           AND (:ev IS NULL OR r.evento_id = :ev)
         GROUP BY r.indicativo, rx.nombre_completo
         ORDER BY total DESC LIMIT 50
@@ -375,7 +375,7 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
             SELECT r.indicativo, COALESCE(rx.nombre_completo,''), COUNT(*) AS total
             FROM reportes_rs r
             LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
-            WHERE r.plataforma_id = :pl AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
+            WHERE r.plataforma_id = :pl AND r.fecha_reporte <= :ff
               AND (:ev IS NULL OR r.evento_id = :ev)
             GROUP BY r.indicativo, rx.nombre_completo
             ORDER BY total DESC LIMIT 50
@@ -608,7 +608,7 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
 
         top_n = int(sec.get('top_estaciones', 10))
         if top_n > 0 and rf.get('top_ests'):
-            story.append(Paragraph(f"Top {top_n} Estaciones", s_section))
+            story.append(Paragraph(f"Top {top_n} Estaciones — Acumulado hasta {ff.strftime('%d/%m/%Y')}", s_section))
             rows = [['#', 'Indicativo', 'Operador', 'Estado', 'QSOs']]
             for i, r in enumerate(rf['top_ests'][:top_n], 1):
                 rows.append([str(i), r['ind'], r['nombre'], r['estado'], str(r['total'])])
@@ -723,7 +723,7 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
 
                 # Top estaciones de esta plataforma
                 if top_n_rs > 0 and pl_d.get('top_ests'):
-                    story.append(Paragraph(f"Top {top_n_rs} Estaciones — {pl_nombre}", s_sec_pl))
+                    story.append(Paragraph(f"Top {top_n_rs} Estaciones {pl_nombre} — Acumulado hasta {ff.strftime('%d/%m/%Y')}", s_sec_pl))
                     rows = [['#', 'Indicativo', 'Operador', 'Reportes']]
                     for i, r in enumerate(pl_d['top_ests'][:top_n_rs], 1):
                         rows.append([str(i), r['ind'], r['nombre'], str(r['total'])])
@@ -806,7 +806,7 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
 
             top_n_rs = int(sec.get('top_estaciones_rs', 10))
             if top_n_rs > 0 and rs.get('top_ests_rs'):
-                story.append(Paragraph(f"Top {top_n_rs} Estaciones (RS)", s_sec_rs))
+                story.append(Paragraph(f"Top {top_n_rs} Estaciones RS — Acumulado hasta {ff.strftime('%d/%m/%Y')}", s_sec_rs))
                 rows = [['#', 'Indicativo', 'Operador', 'Reportes']]
                 for i, r in enumerate(rs['top_ests_rs'][:top_n_rs], 1):
                     rows.append([str(i), r['ind'], r['nombre'], str(r['total'])])
