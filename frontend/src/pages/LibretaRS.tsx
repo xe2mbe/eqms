@@ -179,11 +179,17 @@ export default function LibretaRSPage() {
     if (!platSeleccionada) return
     setLoadingMetricas(true)
     try {
-      const { data } = await libretaRSApi.listEstadisticas({ page: p, page_size: 20, plataforma_id: platSeleccionada.id })
+      const { data } = await libretaRSApi.listEstadisticas({
+        page: p,
+        page_size: 20,
+        plataforma_id: platSeleccionada.id,
+        fecha_inicio: sesionFecha.startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+        fecha_fin: sesionFecha.endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+      })
       setMetricasGuardadas(data.items)
       setTotalMetricas(data.total)
     } finally { setLoadingMetricas(false) }
-  }, [pageMetricas, platSeleccionada])
+  }, [pageMetricas, platSeleccionada, sesionFecha])
 
   useEffect(() => { fetchMetricas() }, [fetchMetricas])
 
@@ -361,7 +367,7 @@ export default function LibretaRSPage() {
     setEditMetricaRecord(r)
     const plat = plataformas.find(p => p.id === r.plataforma_id)
     const ms = (plat?.metricas || []).filter(m => m.is_active).sort((a, b) => a.orden - b.orden)
-    const fields: Record<string, unknown> = { fecha_reporte: dayjs(r.fecha_reporte), observaciones: r.observaciones }
+    const fields: Record<string, unknown> = { observaciones: r.observaciones }
     for (const m of ms) fields[`m_${m.slug}`] = r.valores?.[m.slug] ?? 0
     editMetricaForm.setFieldsValue(fields)
     setEditMetricaModal(true)
@@ -383,7 +389,7 @@ export default function LibretaRSPage() {
       await libretaRSApi.updateEstadistica(editMetricaRecord.id, {
         plataforma_id: editMetricaRecord.plataforma_id,
         valores,
-        fecha_reporte: values.fecha_reporte.format('YYYY-MM-DDTHH:mm:ss'),
+        fecha_reporte: dayjs(editMetricaRecord.fecha_reporte).format('YYYY-MM-DDTHH:mm:ss'),
         observaciones: values.observaciones,
       })
       message.success('Actualizado')
@@ -560,10 +566,6 @@ export default function LibretaRSPage() {
           </Space>
         )
       },
-    },
-    {
-      title: 'Fecha', dataIndex: 'fecha_reporte', key: 'fecha', width: 110,
-      render: (v: string) => dayjs(v).format('DD/MM/YY'),
     },
     {
       title: 'Capturado por', dataIndex: 'capturado_por_nombre', key: 'cap', width: 110,
@@ -881,9 +883,6 @@ export default function LibretaRSPage() {
       <Modal title="Editar métricas" open={editMetricaModal} onOk={handleSaveEditMetrica}
         onCancel={() => setEditMetricaModal(false)} okText="Guardar" width={600}>
         <Form form={editMetricaForm} layout="vertical">
-          <Form.Item label="Fecha" name="fecha_reporte" rules={[{ required: true }]}>
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
-          </Form.Item>
           <Row gutter={12}>
             {getEditMetricasActivas().map(m => (
               <Col span={12} key={m.id}>
