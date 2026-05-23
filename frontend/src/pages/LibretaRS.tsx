@@ -23,11 +23,12 @@ import { useAuthStore } from '@/store/authStore'
 const { Title, Text } = Typography
 
 // ── Columnas configurables tabla reportes ─────────────────────────────────────
-const REPORTE_COL_KEYS = ['indicativo', 'rst', 'operador', 'zona', 'estado', 'ciudad', 'pais', 'url', 'hora', 'cap'] as const
+const REPORTE_COL_KEYS = ['indicativo', 'rst', 'operador', 'zona', 'estado', 'ciudad', 'pais', 'url', 'fecha_reporte', 'created_at', 'cap'] as const
 type ReporteColKey = typeof REPORTE_COL_KEYS[number]
 const REPORTE_COL_LABELS: Record<ReporteColKey, string> = {
   indicativo: 'Indicativo', rst: 'RST', operador: 'Operador', zona: 'Zona',
-  estado: 'Estado', ciudad: 'Ciudad', pais: 'País', url: 'URL', hora: 'Hora', cap: 'Cap. por',
+  estado: 'Estado', ciudad: 'Ciudad', pais: 'País', url: 'URL',
+  fecha_reporte: 'Fecha Evento', created_at: 'Fecha Captura', cap: 'Cap. por',
 }
 const REPORTE_COL_LOCKED: ReporteColKey[] = ['indicativo']
 
@@ -605,8 +606,12 @@ export default function LibretaRSPage() {
       render: (v: string) => v
         ? <a href={v} target="_blank" rel="noreferrer" style={{ fontSize: 11 }}>Ver</a>
         : '—' },
-    hora:       { title: 'Hora', dataIndex: 'created_at', key: 'hora', width: 70,
-      render: (v: string) => dayjs(v).format('HH:mm') },
+    fecha_reporte: { title: 'Fecha Evento', dataIndex: 'fecha_reporte', key: 'fecha_reporte', width: 135,
+      render: (v: string) => dayjs(v).format('DD/MM/YYYY HH:mm') },
+    created_at: { title: 'Fecha Captura', dataIndex: 'created_at', key: 'created_at', width: 135,
+      render: (v: string) => v
+        ? <span style={{ color: '#8c8c8c' }}>{dayjs(v).format('DD/MM/YYYY HH:mm')}</span>
+        : '—' },
     cap:        { title: 'Cap. por', dataIndex: 'capturado_por_nombre', key: 'cap', width: 90,
       render: (v: string) => v || '—' },
   }
