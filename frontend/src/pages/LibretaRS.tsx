@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import {
   Card, Form, Select, DatePicker, Button, Table, Typography,
   Space, InputNumber, Input, message, Popconfirm, Modal,
-  Row, Col, AutoComplete, Divider, Tag, Tooltip, Badge,
+  Row, Col, Divider, Tag, Tooltip, Badge,
 } from 'antd'
 import type { InputRef } from 'antd'
 import {
@@ -664,8 +664,19 @@ export default function LibretaRSPage() {
               validateStatus={sesionEvento ? '' : 'warning'}
               help={sesionEvento ? undefined : 'Requerido antes de capturar'}
             >
-              <AutoComplete placeholder="Selecciona o escribe el evento..." options={tiposEvento}
-                value={sesionEvento} onChange={setSesionEvento} />
+              <Select
+                placeholder="Selecciona o escribe el evento..."
+                showSearch allowClear optionFilterProp="label"
+                style={{ width: '100%' }}
+                value={sesionEvento}
+                onChange={setSesionEvento}
+                labelRender={({ value }) => {
+                  const ev = eventos.find(e => e.tipo === value)
+                  const c = ev?.color ?? '#1677ff'
+                  return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{String(value)}</Tag>
+                }}
+                options={tiposEvento}
+              />
             </Form.Item>
           </Col>
           <Col xs={24} sm={8} md={5}>
