@@ -18,4 +18,5 @@ jobs:
           script: |
             cd /opt/eqms
             git pull origin main
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate
