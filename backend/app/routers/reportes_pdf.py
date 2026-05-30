@@ -92,7 +92,6 @@ class PlantillaCreate(BaseModel):
 class ProgramacionUpdate(BaseModel):
     destinatarios: List[str] = []
     prog_hora: Optional[str] = None
-    prog_recurrencia: Optional[str] = None
     prog_dia_semana: Optional[int] = None
     prog_activo: bool = False
 
@@ -216,9 +215,9 @@ def update_programacion(pid: int, body: ProgramacionUpdate,
         raise HTTPException(404, "Plantilla no encontrada")
     p.destinatarios = body.destinatarios
     p.prog_hora = body.prog_hora
-    p.prog_recurrencia = body.prog_recurrencia
     p.prog_dia_semana = body.prog_dia_semana
     p.prog_activo = body.prog_activo
+    p.prog_recurrencia = 'semanal'
     db.commit()
     db.refresh(p)
     return _to_out(p)
@@ -231,6 +230,196 @@ def delete_plantilla(pid: int, db: Session = Depends(get_db), _=Depends(require_
         raise HTTPException(404, "Plantilla no encontrada")
     db.delete(p)
     db.commit()
+
+
+# ─── Último evento capturado ──────────────────────────────────────────────────
+
+def _detectar_cluster(rows) -> tuple:
+    """Recibe filas (fecha, cnt) en orden DESC y devuelve (fi, ff, fechas_asc)."""
+    cluster = []
+    prev = None
+    for fecha, cnt in rows:
+        if prev is None or (prev - fecha).days <= 2:
+            cluster.append({"fecha": fecha.isoformat(), "count": int(cnt)})
+            prev = fecha
+        else:
+            break
+    if not cluster:
+        return None, None, []
+    ff = cluster[0]["fecha"]
+    fi = cluster[-1]["fecha"]
+    return fi, ff, sorted(cluster, key=lambda x: x["fecha"])
+
+
+def _cluster_rf(db: Session, ev_id: Optional[int], before_date=None) -> Optional[dict]:
+    ev_filter = "AND r.evento_id = :ev" if ev_id is not None else ""
+    params = {"ev": ev_id}
+    date_cap = "AND fecha_reporte::date < :before_date" if before_date else ""
+
+    # Nombre del evento
+    evento_nombre = None
+    if ev_id:
+        row = db.execute(text("SELECT tipo FROM eventos WHERE id = :ev"), params).fetchone()
+        evento_nombre = row[0] if row else None
+
+    # Última fecha (anterior a before_date si se indica)
+    ultima = db.execute(text(f"""
+        SELECT MAX(fecha_reporte::date) FROM reportes WHERE 1=1
+        {ev_filter.replace('r.', '')} {date_cap}
+    """), {**params, "before_date": before_date}).scalar()
+    if ultima is None:
+        return None
+
+    # Cluster global
+    rows = db.execute(text(f"""
+        SELECT r.fecha_reporte::date AS fecha, COUNT(*) AS cnt
+        FROM reportes r
+        WHERE r.fecha_reporte::date <= :ultima {ev_filter}
+        GROUP BY r.fecha_reporte::date ORDER BY fecha DESC
+    """), {**params, "ultima": ultima}).fetchall()
+    fi, ff, _ = _detectar_cluster(rows)
+    if not fi:
+        return None
+
+    # Por sistema dentro del clúster
+    sistemas = db.execute(text(f"""
+        SELECT s.id, s.nombre, s.color
+        FROM sistemas s
+        WHERE s.id IN (
+            SELECT DISTINCT r.sistema_id FROM reportes r
+            WHERE r.sistema_id IS NOT NULL
+              AND r.fecha_reporte::date BETWEEN :fi AND :ff
+              {ev_filter}
+        )
+        ORDER BY s.nombre
+    """), {**params, "fi": fi, "ff": ff}).fetchall()
+
+    origenes = []
+    for sid, snombre, scolor in sistemas:
+        fd = db.execute(text(f"""
+            SELECT fecha_reporte::date AS fecha, COUNT(*) AS cnt
+            FROM reportes r
+            WHERE r.sistema_id = :sid
+              AND r.fecha_reporte::date BETWEEN :fi AND :ff
+              {ev_filter}
+            GROUP BY fecha_reporte::date ORDER BY fecha
+        """), {**params, "sid": sid, "fi": fi, "ff": ff}).fetchall()
+        fechas = [{"fecha": f.isoformat(), "count": int(c)} for f, c in fd]
+        if fechas:
+            origenes.append({
+                "nombre": snombre,
+                "color": scolor or "#1677ff",
+                "total": sum(x["count"] for x in fechas),
+                "fi": fechas[0]["fecha"],
+                "ff": fechas[-1]["fecha"],
+                "fechas": fechas,
+            })
+
+    # Registros sin sistema asignado
+    sin_sistema = db.execute(text(f"""
+        SELECT fecha_reporte::date AS fecha, COUNT(*) AS cnt
+        FROM reportes r
+        WHERE r.sistema_id IS NULL
+          AND r.fecha_reporte::date BETWEEN :fi AND :ff
+          {ev_filter}
+        GROUP BY fecha_reporte::date ORDER BY fecha
+    """), {**params, "fi": fi, "ff": ff}).fetchall()
+    if sin_sistema:
+        fechas = [{"fecha": f.isoformat(), "count": int(c)} for f, c in sin_sistema]
+        origenes.append({
+            "nombre": "Sin sistema",
+            "color": "#8c8c8c",
+            "total": sum(x["count"] for x in fechas),
+            "fi": fechas[0]["fecha"],
+            "ff": fechas[-1]["fecha"],
+            "fechas": fechas,
+        })
+
+    return {"fi": fi, "ff": ff, "evento_nombre": evento_nombre, "origenes": origenes}
+
+
+def _cluster_rs(db: Session, ev_id: Optional[int], before_date=None) -> Optional[dict]:
+    ev_filter = "AND r.evento_id = :ev" if ev_id is not None else ""
+    params = {"ev": ev_id}
+    date_cap = "AND fecha_reporte::date < :before_date" if before_date else ""
+
+    evento_nombre = None
+    if ev_id:
+        row = db.execute(text("SELECT tipo FROM eventos WHERE id = :ev"), params).fetchone()
+        evento_nombre = row[0] if row else None
+
+    ultima = db.execute(text(f"""
+        SELECT MAX(fecha_reporte::date) FROM reportes_rs WHERE 1=1
+        {ev_filter.replace('r.', '')} {date_cap}
+    """), {**params, "before_date": before_date}).scalar()
+    if ultima is None:
+        return None
+
+    rows = db.execute(text(f"""
+        SELECT r.fecha_reporte::date AS fecha, COUNT(*) AS cnt
+        FROM reportes_rs r
+        WHERE r.fecha_reporte::date <= :ultima {ev_filter}
+        GROUP BY r.fecha_reporte::date ORDER BY fecha DESC
+    """), {**params, "ultima": ultima}).fetchall()
+    fi, ff, _ = _detectar_cluster(rows)
+    if not fi:
+        return None
+
+    plataformas = db.execute(text(f"""
+        SELECT pl.id, pl.nombre, pl.color
+        FROM plataformas_rs pl
+        WHERE pl.id IN (
+            SELECT DISTINCT r.plataforma_id FROM reportes_rs r
+            WHERE r.fecha_reporte::date BETWEEN :fi AND :ff
+              {ev_filter}
+        )
+        ORDER BY pl.nombre
+    """), {**params, "fi": fi, "ff": ff}).fetchall()
+
+    origenes = []
+    for plid, plnombre, plcolor in plataformas:
+        fd = db.execute(text(f"""
+            SELECT fecha_reporte::date AS fecha, COUNT(*) AS cnt
+            FROM reportes_rs r
+            WHERE r.plataforma_id = :plid
+              AND r.fecha_reporte::date BETWEEN :fi AND :ff
+              {ev_filter}
+            GROUP BY fecha_reporte::date ORDER BY fecha
+        """), {**params, "plid": plid, "fi": fi, "ff": ff}).fetchall()
+        fechas = [{"fecha": f.isoformat(), "count": int(c)} for f, c in fd]
+        if fechas:
+            origenes.append({
+                "nombre": plnombre,
+                "color": plcolor or "#722ed1",
+                "total": sum(x["count"] for x in fechas),
+                "fi": fechas[0]["fecha"],
+                "ff": fechas[-1]["fecha"],
+                "fechas": fechas,
+            })
+
+    return {"fi": fi, "ff": ff, "evento_nombre": evento_nombre, "origenes": origenes}
+
+
+@router.get("/plantillas/{pid}/ultimo-evento")
+def ultimo_evento(pid: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    """Devuelve nombre del evento y desglose por sistema/plataforma del último clúster."""
+    p = db.get(models.ReportePlantilla, pid)
+    if not p:
+        raise HTTPException(404, "Plantilla no encontrada")
+
+    tipo = p.tipo or 'rf'
+    rf_data = _cluster_rf(db, p.evento_rf_id) if tipo in ('rf', 'ambos') else None
+    rs_data = _cluster_rs(db, p.evento_rs_id) if tipo in ('rs', 'ambos') else None
+
+    fechas_fi = [d["fi"] for d in [rf_data, rs_data] if d and d["fi"]]
+    fechas_ff = [d["ff"] for d in [rf_data, rs_data] if d and d["ff"]]
+
+    return {
+        "fi": min(fechas_fi) if fechas_fi else None,
+        "ff": max(fechas_ff) if fechas_ff else None,
+        "rf": rf_data,
+        "rs": rs_data,
+    }
 
 
 # ─── Datos RF ─────────────────────────────────────────────────────────────────
@@ -1265,6 +1454,33 @@ def auto_send(db: Session, p: models.ReportePlantilla, fi: datetime, ff: datetim
         data['rs'] = _gather_rs(db, p.evento_rs_id, fi, ff)
     pdf = _build_pdf(p, data, fi, ff)
     _send_email_report(p, pdf, data, fi, ff, db)
+
+
+def _resolver_fechas_ultimo_evento(db: Session, p: models.ReportePlantilla, before_date=None):
+    """Resuelve fi/ff del último clúster de eventos para una plantilla.
+    before_date: si se indica, busca el último evento ANTERIOR a esa fecha (para scheduler)."""
+    from datetime import date as dt_date
+    tipo = p.tipo or 'rf'
+    fi_str = ff_str = None
+
+    if tipo in ('rf', 'ambos'):
+        rf = _cluster_rf(db, p.evento_rf_id, before_date=before_date)
+        if rf and rf['fi']:
+            fi_str = rf['fi']
+            ff_str = rf['ff']
+
+    if tipo in ('rs', 'ambos'):
+        rs = _cluster_rs(db, p.evento_rs_id, before_date=before_date)
+        if rs and rs['fi']:
+            fi_str = min(fi_str, rs['fi']) if fi_str else rs['fi']
+            ff_str = max(ff_str, rs['ff']) if ff_str else rs['ff']
+
+    if not fi_str:
+        return None, None
+
+    fi = datetime.combine(dt_date.fromisoformat(fi_str), datetime.min.time())
+    ff = datetime.combine(dt_date.fromisoformat(ff_str), datetime.max.time())
+    return fi, ff
 
 
 # ─── Endpoints generar / enviar ───────────────────────────────────────────────

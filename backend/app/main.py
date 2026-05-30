@@ -146,6 +146,7 @@ async def lifespan(app: FastAPI):
         conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS prog_dia_semana INTEGER"))
         conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS prog_activo BOOLEAN DEFAULT FALSE"))
         conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS prog_ultima_ejecucion TIMESTAMPTZ"))
+        conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS modo_fecha VARCHAR(15) NOT NULL DEFAULT 'ultimo_evento'"))
         conn.commit()
 
     db = SessionLocal()
@@ -181,28 +182,15 @@ def _run_scheduled_reports():
         plantillas = db.query(models.ReportePlantilla).filter(
             models.ReportePlantilla.prog_activo == True,
             models.ReportePlantilla.prog_hora == hhmm,
-            models.ReportePlantilla.prog_recurrencia != None,
+            models.ReportePlantilla.prog_dia_semana == dow,
         ).all()
 
         for p in plantillas:
-            rec = p.prog_recurrencia
-            if rec == 'semanal' and p.prog_dia_semana != dow:
-                continue
-            if rec == 'mensual' and now.day != 1:
-                continue
-
             today = now.date()
-            if rec == 'diario':
-                fi = datetime.combine(today - timedelta(days=1), datetime.min.time())
-                ff = datetime.combine(today - timedelta(days=1), datetime.max.time())
-            elif rec == 'semanal':
-                fi = datetime.combine(today - timedelta(days=7), datetime.min.time())
-                ff = datetime.combine(today - timedelta(days=1), datetime.max.time())
-            else:  # mensual
-                import calendar
-                last = today.replace(day=1) - timedelta(days=1)
-                fi = datetime.combine(last.replace(day=1), datetime.min.time())
-                ff = datetime.combine(last, datetime.max.time())
+            fi, ff = reportes_pdf._resolver_fechas_ultimo_evento(db, p, before_date=today)
+            if fi is None:
+                logger.warning(f"Reporte {p.id} ({p.nombre}): sin evento previo a {today}, se omite.")
+                continue
 
             try:
                 reportes_pdf.auto_send(db, p, fi, ff)

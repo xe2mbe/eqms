@@ -35,10 +35,10 @@ export interface PlantillaOut {
   rol_asignado: string | null
   usuario_id: number | null
   usuario_nombre: string | null
+  prog_activo: boolean
+  prog_dia_semana: number | null
   prog_hora: string | null
   prog_recurrencia: string | null
-  prog_dia_semana: number | null
-  prog_activo: boolean
   prog_ultima_ejecucion: string | null
   created_at: string | null
 }
@@ -59,7 +59,6 @@ export interface PlantillaCreate {
 export interface ProgramacionUpdate {
   destinatarios: string[]
   prog_hora: string | null
-  prog_recurrencia: string | null
   prog_dia_semana: number | null
   prog_activo: boolean
 }
@@ -78,6 +77,29 @@ export const DEFAULT_SECCIONES: SeccionesConfig = {
   metricas_detalle: false,
   detalle_rs: false,
   desglose_plataformas: true,
+}
+
+export interface OrigenCluster {
+  nombre: string
+  color: string
+  total: number
+  fi: string
+  ff: string
+  fechas: { fecha: string; count: number }[]
+}
+
+export interface UltimoCluster {
+  fi: string | null
+  ff: string | null
+  evento_nombre: string | null
+  origenes: OrigenCluster[]
+}
+
+export interface UltimoEventoOut {
+  fi: string | null
+  ff: string | null
+  rf: UltimoCluster | null
+  rs: UltimoCluster | null
 }
 
 export const reportesPdfApi = {
@@ -114,4 +136,7 @@ export const reportesPdfApi = {
 
   updateProgramacion: (id: number, data: ProgramacionUpdate) =>
     client.put<PlantillaOut>(`/reportes-pdf/plantillas/${id}/programacion`, data),
+
+  ultimoEvento: (id: number) =>
+    client.get<UltimoEventoOut>(`/reportes-pdf/plantillas/${id}/ultimo-evento`),
 }
