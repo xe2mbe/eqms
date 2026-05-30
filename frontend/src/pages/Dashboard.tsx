@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Row, Col, Card, Statistic, Spin, Typography, Table, Empty } from 'antd'
-import { FileTextOutlined, TeamOutlined, GlobalOutlined, WifiOutlined, RadarChartOutlined } from '@ant-design/icons'
+import { FileTextOutlined, TeamOutlined, GlobalOutlined, WifiOutlined } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
 import { estadisticasApi } from '@/api/estadisticas'
@@ -154,18 +154,11 @@ export default function DashboardPage() {
                 valueStyle={{ color: '#1A569E' }} />
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={4}>
-            <Card className="card-shadow">
-              <Statistic title="Operadores" value={data?.total_operadores ?? '—'}
-                prefix={<TeamOutlined style={{ color: '#52c41a' }} />}
-                valueStyle={{ color: '#52c41a' }} />
-            </Card>
-          </Col>
           <Col xs={24} sm={12} lg={5}>
             <Card className="card-shadow">
               <Statistic title="Estaciones Reportadas" value={data?.total_estaciones ?? '—'}
-                prefix={<RadarChartOutlined style={{ color: '#1677ff' }} />}
-                valueStyle={{ color: '#1677ff' }} />
+                prefix={<TeamOutlined style={{ color: '#52c41a' }} />}
+                valueStyle={{ color: '#52c41a' }} />
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={5}>

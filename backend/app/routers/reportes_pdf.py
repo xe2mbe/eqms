@@ -9,6 +9,10 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 
+from docx import Document as DocxDocument
+from docx.shared import Pt, RGBColor, Cm
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -80,6 +84,17 @@ class PlantillaCreate(BaseModel):
     destinatarios: List[str] = []
     asunto_email: Optional[str] = "Estadísticas {evento} – {fecha}"
     activa: bool = True
+    # Asignación
+    rol_asignado: Optional[str] = None
+    usuario_id: Optional[int] = None
+
+
+class ProgramacionUpdate(BaseModel):
+    destinatarios: List[str] = []
+    prog_hora: Optional[str] = None
+    prog_recurrencia: Optional[str] = None
+    prog_dia_semana: Optional[int] = None
+    prog_activo: bool = False
 
 
 class PlantillaOut(BaseModel):
@@ -94,6 +109,14 @@ class PlantillaOut(BaseModel):
     destinatarios: List[str]
     asunto_email: Optional[str]
     activa: bool
+    rol_asignado: Optional[str] = None
+    usuario_id: Optional[int] = None
+    usuario_nombre: Optional[str] = None
+    prog_hora: Optional[str] = None
+    prog_recurrencia: Optional[str] = None
+    prog_dia_semana: Optional[int] = None
+    prog_activo: bool = False
+    prog_ultima_ejecucion: Optional[datetime] = None
     created_at: Optional[datetime]
 
     class Config:
@@ -115,6 +138,14 @@ def _to_out(p: models.ReportePlantilla) -> PlantillaOut:
         destinatarios=p.destinatarios or [],
         asunto_email=p.asunto_email,
         activa=p.activa,
+        rol_asignado=p.rol_asignado,
+        usuario_id=p.usuario_id,
+        usuario_nombre=p.usuario.full_name if p.usuario else None,
+        prog_hora=p.prog_hora,
+        prog_recurrencia=p.prog_recurrencia,
+        prog_dia_semana=p.prog_dia_semana,
+        prog_activo=p.prog_activo or False,
+        prog_ultima_ejecucion=p.prog_ultima_ejecucion,
         created_at=p.created_at,
     )
 
@@ -122,9 +153,19 @@ def _to_out(p: models.ReportePlantilla) -> PlantillaOut:
 # ─── CRUD plantillas ─────────────────────────────────────────────────────────
 
 @router.get("/plantillas", response_model=List[PlantillaOut])
-def list_plantillas(db: Session = Depends(get_db), _=Depends(get_current_user)):
-    rows = db.query(models.ReportePlantilla).order_by(models.ReportePlantilla.nombre).all()
-    return [_to_out(r) for r in rows]
+def list_plantillas(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    """Admin ve todas; operadores solo las asignadas a su rol o usuario."""
+    q = db.query(models.ReportePlantilla)
+    if current_user.role != 'admin':
+        from sqlalchemy import or_
+        q = q.filter(
+            or_(
+                models.ReportePlantilla.rol_asignado == None,
+                models.ReportePlantilla.rol_asignado == current_user.role,
+                models.ReportePlantilla.usuario_id == current_user.id,
+            )
+        )
+    return [_to_out(r) for r in q.order_by(models.ReportePlantilla.nombre).all()]
 
 
 @router.post("/plantillas", response_model=PlantillaOut, status_code=201)
@@ -138,6 +179,8 @@ def create_plantilla(body: PlantillaCreate, db: Session = Depends(get_db), _=Dep
         destinatarios=body.destinatarios,
         asunto_email=body.asunto_email,
         activa=body.activa,
+        rol_asignado=body.rol_asignado,
+        usuario_id=body.usuario_id,
     )
     db.add(p)
     db.commit()
@@ -158,6 +201,24 @@ def update_plantilla(pid: int, body: PlantillaCreate, db: Session = Depends(get_
     p.destinatarios = body.destinatarios
     p.asunto_email = body.asunto_email
     p.activa = body.activa
+    p.rol_asignado = body.rol_asignado
+    p.usuario_id = body.usuario_id
+    db.commit()
+    db.refresh(p)
+    return _to_out(p)
+
+
+@router.put("/plantillas/{pid}/programacion", response_model=PlantillaOut)
+def update_programacion(pid: int, body: ProgramacionUpdate,
+                        db: Session = Depends(get_db), _=Depends(get_current_user)):
+    p = db.get(models.ReportePlantilla, pid)
+    if not p:
+        raise HTTPException(404, "Plantilla no encontrada")
+    p.destinatarios = body.destinatarios
+    p.prog_hora = body.prog_hora
+    p.prog_recurrencia = body.prog_recurrencia
+    p.prog_dia_semana = body.prog_dia_semana
+    p.prog_activo = body.prog_activo
     db.commit()
     db.refresh(p)
     return _to_out(p)
@@ -971,6 +1032,241 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
     return buf.read()
 
 
+# ─── Generación Word ─────────────────────────────────────────────────────────
+
+def _add_word_table(doc: DocxDocument, headers: list, rows: list,
+                    header_color: str = '1A569E'):
+    tbl = doc.add_table(rows=1 + len(rows), cols=len(headers))
+    tbl.style = 'Table Grid'
+    hdr_row = tbl.rows[0]
+    for i, h in enumerate(headers):
+        cell = hdr_row.cells[i]
+        cell.text = str(h)
+        cell.paragraphs[0].runs[0].font.bold = True
+        cell.paragraphs[0].runs[0].font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        cell.paragraphs[0].runs[0].font.size = Pt(9)
+        r, g, b = int(header_color[:2],16), int(header_color[2:4],16), int(header_color[4:],16)
+        from docx.oxml.ns import qn
+        from docx.oxml import OxmlElement
+        tc = cell._tc
+        tcPr = tc.get_or_add_tcPr()
+        shd = OxmlElement('w:shd')
+        shd.set(qn('w:val'), 'clear')
+        shd.set(qn('w:color'), 'auto')
+        shd.set(qn('w:fill'), header_color.upper())
+        tcPr.append(shd)
+    for ri, row_data in enumerate(rows):
+        tr = tbl.rows[ri + 1]
+        for ci, val in enumerate(row_data):
+            c = tr.cells[ci]
+            c.text = str(val)
+            c.paragraphs[0].runs[0].font.size = Pt(8)
+    doc.add_paragraph()
+
+
+def _build_word(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetime) -> bytes:
+    doc = DocxDocument()
+
+    # Estilos base
+    style = doc.styles['Normal']
+    style.font.name = 'Calibri'
+    style.font.size = Pt(10)
+
+    tipo = p.tipo or 'rf'
+    sec  = p.secciones or {}
+    evento_nombre = (p.evento_rf.tipo if p.evento_rf else p.nombre) if tipo != 'rs' \
+        else (p.evento_rs.tipo if p.evento_rs else p.nombre)
+    fecha_str = fi.strftime('%d/%m/%Y')
+    if fi.date() != ff.date():
+        fecha_str += f" – {ff.strftime('%d/%m/%Y')}"
+
+    title = doc.add_heading(p.nombre, 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    sub = doc.add_paragraph(f"Federación Mexicana de Radioexperimentadores A.C.")
+    sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    sub2 = doc.add_paragraph(f"{evento_nombre}  ·  {fecha_str}")
+    sub2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph()
+
+    BLUE, TEAL = '1A569E', '0F766E'
+
+    if tipo in ('rf', 'ambos'):
+        rf = data.get('rf', {})
+        if tipo == 'ambos':
+            doc.add_heading('Reportes de Radio Frecuencia (RF)', level=1)
+
+        if sec.get('resumen_general', True):
+            doc.add_heading('Resumen General', level=2)
+            _add_word_table(doc, ['Métrica', 'Valor'], [
+                ['Total de QSOs registrados', rf.get('total', 0)],
+                ['Estaciones participantes',  rf.get('estaciones', 0)],
+                ['Estados representados',     rf.get('estados_cnt', 0)],
+            ], BLUE)
+
+        if sec.get('por_zona', True) and rf.get('por_zona'):
+            doc.add_heading('Actividad por Zona', level=2)
+            total_q = rf.get('total', 0) or 1
+            _add_word_table(doc, ['Zona', 'Nombre', 'QSOs', 'Estaciones', '%'],
+                [[r['zona'], r['nombre'], r['total'], r['ests'],
+                  f"{r['total']/total_q*100:.1f}%"] for r in rf['por_zona']], BLUE)
+
+        if sec.get('por_sistema', True) and rf.get('por_sistema'):
+            doc.add_heading('Actividad por Sistema', level=2)
+            total_s = sum(r['total'] for r in rf['por_sistema']) or 1
+            _add_word_table(doc, ['Sistema', 'QSOs', '%'],
+                [[r['sistema'], r['total'], f"{r['total']/total_s*100:.1f}%"]
+                 for r in rf['por_sistema']], BLUE)
+
+        top_n = int(sec.get('top_estaciones', 10))
+        if top_n > 0 and rf.get('top_ests'):
+            doc.add_heading(f'Top {top_n} Estaciones RF', level=2)
+            _add_word_table(doc, ['#', 'Indicativo', 'Operador', 'Estado', 'QSOs'],
+                [[i+1, r['ind'], r['nombre'], r['estado'], r['total']]
+                 for i, r in enumerate(rf['top_ests'][:top_n])], BLUE)
+
+        if sec.get('por_estado', True) and rf.get('por_estado'):
+            doc.add_heading('Actividad por Estado', level=2)
+            total_q2 = rf.get('total', 0) or 1
+            _add_word_table(doc, ['Estado', 'QSOs', '%'],
+                [[r['estado'], r['total'], f"{r['total']/total_q2*100:.1f}%"]
+                 for r in rf['por_estado']], BLUE)
+
+        if sec.get('primera_vez', False) and rf.get('primera_vez'):
+            doc.add_heading('Nuevas Estaciones', level=2)
+            _add_word_table(doc, ['Indicativo', 'Operador', 'Estado'],
+                [[r['ind'], r['nombre'], r['estado']] for r in rf['primera_vez']], BLUE)
+
+        if sec.get('detalle_rf', False) and rf.get('detalle'):
+            doc.add_heading('Reporte Detallado RF', level=2)
+            _add_word_table(doc, ['#', 'Fecha', 'Indicativo', 'Operador', 'Señal', 'Estado', 'Sistema', 'Zona'],
+                [[i+1, r['fecha'].strftime('%d/%m/%Y'), r['ind'], r['nombre'],
+                  r['senal'], r['estado'], r['sistema'], r['zona']]
+                 for i, r in enumerate(rf['detalle'])], BLUE)
+
+    if tipo in ('rs', 'ambos'):
+        rs = data.get('rs', {})
+        if tipo == 'ambos':
+            doc.add_heading('Redes Sociales (RS)', level=1)
+
+        if sec.get('resumen_plataformas', True):
+            doc.add_heading('Resumen Redes Sociales', level=2)
+            _add_word_table(doc, ['Métrica', 'Total'], [
+                ['Total reportes RS', rs.get('total_rs', 0)],
+                ['Estaciones',        rs.get('estaciones_rs', 0)],
+            ], TEAL)
+            if rs.get('por_plataforma'):
+                total_rs = rs.get('total_rs', 0) or 1
+                _add_word_table(doc, ['Plataforma', 'Reportes', '%'],
+                    [[r['nombre'], r['cnt'], f"{r['cnt']/total_rs*100:.1f}%"]
+                     for r in rs['por_plataforma']], TEAL)
+
+        if sec.get('desglose_plataformas', True):
+            top_n_rs = int(sec.get('top_estaciones_rs', 10))
+            for pl_nombre, pl_d in rs.get('por_plataforma_data', {}).items():
+                doc.add_heading(f'Plataforma: {pl_nombre}', level=2)
+                _add_word_table(doc, ['Métrica', 'Total'],
+                    [['Reportes', pl_d['total']], ['Estaciones', pl_d['estaciones']]], TEAL)
+                if pl_d.get('metricas_defs'):
+                    doc.add_heading(f'Métricas — {pl_nombre}', level=3)
+                    _add_word_table(doc, ['Métrica', 'Total'],
+                        [[d['nombre'], int(pl_d.get('metricas', {}).get(d['slug'], 0))]
+                         for d in pl_d['metricas_defs']], TEAL)
+                if top_n_rs > 0 and pl_d.get('top_ests'):
+                    doc.add_heading(f'Top {top_n_rs} Estaciones — {pl_nombre}', level=3)
+                    _add_word_table(doc, ['#', 'Indicativo', 'Operador', 'Reportes'],
+                        [[i+1, r['ind'], r['nombre'], r['total']]
+                         for i, r in enumerate(pl_d['top_ests'][:top_n_rs])], TEAL)
+                if sec.get('por_zona_rs', True) and pl_d.get('por_zona'):
+                    doc.add_heading(f'Actividad por Zona — {pl_nombre}', level=3)
+                    total_pl = pl_d['total'] or 1
+                    _add_word_table(doc, ['Zona', 'Nombre', 'Estaciones', '%'],
+                        [[r['zona'], r['nombre'], r['ests'], f"{r['total']/total_pl*100:.1f}%"]
+                         for r in pl_d['por_zona']], TEAL)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    return buf.read()
+
+
+# ─── Helper email (reutilizado por enviar + scheduler) ────────────────────────
+
+def _send_email_report(p: models.ReportePlantilla, pdf: bytes, data: dict,
+                       fi: datetime, ff: datetime, db: Session):
+    from app.routers.configuracion import _load_smtp
+    destinatarios = p.destinatarios or []
+    if not destinatarios:
+        raise ValueError("Sin destinatarios")
+    smtp = _load_smtp(db)
+    if not smtp.host or not smtp.usuario or not smtp.password:
+        raise ValueError("SMTP no configurado")
+
+    evento    = p.evento_rf.tipo if p.evento_rf else p.nombre
+    fname     = f"qms_{evento.replace(' ', '_').lower()}_{fi.strftime('%Y%m%d')}.pdf"
+    fecha_str = fi.strftime('%d/%m/%Y')
+    asunto    = (p.asunto_email or "Estadísticas {evento} – {fecha}") \
+        .replace("{evento}", evento).replace("{fecha}", fecha_str)
+
+    rf_block = ''
+    if 'rf' in data:
+        rf = data['rf']
+        rf_block = f"""<p><strong>Estadísticas RF:</strong></p><ul>
+  <li>Total QSOs: <strong>{rf['total']}</strong></li>
+  <li>Estaciones: <strong>{rf['estaciones']}</strong></li>
+  <li>Estados representados: <strong>{rf['estados_cnt']}</strong></li>
+</ul>"""
+    rs_block = ''
+    if 'rs' in data:
+        rs = data['rs']
+        plats = ', '.join(f"{r['nombre']} ({r['cnt']})" for r in rs.get('por_plataforma', []))
+        rs_block = f"""<p><strong>Estadísticas RS:</strong></p><ul>
+  <li>Total reportes RS: <strong>{rs['total_rs']}</strong></li>
+  <li>Estaciones: <strong>{rs['estaciones_rs']}</strong></li>
+  {f'<li>Por plataforma: {plats}</li>' if plats else ''}
+</ul>"""
+
+    msg = MIMEMultipart()
+    msg["Subject"] = asunto
+    msg["From"]    = smtp.remitente or smtp.usuario
+    msg["To"]      = ", ".join(destinatarios)
+    msg.attach(MIMEText(f"""<p>Estimados,</p>
+<p>Se adjuntan las estadísticas de <strong>{evento}</strong> del día <strong>{fecha_str}</strong>.</p>
+{rf_block}{rs_block}
+<p>Ver detalles en el archivo PDF adjunto.</p>
+<hr><p style="color:#999;font-size:12px">QMS – Federación Mexicana de Radioexperimentadores A.C.</p>
+""", "html"))
+    att = MIMEApplication(pdf, _subtype="pdf")
+    att.add_header("Content-Disposition", "attachment", filename=fname)
+    msg.attach(att)
+
+    ctx = ssl.create_default_context()
+    if smtp.port == 465:
+        with smtplib.SMTP_SSL(smtp.host, smtp.port, context=ctx, timeout=15) as s:
+            s.login(smtp.usuario, smtp.password)
+            s.sendmail(msg["From"], destinatarios, msg.as_string())
+    else:
+        with smtplib.SMTP(smtp.host, smtp.port, timeout=15) as s:
+            s.ehlo()
+            if smtp.ssl:
+                s.starttls(); s.ehlo()
+            s.login(smtp.usuario, smtp.password)
+            s.sendmail(msg["From"], destinatarios, msg.as_string())
+
+    return {"ok": True, "enviado_a": destinatarios, "archivo": fname}
+
+
+def auto_send(db: Session, p: models.ReportePlantilla, fi: datetime, ff: datetime):
+    """Llamado por el scheduler. Genera PDF y envía."""
+    tipo = p.tipo or 'rf'
+    data: dict = {}
+    if tipo in ('rf', 'ambos'):
+        data['rf'] = _gather_rf(db, p.evento_rf_id, fi, ff)
+    if tipo in ('rs', 'ambos'):
+        data['rs'] = _gather_rs(db, p.evento_rs_id, fi, ff)
+    pdf = _build_pdf(p, data, fi, ff)
+    _send_email_report(p, pdf, data, fi, ff, db)
+
+
 # ─── Endpoints generar / enviar ───────────────────────────────────────────────
 
 @router.post("/generar/{pid}")
@@ -1015,83 +1311,45 @@ def enviar_pdf(
     p = db.get(models.ReportePlantilla, pid)
     if not p:
         raise HTTPException(404, "Plantilla no encontrada")
-
-    destinatarios = p.destinatarios or []
-    if not destinatarios:
+    if not p.destinatarios:
         raise HTTPException(400, "La plantilla no tiene destinatarios configurados")
-
-    smtp = _load_smtp(db)
-    if not smtp.host or not smtp.usuario or not smtp.password:
-        raise HTTPException(400, "Configura el servidor SMTP en Configuración antes de enviar correos")
-
     tipo = p.tipo or 'rf'
     data: dict = {}
     if tipo in ('rf', 'ambos'):
         data['rf'] = _gather_rf(db, p.evento_rf_id, fecha_inicio, fecha_fin)
     if tipo in ('rs', 'ambos'):
         data['rs'] = _gather_rs(db, p.evento_rs_id, fecha_inicio, fecha_fin)
-
     pdf = _build_pdf(p, data, fecha_inicio, fecha_fin)
-
-    evento    = p.evento_rf.tipo if p.evento_rf else p.nombre
-    fname     = f"qms_{evento.replace(' ', '_').lower()}_{fecha_inicio.strftime('%Y%m%d')}.pdf"
-    fecha_str = fecha_inicio.strftime('%d/%m/%Y')
-    asunto    = (p.asunto_email or "Estadísticas {evento} – {fecha}") \
-        .replace("{evento}", evento).replace("{fecha}", fecha_str)
-
-    rf_block = ''
-    if 'rf' in data:
-        rf = data['rf']
-        rf_block = f"""
-<p><strong>Estadísticas RF:</strong></p>
-<ul>
-  <li>Total QSOs: <strong>{rf['total']}</strong></li>
-  <li>Estaciones: <strong>{rf['estaciones']}</strong></li>
-  <li>Estados representados: <strong>{rf['estados_cnt']}</strong></li>
-</ul>"""
-
-    rs_block = ''
-    if 'rs' in data:
-        rs = data['rs']
-        plats = ', '.join(f"{r['nombre']} ({r['cnt']})" for r in rs.get('por_plataforma', []))
-        rs_block = f"""
-<p><strong>Estadísticas Redes Sociales:</strong></p>
-<ul>
-  <li>Total reportes RS: <strong>{rs['total_rs']}</strong></li>
-  <li>Estaciones: <strong>{rs['estaciones_rs']}</strong></li>
-  {f'<li>Por plataforma: {plats}</li>' if plats else ''}
-</ul>"""
-
-    msg = MIMEMultipart()
-    msg["Subject"] = asunto
-    msg["From"]    = smtp.remitente or smtp.usuario
-    msg["To"]      = ", ".join(destinatarios)
-    msg.attach(MIMEText(f"""
-<p>Estimados,</p>
-<p>Se adjuntan las estadísticas de <strong>{evento}</strong> del día <strong>{fecha_str}</strong>.</p>
-{rf_block}
-{rs_block}
-<p>Ver detalles en el archivo PDF adjunto.</p>
-<hr><p style="color:#999;font-size:12px">QMS – Federación Mexicana de Radioexperimentadores A.C.</p>
-""", "html"))
-    att = MIMEApplication(pdf, _subtype="pdf")
-    att.add_header("Content-Disposition", "attachment", filename=fname)
-    msg.attach(att)
-
     try:
-        ctx = ssl.create_default_context()
-        if smtp.port == 465:
-            with smtplib.SMTP_SSL(smtp.host, smtp.port, context=ctx, timeout=15) as s:
-                s.login(smtp.usuario, smtp.password)
-                s.sendmail(msg["From"], destinatarios, msg.as_string())
-        else:
-            with smtplib.SMTP(smtp.host, smtp.port, timeout=15) as s:
-                s.ehlo()
-                if smtp.ssl:
-                    s.starttls(); s.ehlo()
-                s.login(smtp.usuario, smtp.password)
-                s.sendmail(msg["From"], destinatarios, msg.as_string())
+        return _send_email_report(p, pdf, data, fecha_inicio, fecha_fin, db)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     except Exception as e:
         raise HTTPException(500, f"Error al enviar correo: {e}")
 
-    return {"ok": True, "enviado_a": destinatarios, "archivo": fname}
+
+@router.post("/generar-word/{pid}")
+def generar_word(
+    pid: int,
+    fecha_inicio: datetime,
+    fecha_fin: datetime,
+    db: Session = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    p = db.get(models.ReportePlantilla, pid)
+    if not p:
+        raise HTTPException(404, "Plantilla no encontrada")
+    tipo = p.tipo or 'rf'
+    data: dict = {}
+    if tipo in ('rf', 'ambos'):
+        data['rf'] = _gather_rf(db, p.evento_rf_id, fecha_inicio, fecha_fin)
+    if tipo in ('rs', 'ambos'):
+        data['rs'] = _gather_rs(db, p.evento_rs_id, fecha_inicio, fecha_fin)
+    docx_bytes = _build_word(p, data, fecha_inicio, fecha_fin)
+    evento = (p.evento_rf.tipo if p.evento_rf else p.nombre).replace(' ', '_').lower()
+    fname  = f"qms_{evento}_{fecha_inicio.strftime('%Y%m%d')}.docx"
+    return StreamingResponse(
+        io.BytesIO(docx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )

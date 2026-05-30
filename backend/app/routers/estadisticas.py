@@ -134,46 +134,56 @@ def tendencia(
 def rs_resumen_reportes(
     fecha_inicio: Optional[datetime] = None,
     fecha_fin: Optional[datetime] = None,
+    plataforma_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
     """Estadísticas de estaciones reportadas vía redes sociales."""
     fi, ff = fecha_inicio, _fin(fecha_fin)
-    total = db.execute(text("""
+    plat_filter = "AND plataforma_id = :pid" if plataforma_id else ""
+    plat_filter_r = "AND r.plataforma_id = :pid" if plataforma_id else ""
+    params = {"fi": fi, "ff": ff, "pid": plataforma_id}
+
+    total = db.execute(text(f"""
         SELECT COUNT(*) FROM reportes_rs
         WHERE (:fi IS NULL OR fecha_reporte >= :fi)
           AND (:ff IS NULL OR fecha_reporte <= :ff)
-    """), {"fi": fi, "ff": ff}).scalar() or 0
+          {plat_filter}
+    """), params).scalar() or 0
 
-    indicativos = db.execute(text("""
+    indicativos = db.execute(text(f"""
         SELECT COUNT(DISTINCT indicativo) FROM reportes_rs
         WHERE (:fi IS NULL OR fecha_reporte >= :fi)
           AND (:ff IS NULL OR fecha_reporte <= :ff)
-    """), {"fi": fi, "ff": ff}).scalar() or 0
+          {plat_filter}
+    """), params).scalar() or 0
 
-    estados = db.execute(text("""
+    estados = db.execute(text(f"""
         SELECT COUNT(DISTINCT estado) FROM reportes_rs
         WHERE estado IS NOT NULL
           AND (:fi IS NULL OR fecha_reporte >= :fi)
           AND (:ff IS NULL OR fecha_reporte <= :ff)
-    """), {"fi": fi, "ff": ff}).scalar() or 0
+          {plat_filter}
+    """), params).scalar() or 0
 
-    por_plataforma = db.execute(text("""
+    por_plataforma = db.execute(text(f"""
         SELECT p.nombre, COUNT(r.id) AS total
         FROM reportes_rs r
         JOIN plataformas_rs p ON p.id = r.plataforma_id
         WHERE (:fi IS NULL OR r.fecha_reporte >= :fi)
           AND (:ff IS NULL OR r.fecha_reporte <= :ff)
+          {plat_filter_r}
         GROUP BY p.nombre ORDER BY total DESC
-    """), {"fi": fi, "ff": ff}).fetchall()
+    """), params).fetchall()
 
-    por_estado = db.execute(text("""
+    por_estado = db.execute(text(f"""
         SELECT estado, COUNT(*) AS total
         FROM reportes_rs
         WHERE estado IS NOT NULL
           AND (:fi IS NULL OR fecha_reporte >= :fi)
           AND (:ff IS NULL OR fecha_reporte <= :ff)
+          {plat_filter}
         GROUP BY estado ORDER BY total DESC LIMIT 15
-    """), {"fi": fi, "ff": ff}).fetchall()
+    """), params).fetchall()
 
     return {
         "total_reportes": int(total),
@@ -359,6 +369,45 @@ def rs_tendencia_metricas(
         {"periodo": str(r[0]), "plataforma": r[1], "slug": r[2], "total": float(r[3] or 0)}
         for r in rows
     ]
+
+
+@router.get("/rs/cobertura-estados")
+def rs_cobertura_estados(
+    fecha_inicio: Optional[datetime] = None,
+    fecha_fin: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+):
+    """Todos los estados del catálogo con su actividad RS en el período."""
+    ff = _fin(fecha_fin)
+    catalog = db.query(models.Estado).order_by(models.Estado.nombre).all()
+    rows = db.execute(text("""
+        SELECT r.estado,
+               COUNT(*)                   AS total,
+               COUNT(DISTINCT r.indicativo) AS indicativos
+        FROM reportes_rs r
+        WHERE r.estado IS NOT NULL
+          AND (:fi IS NULL OR r.fecha_reporte >= :fi)
+          AND (:ff IS NULL OR r.fecha_reporte <= :ff)
+        GROUP BY r.estado
+    """), {"fi": fecha_inicio, "ff": ff}).fetchall()
+
+    activity: dict = {}
+    for r in rows:
+        activity[r[0]] = {"total": r[1], "indicativos": r[2]}
+
+    result = []
+    for e in catalog:
+        act = activity.get(e.abreviatura) or activity.get(e.nombre) or \
+              {"total": 0, "indicativos": 0}
+        result.append({
+            "abreviatura": e.abreviatura,
+            "nombre": e.nombre,
+            "zona": e.zona,
+            "total": act["total"],
+            "indicativos": act["indicativos"],
+        })
+
+    return sorted(result, key=lambda x: -x["total"])
 
 
 @router.get("/ultima-actividad")

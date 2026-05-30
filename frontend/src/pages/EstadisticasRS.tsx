@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Row, Col, Typography, Spin, Tabs, Table, Tag, Tooltip, Select, Empty } from 'antd'
+import { Card, Row, Col, Typography, Spin, Tabs, Table, Tag, Tooltip, Select, Empty, Progress } from 'antd'
 import DateRangeBar from '@/components/common/DateRangeBar'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
@@ -19,15 +19,17 @@ const METRICA_LABELS: Record<string, string> = {
   me_gusta: 'Me gusta', comentarios: 'Comentarios', compartidos: 'Compartidos',
   reproducciones: 'Reproducciones', seguidores: 'Seguidores', alcance: 'Alcance',
   impresiones: 'Impresiones', reacciones: 'Reacciones', guardados: 'Guardados',
+  interacciones: 'Interacciones',
 }
 
-type TendRow    = { periodo: string; plataforma: string; total: number }
-type EstadoPlat = { plataforma: string; estado: string; total: number }
-type TopOp      = { plataforma: string; indicativo: string; total: number; estados: number; zonas: number; ultimo: string | null; nombre: string | null }
-type ZonaRow    = { plataforma: string; zona: string; total: number; indicativos: number }
-type NuevoRow   = { mes: string; plataforma: string; nuevos: number }
-type ResumenRow = { plataforma: string; color: string; slug: string; total: number }
-type MetricaTend = { periodo: string; plataforma: string; slug: string; total: number }
+type TendRow       = { periodo: string; plataforma: string; total: number }
+type EstadoPlat    = { plataforma: string; estado: string; total: number }
+type TopOp         = { plataforma: string; indicativo: string; total: number; estados: number; zonas: number; ultimo: string | null; nombre: string | null }
+type ZonaRow       = { plataforma: string; zona: string; total: number; indicativos: number }
+type NuevoRow      = { mes: string; plataforma: string; nuevos: number }
+type ResumenRow    = { plataforma: string; color: string; slug: string; total: number }
+type MetricaTend   = { periodo: string; plataforma: string; slug: string; total: number }
+type CoberturaRS   = { abreviatura: string; nombre: string; zona: string; total: number; indicativos: number }
 
 export default function EstadisticasRSPage() {
   const [loading, setLoading]             = useState(false)
@@ -42,6 +44,7 @@ export default function EstadisticasRSPage() {
   const [nuevos, setNuevos]               = useState<NuevoRow[]>([])
   const [resumen, setResumen]             = useState<ResumenRow[]>([])
   const [metricaTend, setMetricaTend]     = useState<MetricaTend[]>([])
+  const [coberturaRS, setCoberturaRS]     = useState<CoberturaRS[]>([])
   const [platFilter, setPlatFilter]       = useState<string | undefined>()
   const [loadingMetricas, setLoadingMetricas] = useState(false)
 
@@ -58,11 +61,13 @@ export default function EstadisticasRSPage() {
       estadisticasApi.rsZonaActividad(p),
       estadisticasApi.rsNuevosMensuales(),
       estadisticasApi.rsResumen(p),
+      estadisticasApi.rsCoberturaEstados(p),
     ])
     const ok = <T,>(i: number): T[] =>
       results[i].status === 'fulfilled' ? (results[i] as PromiseFulfilledResult<any>).value.data : []
     setTendencia(ok(0)); setPorEstadoPlat(ok(1)); setTopOps(ok(2))
     setZonaAct(ok(3));   setNuevos(ok(4));        setResumen(ok(5))
+    setCoberturaRS(ok(6))
     setLoading(false)
   }
 
@@ -264,6 +269,60 @@ export default function EstadisticasRSPage() {
     })),
   }
 
+  // ── Tab 5: Cobertura ─────────────────────────────────────────────────────────
+
+  const zonasCobertura = Object.keys(ZONA_COLORS)
+  const coberturaByZona = zonasCobertura.map(z => {
+    const estados = coberturaRS.filter(e => e.zona === z)
+    const activos = estados.filter(e => e.total > 0)
+    const totalContactos = estados.reduce((s, e) => s + e.total, 0)
+    const totalIndicativos = estados.reduce((s, e) => s + e.indicativos, 0)
+    return { zona: z, estados: estados.length, activos: activos.length, totalContactos, totalIndicativos }
+  }).filter(z => z.estados > 0)
+
+  const coberturaBarOption = {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { bottom: 0, data: ['Reportes', 'Indicativos únicos'] },
+    grid: { left: 8, right: 8, top: 10, bottom: 40, containLabel: true },
+    xAxis: { type: 'category', data: coberturaByZona.map(z => z.zona) },
+    yAxis: [
+      { type: 'value', name: 'Reportes' },
+      { type: 'value', name: 'Indicativos', position: 'right' },
+    ],
+    series: [
+      {
+        name: 'Reportes', type: 'bar', barMaxWidth: 48,
+        data: coberturaByZona.map(z => ({ value: z.totalContactos, itemStyle: { color: ZONA_COLORS[z.zona] ?? '#1677ff', borderRadius: [4,4,0,0] } })),
+      },
+      {
+        name: 'Indicativos únicos', type: 'line', yAxisIndex: 1, smooth: true,
+        data: coberturaByZona.map(z => z.totalIndicativos),
+        itemStyle: { color: '#fa8c16' }, lineStyle: { width: 2 },
+      },
+    ],
+  }
+
+  const coberturaActivos = coberturaRS.filter(e => e.total > 0)
+
+  const coberturaEstadoBarOption = {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+      formatter: (p: any) => `${p[0].name}: ${p[0].value} reportes` },
+    grid: { left: 140, right: 16, top: 8, bottom: 8, containLabel: false },
+    xAxis: { type: 'value' },
+    yAxis: {
+      type: 'category',
+      data: coberturaActivos.map(e => e.abreviatura).reverse(),
+    },
+    series: [{
+      type: 'bar',
+      data: coberturaActivos.map(e => ({
+        value: e.total,
+        itemStyle: { color: ZONA_COLORS[e.zona] ?? '#aaa', borderRadius: [0, 4, 4, 0] },
+      })).reverse(),
+      label: { show: true, position: 'right', fontSize: 10 },
+    }],
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
@@ -446,6 +505,107 @@ export default function EstadisticasRSPage() {
                   }
                 </Row>
               </Spin>
+            ),
+          },
+
+          // ── Tab 5: Cobertura ───────────────────────────────────────────────
+          {
+            key: 'cobertura', label: '🗺️ Cobertura',
+            children: (
+              <Row gutter={[16, 16]}>
+
+                {/* Resumen por zona */}
+                <Col xs={24}>
+                  <Card className="card-shadow"
+                    title={<Tooltip title="Reportes e indicativos únicos por zona FMRE en el período">
+                      📊 Actividad por zona FMRE
+                    </Tooltip>}>
+                    {coberturaByZona.length > 0
+                      ? <ReactECharts option={coberturaBarOption} style={{ height: 240 }} notMerge />
+                      : <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} />
+                    }
+                  </Card>
+                </Col>
+
+                {/* Cards de zonas con cobertura de estados */}
+                {coberturaByZona.length > 0 && coberturaByZona.map(z => (
+                  <Col key={z.zona} xs={24} sm={12} lg={Math.floor(24 / Math.max(coberturaByZona.length, 1)) as any}>
+                    <Card size="small" className="card-shadow"
+                      style={{ borderTop: `4px solid ${ZONA_COLORS[z.zona] ?? '#1677ff'}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <Tag style={{ backgroundColor: ZONA_COLORS[z.zona] ?? '#1677ff', color: '#fff', fontWeight: 800, fontSize: 14 }}>
+                          {z.zona}
+                        </Tag>
+                        <Text type="secondary" style={{ fontSize: 11 }}>{z.activos}/{z.estados} estados activos</Text>
+                      </div>
+                      <Progress
+                        percent={z.estados > 0 ? Math.round(z.activos / z.estados * 100) : 0}
+                        strokeColor={ZONA_COLORS[z.zona] ?? '#1677ff'}
+                        size="small" style={{ marginBottom: 8 }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                        <span><strong>{z.totalContactos.toLocaleString()}</strong> reportes</span>
+                        <span><strong>{z.totalIndicativos}</strong> indicativos</span>
+                      </div>
+                    </Card>
+                  </Col>
+                ))}
+
+                {/* Cobertura por estado — barra horizontal */}
+                <Col xs={24}>
+                  <Card className="card-shadow"
+                    title={<Tooltip title="Todos los estados con actividad en el período, coloreados por zona FMRE">
+                      🏛️ Cobertura por estado (coloreado por zona)
+                    </Tooltip>}
+                    extra={
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {Object.entries(ZONA_COLORS).map(([z, c]) => (
+                          <Tag key={z} style={{ backgroundColor: c, color: '#fff', fontWeight: 600 }}>{z}</Tag>
+                        ))}
+                      </div>
+                    }>
+                    {coberturaActivos.length > 0
+                      ? <ReactECharts
+                          option={coberturaEstadoBarOption}
+                          style={{ height: Math.max(300, coberturaActivos.length * 22 + 40) }}
+                          notMerge
+                        />
+                      : <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} />
+                    }
+                  </Card>
+                </Col>
+
+                {/* Tabla completa */}
+                <Col xs={24}>
+                  <Card className="card-shadow" title="Detalle por estado">
+                    <Table
+                      dataSource={coberturaActivos}
+                      rowKey="abreviatura"
+                      size="small"
+                      pagination={{ pageSize: 16, showSizeChanger: false }}
+                      locale={{ emptyText: <Empty description="Sin datos" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+                      columns={[
+                        { title: 'Estado', dataIndex: 'abreviatura', width: 80,
+                          render: (v: string) => <Text strong style={{ fontFamily: 'monospace' }}>{v}</Text> },
+                        { title: 'Nombre', dataIndex: 'nombre', ellipsis: true },
+                        { title: 'Zona', dataIndex: 'zona', width: 80, align: 'center' as const,
+                          render: (v: string) => v
+                            ? <Tag style={{ backgroundColor: ZONA_COLORS[v] ?? '#1677ff', color: '#fff', fontWeight: 600 }}>{v}</Tag>
+                            : <span style={{ color: '#ccc' }}>—</span>
+                        },
+                        { title: 'Reportes', dataIndex: 'total', width: 100, align: 'right' as const,
+                          render: (v: number) => v > 0
+                            ? <Text strong style={{ color: '#1A569E' }}>{v.toLocaleString()}</Text>
+                            : <Text type="secondary">—</Text>
+                        },
+                        { title: 'Indicativos', dataIndex: 'indicativos', width: 100, align: 'right' as const,
+                          render: (v: number) => v > 0 ? <Tag color="blue">{v}</Tag> : <Text type="secondary">—</Text> },
+                      ]}
+                    />
+                  </Card>
+                </Col>
+
+              </Row>
             ),
           },
         ]} />

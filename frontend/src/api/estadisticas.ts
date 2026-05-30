@@ -16,7 +16,7 @@ export const estadisticasApi = {
 
   // ── RS ────────────────────────────────────────────────────────────────────
 
-  rsResumenReportes: (params?: { fecha_inicio?: string; fecha_fin?: string }) =>
+  rsResumenReportes: (params?: { fecha_inicio?: string; fecha_fin?: string; plataforma_id?: number }) =>
     client.get<{
       total_reportes: number
       total_indicativos: number
@@ -73,5 +73,10 @@ export const estadisticasApi = {
   rsTendenciaMetricas: (params?: { fecha_inicio?: string; fecha_fin?: string; granularidad?: string; plataforma_id?: number }) =>
     client.get<{ periodo: string; plataforma: string; slug: string; total: number }[]>(
       '/estadisticas/rs/tendencia-metricas', { params }
+    ),
+
+  rsCoberturaEstados: (params?: { fecha_inicio?: string; fecha_fin?: string }) =>
+    client.get<{ abreviatura: string; nombre: string; zona: string; total: number; indicativos: number }[]>(
+      '/estadisticas/rs/cobertura-estados', { params }
     ),
 }

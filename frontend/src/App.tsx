@@ -26,6 +26,7 @@ import RadioexperimentadoresPage from '@/pages/gestion/Radioexperimentadores'
 import PerfilPage from '@/pages/Perfil'
 import PremiosPage from '@/pages/Premios'
 import ReportesPDFPage from '@/pages/gestion/ReportesPDF'
+import EstadisticasReportesPage from '@/pages/EstadisticasReportes'
 
 export default function App() {
   const { checkAuth, isLoading } = useAuthStore()
@@ -61,6 +62,7 @@ export default function App() {
             <Route path="/estadisticas" element={<Navigate to="/estadisticas/rf" replace />} />
             <Route path="/estadisticas/rf" element={<EstadisticasPage />} />
             <Route path="/estadisticas/rs" element={<EstadisticasRSPage />} />
+            <Route path="/estadisticas/reportes" element={<EstadisticasReportesPage />} />
             <Route path="/gestion/usuarios"       element={<UsuariosPage />} />
             <Route path="/gestion/eventos"        element={<EventosPage />} />
             <Route path="/gestion/zonas"          element={<ZonasPage />} />

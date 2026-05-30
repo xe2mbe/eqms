@@ -33,8 +33,9 @@ const menuItems = [
   },
   { key: '/estadisticas', icon: <BarChartOutlined />, label: 'Estadísticas',
     children: [
-      { key: '/estadisticas/rf', icon: <WifiOutlined />,    label: 'Estadísticas RF' },
-      { key: '/estadisticas/rs', icon: <ShareAltOutlined />, label: 'Estadísticas RS' },
+      { key: '/estadisticas/rf',       icon: <WifiOutlined />,    label: 'Estadísticas RF' },
+      { key: '/estadisticas/rs',       icon: <ShareAltOutlined />, label: 'Estadísticas RS' },
+      { key: '/estadisticas/reportes', icon: <FilePdfOutlined />,  label: 'Reportes' },
     ],
   },
   { key: '/premios', icon: <TrophyOutlined />, label: 'Premios y Distinciones' },

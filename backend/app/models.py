@@ -263,11 +263,21 @@ class ReportePlantilla(Base):
     destinatarios = Column(JSONB, nullable=False, default=list)
     asunto_email = Column(String(200), nullable=True, default="Estadísticas {evento} – {fecha}")
     activa = Column(Boolean, default=True)
+    # Asignación
+    rol_asignado = Column(String(20), nullable=True)        # 'admin' | 'operador' | None = todos
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    # Programación
+    prog_hora = Column(String(5), nullable=True)            # "HH:MM"
+    prog_recurrencia = Column(String(20), nullable=True)    # 'diario' | 'semanal' | 'mensual'
+    prog_dia_semana = Column(Integer, nullable=True)        # 0=lun … 6=dom (solo recurrencia semanal)
+    prog_activo = Column(Boolean, default=False)
+    prog_ultima_ejecucion = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     evento_rf = relationship("Evento", foreign_keys=[evento_rf_id])
     evento_rs = relationship("Evento", foreign_keys=[evento_rs_id])
+    usuario = relationship("Usuario", foreign_keys=[usuario_id])
 
 
 class AuditLog(Base):

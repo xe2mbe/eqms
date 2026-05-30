@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import logging, os
+from datetime import datetime, timedelta
+
+import pytz
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.config import settings
 from app.database import Base, engine
@@ -134,6 +138,14 @@ async def lifespan(app: FastAPI):
             END $$
         """))
         conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS evento_rs_id INTEGER REFERENCES eventos(id)"))
+        # Campos de asignación y programación
+        conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS rol_asignado VARCHAR(20)"))
+        conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS usuario_id INTEGER REFERENCES usuarios(id)"))
+        conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS prog_hora VARCHAR(5)"))
+        conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS prog_recurrencia VARCHAR(20)"))
+        conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS prog_dia_semana INTEGER"))
+        conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS prog_activo BOOLEAN DEFAULT FALSE"))
+        conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS prog_ultima_ejecucion TIMESTAMPTZ"))
         conn.commit()
 
     db = SessionLocal()
@@ -142,8 +154,65 @@ async def lifespan(app: FastAPI):
         seed_metricas_rs_default(db)
     finally:
         db.close()
+
+    # Scheduler para envíos automáticos
+    scheduler = BackgroundScheduler(timezone=pytz.timezone('America/Mexico_City'))
+    scheduler.add_job(_run_scheduled_reports, 'cron', minute='*', id='envios_programados',
+                      replace_existing=True)
+    scheduler.start()
+    logger.info("Scheduler de reportes iniciado.")
+
     yield
+
+    scheduler.shutdown(wait=False)
     logger.info("Servidor detenido.")
+
+
+def _run_scheduled_reports():
+    """Verifica y envía reportes programados cuya hora coincide con la actual."""
+    tz = pytz.timezone('America/Mexico_City')
+    now = datetime.now(tz)
+    hhmm = now.strftime('%H:%M')
+    dow = now.weekday()   # 0=lun … 6=dom
+
+    db = SessionLocal()
+    try:
+        from app import models
+        plantillas = db.query(models.ReportePlantilla).filter(
+            models.ReportePlantilla.prog_activo == True,
+            models.ReportePlantilla.prog_hora == hhmm,
+            models.ReportePlantilla.prog_recurrencia != None,
+        ).all()
+
+        for p in plantillas:
+            rec = p.prog_recurrencia
+            if rec == 'semanal' and p.prog_dia_semana != dow:
+                continue
+            if rec == 'mensual' and now.day != 1:
+                continue
+
+            today = now.date()
+            if rec == 'diario':
+                fi = datetime.combine(today - timedelta(days=1), datetime.min.time())
+                ff = datetime.combine(today - timedelta(days=1), datetime.max.time())
+            elif rec == 'semanal':
+                fi = datetime.combine(today - timedelta(days=7), datetime.min.time())
+                ff = datetime.combine(today - timedelta(days=1), datetime.max.time())
+            else:  # mensual
+                import calendar
+                last = today.replace(day=1) - timedelta(days=1)
+                fi = datetime.combine(last.replace(day=1), datetime.min.time())
+                ff = datetime.combine(last, datetime.max.time())
+
+            try:
+                reportes_pdf.auto_send(db, p, fi, ff)
+                p.prog_ultima_ejecucion = now
+                db.commit()
+                logger.info(f"Reporte programado enviado: {p.nombre} ({p.id})")
+            except Exception as e:
+                logger.error(f"Error en reporte programado {p.id}: {e}")
+    finally:
+        db.close()
 
 
 app = FastAPI(

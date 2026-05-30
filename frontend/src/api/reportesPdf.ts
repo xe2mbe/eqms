@@ -32,6 +32,14 @@ export interface PlantillaOut {
   destinatarios: string[]
   asunto_email: string | null
   activa: boolean
+  rol_asignado: string | null
+  usuario_id: number | null
+  usuario_nombre: string | null
+  prog_hora: string | null
+  prog_recurrencia: string | null
+  prog_dia_semana: number | null
+  prog_activo: boolean
+  prog_ultima_ejecucion: string | null
   created_at: string | null
 }
 
@@ -44,6 +52,16 @@ export interface PlantillaCreate {
   destinatarios: string[]
   asunto_email: string | null
   activa: boolean
+  rol_asignado: string | null
+  usuario_id: number | null
+}
+
+export interface ProgramacionUpdate {
+  destinatarios: string[]
+  prog_hora: string | null
+  prog_recurrencia: string | null
+  prog_dia_semana: number | null
+  prog_activo: boolean
 }
 
 export const DEFAULT_SECCIONES: SeccionesConfig = {
@@ -87,4 +105,13 @@ export const reportesPdfApi = {
       null,
       { params: { fecha_inicio: fechaInicio, fecha_fin: fechaFin } },
     ),
+
+  generarWord: (id: number, fechaInicio: string, fechaFin: string) =>
+    client.post(`/reportes-pdf/generar-word/${id}`, null, {
+      params: { fecha_inicio: fechaInicio, fecha_fin: fechaFin },
+      responseType: 'blob',
+    }),
+
+  updateProgramacion: (id: number, data: ProgramacionUpdate) =>
+    client.put<PlantillaOut>(`/reportes-pdf/plantillas/${id}/programacion`, data),
 }

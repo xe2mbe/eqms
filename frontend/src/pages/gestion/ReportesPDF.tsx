@@ -10,15 +10,16 @@ import {
   RadarChartOutlined, GlobalOutlined, TeamOutlined,
   BarChartOutlined, EnvironmentOutlined, StarOutlined,
   LikeOutlined, AppstoreOutlined, TrophyOutlined, UnorderedListOutlined,
-  ApartmentOutlined,
+  ApartmentOutlined, UserOutlined,
 } from '@ant-design/icons'
 import dayjs, { Dayjs } from 'dayjs'
 import { catalogosApi } from '@/api/catalogos'
+import client from '@/api/client'
 import {
   reportesPdfApi, DEFAULT_SECCIONES,
   type PlantillaOut, type PlantillaCreate, type SeccionesConfig, type TipoReporte,
 } from '@/api/reportesPdf'
-import type { Evento } from '@/types'
+import type { Evento, Usuario } from '@/types'
 
 const { Title, Text } = Typography
 
@@ -122,6 +123,7 @@ function SeccionCard({ def, secciones, onChange }: {
 export default function ReportesPDFPage() {
   const [plantillas, setPlantillas] = useState<PlantillaOut[]>([])
   const [eventos, setEventos] = useState<Evento[]>([])
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [loading, setLoading] = useState(false)
 
   // Drawer plantilla
@@ -168,6 +170,7 @@ export default function ReportesPDFPage() {
   useEffect(() => {
     fetchPlantillas()
     catalogosApi.eventos().then(r => setEventos(r.data))
+    client.get<Usuario[]>('/usuarios').then(r => setUsuarios(r.data)).catch(() => {})
   }, [])
 
   // ── Drawer ────────────────────────────────────────────────────────────────
@@ -179,6 +182,7 @@ export default function ReportesPDFPage() {
     form.setFieldsValue({
       nombre: '', evento_rf_id: null, evento_rs_id: null,
       destinatarios: [], asunto_email: 'Estadísticas {evento} – {fecha}', activa: true,
+      rol_asignado: null, usuario_id: null,
     })
     setDrawerOpen(true)
   }
@@ -208,6 +212,8 @@ export default function ReportesPDFPage() {
       destinatarios: p.destinatarios,
       asunto_email:  p.asunto_email,
       activa:        p.activa,
+      rol_asignado:  p.rol_asignado ?? null,
+      usuario_id:    p.usuario_id ?? null,
     })
     setDrawerOpen(true)
   }
@@ -224,6 +230,8 @@ export default function ReportesPDFPage() {
       destinatarios: vals.destinatarios || [],
       asunto_email:  vals.asunto_email || null,
       activa:        vals.activa ?? true,
+      rol_asignado:  vals.rol_asignado ?? null,
+      usuario_id:    vals.usuario_id ?? null,
     }
     setSaving(true)
     try {
@@ -343,6 +351,18 @@ export default function ReportesPDFPage() {
             {rs.map(t => <Tag key={t} color="purple" style={{ fontSize: 11 }}>{t}</Tag>)}
           </Space>
         )
+      },
+    },
+    {
+      title: 'Asignado a', key: 'asignado', width: 130,
+      render: (_: unknown, r: PlantillaOut) => {
+        if (r.usuario_nombre)
+          return <Tag icon={<UserOutlined />} color="cyan" style={{ fontSize: 11 }}>{r.usuario_nombre}</Tag>
+        if (r.rol_asignado === 'admin')
+          return <Tag color="red" style={{ fontSize: 11 }}>Administradores</Tag>
+        if (r.rol_asignado === 'operador')
+          return <Tag color="geekblue" style={{ fontSize: 11 }}>Operadores</Tag>
+        return <Tag color="default" style={{ fontSize: 11 }}>Todos</Tag>
       },
     },
     {
@@ -533,6 +553,34 @@ export default function ReportesPDFPage() {
                 </Form.Item>
               </Col>
             )}
+          </Row>
+
+          {/* ── Asignación ── */}
+          <Divider orientation="left">Asignación</Divider>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="Visible para rol" name="rol_asignado"
+                help="Deja en blanco para que lo vean todos los roles">
+                <Select allowClear placeholder="Todos los roles"
+                  options={[
+                    { value: 'admin',    label: 'Administradores' },
+                    { value: 'operador', label: 'Operadores' },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Asignar a usuario específico" name="usuario_id"
+                help="Sobreescribe la asignación por rol">
+                <Select allowClear showSearch placeholder="Cualquier usuario"
+                  optionFilterProp="label"
+                  options={usuarios.map(u => ({
+                    value: u.id,
+                    label: u.full_name + (u.indicativo ? ` (${u.indicativo})` : ''),
+                  }))}
+                />
+              </Form.Item>
+            </Col>
           </Row>
 
           {/* ── Constructor visual de secciones ── */}
