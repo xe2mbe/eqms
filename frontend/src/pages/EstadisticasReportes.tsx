@@ -244,6 +244,8 @@ export default function EstadisticasReportesPage() {
     }
   }
 
+  const progActivo = Form.useWatch('prog_activo', form)
+
   const borderColor = (tipo: string) =>
     tipo === 'rf' ? '#1677ff' : tipo === 'rs' ? '#722ed1' : '#faad14'
 
@@ -413,6 +415,15 @@ export default function EstadisticasReportesPage() {
             label="Buzones destinatarios"
             name="destinatarios"
             extra="Emails que recibirán el reporte. Presiona Enter para agregar."
+            rules={[
+              {
+                validator: (_, value) => {
+                  if (form.getFieldValue('prog_activo') && (!value || value.length === 0))
+                    return Promise.reject('Agrega al menos un buzón para el envío automático')
+                  return Promise.resolve()
+                },
+              },
+            ]}
           >
             <Select mode="tags" tokenSeparators={[',']} placeholder="correo@ejemplo.com" style={{ width: '100%' }} />
           </Form.Item>
@@ -426,7 +437,7 @@ export default function EstadisticasReportesPage() {
           <Form.Item
             label="Día de envío"
             name="prog_dia_semana"
-            rules={[{ required: true, message: 'Selecciona el día de envío' }]}
+            rules={[{ required: !!progActivo, message: 'Selecciona el día de envío' }]}
             extra="El sistema buscará el último evento registrado antes de este día."
           >
             <Select placeholder="Selecciona día" options={DIAS_SEMANA} />
@@ -435,7 +446,7 @@ export default function EstadisticasReportesPage() {
           <Form.Item
             label="Hora de envío"
             name="prog_hora"
-            rules={[{ required: true, message: 'Indica la hora de envío' }]}
+            rules={[{ required: !!progActivo, message: 'Indica la hora de envío' }]}
           >
             <TimePicker format="HH:mm" minuteStep={15} style={{ width: '100%' }} placeholder="Selecciona hora" />
           </Form.Item>
