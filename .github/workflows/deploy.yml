@@ -24,7 +24,13 @@ jobs:
             docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
             echo "=== Logs recientes frontend ==="
             docker compose -f docker-compose.yml -f docker-compose.prod.yml logs frontend --tail 20
-            echo "=== Nginx host (fuera de Docker) ==="
-            cat /etc/nginx/sites-enabled/* 2>/dev/null || cat /etc/nginx/conf.d/*.conf 2>/dev/null || echo "No se encontro config nginx"
-            echo "=== Procesos escuchando en 443 y 80 ==="
-            ss -tlnp | grep -E ':80|:443'
+            echo "=== Proceso en puerto 443 y 80 ==="
+            sudo ss -tlnp | grep -E ':80|:443' || ss -tlnp | grep -E ':80|:443'
+            echo "=== Caddy ==="
+            which caddy 2>/dev/null && cat /etc/caddy/Caddyfile 2>/dev/null || echo "Caddy no encontrado"
+            echo "=== Apache ==="
+            which apache2 2>/dev/null && cat /etc/apache2/sites-enabled/* 2>/dev/null || echo "Apache no encontrado"
+            echo "=== Nginx conf principal ==="
+            cat /etc/nginx/nginx.conf 2>/dev/null || echo "Nginx no encontrado"
+            echo "=== Procesos web activos ==="
+            ps aux | grep -E 'nginx|caddy|apache|httpd' | grep -v grep
