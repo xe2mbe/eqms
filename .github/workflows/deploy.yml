@@ -20,3 +20,7 @@ jobs:
             git pull origin main
             docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate
+            echo "=== Contenedores corriendo ==="
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+            echo "=== Logs recientes frontend ==="
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml logs frontend --tail 20
