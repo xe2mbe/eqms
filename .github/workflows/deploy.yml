@@ -24,3 +24,7 @@ jobs:
             docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
             echo "=== Logs recientes frontend ==="
             docker compose -f docker-compose.yml -f docker-compose.prod.yml logs frontend --tail 20
+            echo "=== Nginx host (fuera de Docker) ==="
+            cat /etc/nginx/sites-enabled/* 2>/dev/null || cat /etc/nginx/conf.d/*.conf 2>/dev/null || echo "No se encontro config nginx"
+            echo "=== Procesos escuchando en 443 y 80 ==="
+            ss -tlnp | grep -E ':80|:443'
