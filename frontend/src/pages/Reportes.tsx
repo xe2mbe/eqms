@@ -14,7 +14,7 @@ import { catalogosApi } from '@/api/catalogos'
 import { useAuthStore } from '@/store/authStore'
 import { useColPrefs } from '@/components/common/ColSettings'
 import { textFilterProps, selectFilterProps, uniqueFilterOptions } from '@/utils/tableFilters'
-import type { Reporte, ReporteFilters, Evento, Sistema } from '@/types'
+import type { Reporte, ReporteFilters, Evento, Sistema, Zona } from '@/types'
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
