@@ -403,7 +403,16 @@ export default function ReportesRSPage() {
             <Col span={12}>
               <Form.Item label="Estado" name="estado">
                 <Select allowClear showSearch optionFilterProp="label"
-                  options={estados.map(e => ({ value: e.nombre, label: e.nombre }))} />
+                  options={[
+                    { value: 'Extranjero', label: 'Extranjero' },
+                    ...estados.map(e => ({ value: e.nombre, label: e.nombre })),
+                  ]}
+                  optionRender={(option) =>
+                    option.value === 'Extranjero'
+                      ? <span style={{ color: '#1677ff', fontWeight: 700 }}>🌍 Extranjero</span>
+                      : <span>{option.label}</span>
+                  }
+                />
               </Form.Item>
             </Col>
             <Col span={12}>

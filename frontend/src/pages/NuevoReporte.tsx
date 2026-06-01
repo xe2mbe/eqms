@@ -194,7 +194,15 @@ export default function NuevoReportePage() {
                 allowClear
                 filterOption={(input, option) =>
                   (option?.label as string)?.toLowerCase().includes(input.toLowerCase())}
-                options={estados.map(e => ({ value: e.nombre, label: e.nombre }))}
+                options={[
+                  { value: 'Extranjero', label: 'Extranjero' },
+                  ...estados.map(e => ({ value: e.nombre, label: e.nombre })),
+                ]}
+                optionRender={(option) =>
+                  option.value === 'Extranjero'
+                    ? <span style={{ color: '#1677ff', fontWeight: 700 }}>🌍 Extranjero</span>
+                    : <span>{option.label}</span>
+                }
               />
             </Form.Item>
 
