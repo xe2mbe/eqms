@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from 'react'
-import { Row, Col, Card, Tag, Typography, Divider, Spin } from 'antd'
+import { Row, Col, Card, Tag, Typography, Divider, Spin, Input, Button, Alert, Table } from 'antd'
 import {
   WifiOutlined, GlobalOutlined, TeamOutlined, RiseOutlined,
-  StarOutlined, RadarChartOutlined,
+  StarOutlined, RadarChartOutlined, SearchOutlined, UserOutlined,
 } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import * as echarts from 'echarts'
@@ -93,9 +93,48 @@ type Stats = {
   ultimo_evento: { tipo: string; ultima: string; participantes: number } | null
 }
 
+type BusquedaResult = {
+  indicativo: string
+  operador: { nombre: string | null; municipio: string | null; estado: string | null; licencia: string | null } | null
+  rf: {
+    total: number; primera: string | null; ultima: string | null
+    por_evento: { evento: string; total: number }[]
+    por_sistema: { sistema: string; total: number }[]
+    ultimos: { fecha: string | null; evento: string | null; sistema: string | null; zona: string | null; ciudad: string | null; estado: string | null; senal: number | null }[]
+  }
+  rs: {
+    total: number; primera: string | null; ultima: string | null
+    por_plataforma: { plataforma: string; total: number }[]
+    ultimos: { fecha: string | null; plataforma: string | null; ciudad: string | null; estado: string | null; senal: number | null }[]
+  }
+}
+
 export default function PublicFMREPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [mapReady, setMapReady] = useState(false)
+
+  // Búsqueda por indicativo
+  const [busqueda, setBusqueda] = useState('')
+  const [buscando, setBuscando] = useState(false)
+  const [resultado, setResultado] = useState<BusquedaResult | null>(null)
+  const [busqError, setBusqError] = useState<string | null>(null)
+  const busquedaRef = useRef<HTMLDivElement>(null)
+
+  const handleBuscar = async () => {
+    if (!busqueda.trim()) return
+    setBuscando(true)
+    setBusqError(null)
+    setResultado(null)
+    try {
+      const { data } = await axios.get(`/api/public/buscar?indicativo=${busqueda.trim().toUpperCase()}`)
+      setResultado(data)
+      setTimeout(() => busquedaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+    } catch (e: any) {
+      setBusqError(e?.response?.data?.detail ?? `No se encontraron registros para ${busqueda.trim().toUpperCase()}`)
+    } finally {
+      setBuscando(false)
+    }
+  }
 
   useEffect(() => {
     // Cargar el mapa de México
@@ -259,6 +298,150 @@ export default function PublicFMREPage() {
           </Text>
         </div>
       )}
+
+      {/* ── BÚSQUEDA ── */}
+      <section style={{ background: 'white', borderBottom: `3px solid ${FMRE_BLUE}`, padding: '40px 32px' }}>
+        <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>📡</div>
+          <Title level={3} style={{ color: FMRE_DARK, margin: 0 }}>¿Estás en el aire?</Title>
+          <Paragraph style={{ color: '#666', marginTop: 8, marginBottom: 24 }}>
+            Consulta los reportes de cualquier estación radioaficionada registrados en el sistema.
+            Ingresa un indicativo y ve su historial de actividad en RF y redes sociales.
+          </Paragraph>
+          <Input.Search
+            size="large"
+            placeholder="Ej. XE2MBE, XE1LM, XE3AAA..."
+            enterButton={<><SearchOutlined /> Buscar</>}
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value.toUpperCase())}
+            onSearch={handleBuscar}
+            loading={buscando}
+            style={{ maxWidth: 480 }}
+            allowClear
+          />
+        </div>
+
+        {/* Resultado de búsqueda */}
+        {(resultado || busqError) && (
+          <div ref={busquedaRef} style={{ maxWidth: 900, margin: '32px auto 0' }}>
+            {busqError && <Alert type="warning" message={busqError} showIcon />}
+
+            {resultado && (
+              <div>
+                {/* Cabecera del operador */}
+                <Card style={{ marginBottom: 16, borderTop: `4px solid ${FMRE_BLUE}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                    <div style={{
+                      width: 64, height: 64, borderRadius: '50%',
+                      background: FMRE_DARK, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <UserOutlined style={{ color: 'white', fontSize: 28 }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 26, fontWeight: 800, color: FMRE_BLUE, letterSpacing: 1 }}>
+                        {resultado.indicativo}
+                      </div>
+                      {resultado.operador?.nombre && (
+                        <div style={{ fontSize: 16, color: '#333', fontWeight: 600 }}>{resultado.operador.nombre}</div>
+                      )}
+                      {resultado.operador && (
+                        <div style={{ color: '#888', fontSize: 13 }}>
+                          {[resultado.operador.municipio, resultado.operador.estado, resultado.operador.licencia]
+                            .filter(Boolean).join(' · ')}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      <div style={{ textAlign: 'center', background: FMRE_LIGHT, borderRadius: 8, padding: '8px 16px' }}>
+                        <div style={{ fontSize: 24, fontWeight: 800, color: FMRE_BLUE }}>{resultado.rf.total.toLocaleString()}</div>
+                        <div style={{ fontSize: 11, color: '#666' }}>Reportes RF</div>
+                      </div>
+                      <div style={{ textAlign: 'center', background: '#f9f0ff', borderRadius: 8, padding: '8px 16px' }}>
+                        <div style={{ fontSize: 24, fontWeight: 800, color: '#722ed1' }}>{resultado.rs.total.toLocaleString()}</div>
+                        <div style={{ fontSize: 11, color: '#666' }}>Reportes RS</div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                <Row gutter={[16, 16]}>
+                  {/* RF */}
+                  {resultado.rf.total > 0 && (
+                    <Col xs={24} lg={12}>
+                      <Card title={<span><WifiOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Actividad RF</span>}
+                            size="small" style={{ height: '100%' }}>
+                        <div style={{ marginBottom: 12, fontSize: 12, color: '#888' }}>
+                          Primera actividad: <strong>{resultado.rf.primera}</strong>
+                          {resultado.rf.primera !== resultado.rf.ultima && <> · Última: <strong>{resultado.rf.ultima}</strong></>}
+                        </div>
+                        <div style={{ marginBottom: 8 }}>
+                          {resultado.rf.por_evento.map(e => (
+                            <Tag key={e.evento} color={FMRE_BLUE} style={{ marginBottom: 4 }}>
+                              {e.evento} · {e.total}
+                            </Tag>
+                          ))}
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                          {resultado.rf.por_sistema.map(s => (
+                            <Tag key={s.sistema} color={SISTEMA_COLORS[s.sistema] ?? '#666'} style={{ marginBottom: 4 }}>
+                              {s.sistema} · {s.total}
+                            </Tag>
+                          ))}
+                        </div>
+                        <Table
+                          size="small"
+                          dataSource={resultado.rf.ultimos}
+                          rowKey={(r, i) => String(i)}
+                          pagination={false}
+                          columns={[
+                            { title: 'Fecha', dataIndex: 'fecha', width: 90, render: v => v ?? '—' },
+                            { title: 'Evento', dataIndex: 'evento', render: v => v ?? '—' },
+                            { title: 'Sistema', dataIndex: 'sistema', width: 70, render: v => v
+                              ? <Tag color={SISTEMA_COLORS[v] ?? '#666'} style={{ fontSize: 11 }}>{v}</Tag> : '—' },
+                            { title: 'Estado', dataIndex: 'estado', render: v => v ?? '—' },
+                          ]}
+                        />
+                      </Card>
+                    </Col>
+                  )}
+
+                  {/* RS */}
+                  {resultado.rs.total > 0 && (
+                    <Col xs={24} lg={12}>
+                      <Card title={<span style={{ color: '#722ed1' }}>📱 Actividad en Redes Sociales</span>}
+                            size="small" style={{ height: '100%' }}>
+                        <div style={{ marginBottom: 12, fontSize: 12, color: '#888' }}>
+                          Primera actividad: <strong>{resultado.rs.primera}</strong>
+                          {resultado.rs.primera !== resultado.rs.ultima && <> · Última: <strong>{resultado.rs.ultima}</strong></>}
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                          {resultado.rs.por_plataforma.map(p => (
+                            <Tag key={p.plataforma} color={PLAT_COLORS[p.plataforma] ?? '#722ed1'} style={{ marginBottom: 4 }}>
+                              {p.plataforma} · {p.total}
+                            </Tag>
+                          ))}
+                        </div>
+                        <Table
+                          size="small"
+                          dataSource={resultado.rs.ultimos}
+                          rowKey={(r, i) => String(i)}
+                          pagination={false}
+                          columns={[
+                            { title: 'Fecha', dataIndex: 'fecha', width: 90, render: v => v ?? '—' },
+                            { title: 'Plataforma', dataIndex: 'plataforma', render: v => v
+                              ? <Tag color={PLAT_COLORS[v] ?? '#722ed1'} style={{ fontSize: 11 }}>{v}</Tag> : '—' },
+                            { title: 'Estado', dataIndex: 'estado', render: v => v ?? '—' },
+                          ]}
+                        />
+                      </Card>
+                    </Col>
+                  )}
+                </Row>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* ── CONTENIDO PRINCIPAL ── */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 16px' }}>

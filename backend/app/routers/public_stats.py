@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.database import get_db
@@ -93,4 +93,116 @@ def public_stats(db: Session = Depends(get_db)):
             "ultima": str(ultimo_evento[1])[:10],
             "participantes": int(ultimo_evento[2]),
         } if ultimo_evento else None,
+    }
+
+
+@router.get("/buscar")
+def buscar_indicativo(
+    indicativo: str = Query(..., min_length=2, max_length=20),
+    db: Session = Depends(get_db),
+):
+    """Búsqueda pública de reportes por indicativo."""
+    ind = indicativo.strip().upper()
+
+    # Datos del operador
+    operador = db.execute(text("""
+        SELECT nombre_completo, municipio, estado, tipo_licencia
+        FROM radioexperimentadores WHERE UPPER(indicativo) = :ind LIMIT 1
+    """), {"ind": ind}).first()
+
+    # Resumen RF
+    rf_resumen = db.execute(text("""
+        SELECT COUNT(*) as total,
+               MIN(fecha_reporte) as primera,
+               MAX(fecha_reporte) as ultima
+        FROM reportes WHERE UPPER(indicativo) = :ind
+    """), {"ind": ind}).first()
+
+    # RF por evento
+    rf_por_evento = db.execute(text("""
+        SELECT e.tipo, COUNT(*) as total
+        FROM reportes r LEFT JOIN eventos e ON e.id = r.evento_id
+        WHERE UPPER(r.indicativo) = :ind
+        GROUP BY e.tipo ORDER BY total DESC
+    """), {"ind": ind}).fetchall()
+
+    # RF por sistema
+    rf_por_sistema = db.execute(text("""
+        SELECT s.codigo, COUNT(*) as total
+        FROM reportes r LEFT JOIN sistemas s ON s.id = r.sistema_id
+        WHERE UPPER(r.indicativo) = :ind AND r.sistema_id IS NOT NULL
+        GROUP BY s.codigo ORDER BY total DESC
+    """), {"ind": ind}).fetchall()
+
+    # Últimos 10 registros RF
+    rf_ultimos = db.execute(text("""
+        SELECT r.fecha_reporte, e.tipo as evento, s.codigo as sistema,
+               z.nombre as zona, r.ciudad, r.estado, r.senal
+        FROM reportes r
+        LEFT JOIN eventos e ON e.id = r.evento_id
+        LEFT JOIN sistemas s ON s.id = r.sistema_id
+        LEFT JOIN zonas z ON z.id = r.zona_id
+        WHERE UPPER(r.indicativo) = :ind
+        ORDER BY r.fecha_reporte DESC LIMIT 10
+    """), {"ind": ind}).fetchall()
+
+    # Resumen RS
+    rs_resumen = db.execute(text("""
+        SELECT COUNT(*) as total,
+               MIN(fecha_reporte) as primera,
+               MAX(fecha_reporte) as ultima
+        FROM reportes_rs WHERE UPPER(indicativo) = :ind
+    """), {"ind": ind}).first()
+
+    # RS por plataforma
+    rs_por_plataforma = db.execute(text("""
+        SELECT p.nombre, COUNT(*) as total
+        FROM reportes_rs r JOIN plataformas_rs p ON p.id = r.plataforma_id
+        WHERE UPPER(r.indicativo) = :ind
+        GROUP BY p.nombre ORDER BY total DESC
+    """), {"ind": ind}).fetchall()
+
+    # Últimos 10 registros RS
+    rs_ultimos = db.execute(text("""
+        SELECT r.fecha_reporte, p.nombre as plataforma, r.ciudad, r.estado, r.senal
+        FROM reportes_rs r JOIN plataformas_rs p ON p.id = r.plataforma_id
+        WHERE UPPER(r.indicativo) = :ind
+        ORDER BY r.fecha_reporte DESC LIMIT 10
+    """), {"ind": ind}).fetchall()
+
+    if (rf_resumen[0] or 0) == 0 and (rs_resumen[0] or 0) == 0:
+        raise HTTPException(404, f"No se encontraron registros para {ind}")
+
+    def fmt_date(d):
+        return str(d)[:10] if d else None
+
+    return {
+        "indicativo": ind,
+        "operador": {
+            "nombre": operador[0] if operador else None,
+            "municipio": operador[1] if operador else None,
+            "estado": operador[2] if operador else None,
+            "licencia": operador[3] if operador else None,
+        } if operador else None,
+        "rf": {
+            "total": int(rf_resumen[0] or 0),
+            "primera": fmt_date(rf_resumen[1]),
+            "ultima": fmt_date(rf_resumen[2]),
+            "por_evento": [{"evento": r[0] or "—", "total": int(r[1])} for r in rf_por_evento],
+            "por_sistema": [{"sistema": r[0], "total": int(r[1])} for r in rf_por_sistema],
+            "ultimos": [{
+                "fecha": fmt_date(r[0]), "evento": r[1], "sistema": r[2],
+                "zona": r[3], "ciudad": r[4], "estado": r[5], "senal": r[6],
+            } for r in rf_ultimos],
+        },
+        "rs": {
+            "total": int(rs_resumen[0] or 0),
+            "primera": fmt_date(rs_resumen[1]),
+            "ultima": fmt_date(rs_resumen[2]),
+            "por_plataforma": [{"plataforma": r[0], "total": int(r[1])} for r in rs_por_plataforma],
+            "ultimos": [{
+                "fecha": fmt_date(r[0]), "plataforma": r[1],
+                "ciudad": r[2], "estado": r[3], "senal": r[4],
+            } for r in rs_ultimos],
+        },
     }
