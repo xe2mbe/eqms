@@ -11,6 +11,7 @@ import { libretaRSApi, type ReporteRSPayload } from '@/api/libretaRS'
 import { catalogosApi } from '@/api/catalogos'
 import { useAuthStore } from '@/store/authStore'
 import { useColPrefs } from '@/components/common/ColSettings'
+import { textFilterProps, selectFilterProps, uniqueFilterOptions } from '@/utils/tableFilters'
 import type { ReporteRS, Evento, PlataformaRS, Zona, Estacion, Estado } from '@/types'
 
 const { Title } = Typography
@@ -155,10 +156,12 @@ export default function ReportesRSPage() {
     indicativo: {
       title: 'Indicativo', dataIndex: 'indicativo', width: 110, fixed: 'left' as const,
       render: (v: string) => <strong style={{ color: '#1A569E' }}>{v}</strong>,
+      ...textFilterProps('indicativo'),
     },
     operador: {
       title: 'Operador', dataIndex: 'operador', width: 160,
       render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
+      ...textFilterProps('operador'),
     },
     senal: {
       title: 'RST', dataIndex: 'senal', width: 70,
@@ -171,16 +174,31 @@ export default function ReportesRSPage() {
         const c = p.color ?? '#1677ff'
         return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{p.nombre}</Tag>
       },
+      ...selectFilterProps(
+        plataformas.map(p => ({ text: p.nombre, value: p.nombre })),
+        (value, record) => (record as unknown as ReporteRS).plataforma?.nombre === value,
+      ),
     },
     ciudad: {
       title: 'Ciudad', dataIndex: 'ciudad', width: 130,
       render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
+      ...textFilterProps('ciudad'),
     },
     pais: {
       title: 'País', dataIndex: 'pais', width: 140,
       render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
+      ...selectFilterProps(
+        uniqueFilterOptions(data as any, r => (r as ReporteRS).pais ?? undefined),
+        (value, record) => (record as unknown as ReporteRS).pais === value,
+      ),
     },
-    estado: { title: 'Estado', dataIndex: 'estado', width: 130 },
+    estado: {
+      title: 'Estado', dataIndex: 'estado', width: 130,
+      ...selectFilterProps(
+        uniqueFilterOptions(data as any, r => (r as ReporteRS).estado ?? undefined),
+        (value, record) => (record as unknown as ReporteRS).estado === value,
+      ),
+    },
     zona: {
       title: 'Zona', dataIndex: 'zona', width: 80, align: 'center' as const,
       render: (_: unknown, record: ReporteRS) => {
@@ -189,6 +207,10 @@ export default function ReportesRSPage() {
         const c = record.zona?.color ?? '#1677ff'
         return <Tag color={c} style={{ fontWeight: 600 }}>{codigo}</Tag>
       },
+      ...selectFilterProps(
+        zonas.map(z => ({ text: z.codigo, value: z.codigo })),
+        (value, record) => (record as unknown as ReporteRS).zona?.codigo === value,
+      ),
     },
     evento: {
       title: 'Tipo', dataIndex: 'evento', width: 160,
@@ -197,6 +219,10 @@ export default function ReportesRSPage() {
         const c = record.evento.color ?? '#1677ff'
         return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{record.evento.tipo}</Tag>
       },
+      ...selectFilterProps(
+        eventos.map(e => ({ text: e.tipo, value: e.tipo })),
+        (value, record) => (record as unknown as ReporteRS).evento?.tipo === value,
+      ),
     },
     estacion: {
       title: 'Estación', dataIndex: 'estacion', width: 120,
@@ -205,6 +231,10 @@ export default function ReportesRSPage() {
         const c = record.estacion.color ?? '#1677ff'
         return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{record.estacion.qrz}</Tag>
       },
+      ...selectFilterProps(
+        uniqueFilterOptions(data as any, r => (r as ReporteRS).estacion?.qrz ?? undefined),
+        (value, record) => (record as unknown as ReporteRS).estacion?.qrz === value,
+      ),
     },
     fecha_reporte: {
       title: 'Fecha Evento', dataIndex: 'fecha_reporte', width: 140,
@@ -219,6 +249,10 @@ export default function ReportesRSPage() {
     capturado_por_nombre: {
       title: 'Capturado por', dataIndex: 'capturado_por_nombre', width: 140,
       render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
+      ...selectFilterProps(
+        uniqueFilterOptions(data as any, r => (r as ReporteRS).capturado_por_nombre ?? undefined),
+        (value, record) => (record as unknown as ReporteRS).capturado_por_nombre === value,
+      ),
     },
   }
 
