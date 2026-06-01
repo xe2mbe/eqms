@@ -10,7 +10,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.config import settings
 from app.database import Base, engine
-from app.routers import auth, reportes, usuarios, catalogos, estadisticas, operadores, configuracion, libreta, admin_db, premios, libreta_rs, reportes_pdf
+from app.routers import auth, reportes, usuarios, catalogos, estadisticas, operadores, configuracion, libreta, admin_db, premios, libreta_rs, reportes_pdf, public_stats
 from app.seeds import seed_prefijos, seed_metricas_rs_default
 from app.database import SessionLocal
 from sqlalchemy import text
@@ -248,6 +248,7 @@ app.include_router(admin_db.router,     prefix="/api/admin/db",     tags=["Admin
 app.include_router(premios.router,      prefix="/api/premios",       tags=["Premios"])
 app.include_router(libreta_rs.router,   prefix="/api/libreta-rs",    tags=["Libreta RS"])
 app.include_router(reportes_pdf.router, prefix="/api/reportes-pdf",  tags=["Reportes PDF"])
+app.include_router(public_stats.router, prefix="/api/public",         tags=["Público"])
 
 
 uploads_path = "/app/uploads"
