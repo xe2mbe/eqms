@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   Table, Button, Space, DatePicker, Input, Select, Modal, Form, InputNumber, Row, Col,
-  Typography, Card, Tag, Popconfirm, message, Tooltip,
+  Typography, Card, Tag, Popconfirm, message, Tooltip, Badge,
 } from 'antd'
 import {
   SearchOutlined, ClearOutlined, DeleteOutlined, EditOutlined,
@@ -285,9 +285,8 @@ export default function ReportesRSPage() {
 
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>Registros RS — Redes Sociales</Title>
-        <Space>{colSettingsButton}</Space>
       </div>
 
       <Card className="card-shadow" style={{ marginBottom: 16 }}>
@@ -356,6 +355,14 @@ export default function ReportesRSPage() {
             showTotal: (t) => `${t} reportes`,
             onChange: (page, page_size) => setFilters(prev => ({ ...prev, page, page_size })),
           }}
+          title={() =>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 700 }}>
+                Registros <Badge count={total} color="#722ed1" style={{ marginLeft: 8 }} />
+              </span>
+              {colSettingsButton}
+            </div>
+          }
         />
       </Card>
 

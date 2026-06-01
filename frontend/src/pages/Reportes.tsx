@@ -258,11 +258,8 @@ export default function ReportesPage() {
 
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>Reportes Tradicionales</Title>
-        <Space>
-          {colSettingsButton}
-        </Space>
       </div>
 
       {/* Filtros */}
@@ -355,9 +352,12 @@ export default function ReportesPage() {
             onChange: (page, page_size) => setFilters(prev => ({ ...prev, page, page_size })),
           }}
           title={() =>
-            <span style={{ fontWeight: 700 }}>
-              Registros <Badge count={total} color="#1A569E" style={{ marginLeft: 8 }} />
-            </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 700 }}>
+                Registros <Badge count={total} color="#1A569E" style={{ marginLeft: 8 }} />
+              </span>
+              {colSettingsButton}
+            </div>
           }
         />
       </Card>
