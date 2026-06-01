@@ -4,7 +4,7 @@ import {
   Typography, Card, Tag, Popconfirm, message, Tooltip, Badge,
 } from 'antd'
 import {
-  PlusOutlined, SearchOutlined, ClearOutlined,
+  SearchOutlined, ClearOutlined,
   EditOutlined, DeleteOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
@@ -262,9 +262,6 @@ export default function ReportesPage() {
         <Title level={4} style={{ margin: 0 }}>Reportes Tradicionales</Title>
         <Space>
           {colSettingsButton}
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/reportes/nuevo')}>
-            Nuevo Reporte
-          </Button>
         </Space>
       </div>
 
