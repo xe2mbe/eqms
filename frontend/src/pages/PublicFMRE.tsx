@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Row, Col, Card, Tag, Typography, Divider, Spin, Input, Button, Alert, Table } from 'antd'
+import { Row, Col, Card, Tag, Typography, Divider, Spin, Input, Alert, Table } from 'antd'
 import {
   WifiOutlined, GlobalOutlined, TeamOutlined, RiseOutlined,
   StarOutlined, RadarChartOutlined, SearchOutlined, UserOutlined,
@@ -391,7 +391,7 @@ export default function PublicFMREPage() {
                         <Table
                           size="small"
                           dataSource={resultado.rf.ultimos}
-                          rowKey={(r, i) => String(i)}
+                          rowKey={(_r, i) => String(i)}
                           pagination={false}
                           columns={[
                             { title: 'Fecha', dataIndex: 'fecha', width: 90, render: v => v ?? '—' },
@@ -424,7 +424,7 @@ export default function PublicFMREPage() {
                         <Table
                           size="small"
                           dataSource={resultado.rs.ultimos}
-                          rowKey={(r, i) => String(i)}
+                          rowKey={(_r, i) => String(i)}
                           pagination={false}
                           columns={[
                             { title: 'Fecha', dataIndex: 'fecha', width: 90, render: v => v ?? '—' },
