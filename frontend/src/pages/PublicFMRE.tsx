@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Row, Col, Card, Statistic, Tag, Typography, Divider, Spin } from 'antd'
+import { Row, Col, Card, Tag, Typography, Divider, Spin } from 'antd'
 import {
   WifiOutlined, GlobalOutlined, TeamOutlined, RiseOutlined,
   StarOutlined, RadarChartOutlined,
