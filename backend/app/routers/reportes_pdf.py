@@ -124,7 +124,8 @@ class PlantillaOut(BaseModel):
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
-def _to_out(p: models.ReportePlantilla) -> PlantillaOut:
+def _to_out(p: models.ReportePlantilla, user_config=None) -> PlantillaOut:
+    uc = user_config
     return PlantillaOut(
         id=p.id,
         nombre=p.nombre,
@@ -134,17 +135,17 @@ def _to_out(p: models.ReportePlantilla) -> PlantillaOut:
         evento_rf_tipo=p.evento_rf.tipo if p.evento_rf else None,
         evento_rs_tipo=p.evento_rs.tipo if p.evento_rs else None,
         secciones=p.secciones or {},
-        destinatarios=p.destinatarios or [],
+        destinatarios=(uc.destinatarios if uc else None) or p.destinatarios or [],
         asunto_email=p.asunto_email,
         activa=p.activa,
         rol_asignado=p.rol_asignado,
         usuario_id=p.usuario_id,
         usuario_nombre=p.usuario.full_name if p.usuario else None,
-        prog_hora=p.prog_hora,
+        prog_hora=uc.prog_hora if uc else p.prog_hora,
         prog_recurrencia=p.prog_recurrencia,
-        prog_dia_semana=p.prog_dia_semana,
-        prog_activo=p.prog_activo or False,
-        prog_ultima_ejecucion=p.prog_ultima_ejecucion,
+        prog_dia_semana=uc.prog_dia_semana if uc else p.prog_dia_semana,
+        prog_activo=(uc.prog_activo if uc else p.prog_activo) or False,
+        prog_ultima_ejecucion=uc.prog_ultima_ejecucion if uc else p.prog_ultima_ejecucion,
         created_at=p.created_at,
     )
 
@@ -164,7 +165,19 @@ def list_plantillas(db: Session = Depends(get_db), current_user=Depends(get_curr
                 models.ReportePlantilla.usuario_id == current_user.id,
             )
         )
-    return [_to_out(r) for r in q.order_by(models.ReportePlantilla.nombre).all()]
+    plantillas = q.order_by(models.ReportePlantilla.nombre).all()
+
+    # Cargar configs del usuario actual en un dict para lookup O(1)
+    pids = [p.id for p in plantillas]
+    user_configs = {}
+    if pids:
+        ucs = db.query(models.ReportePlantillaUserConfig).filter(
+            models.ReportePlantillaUserConfig.plantilla_id.in_(pids),
+            models.ReportePlantillaUserConfig.usuario_id == current_user.id,
+        ).all()
+        user_configs = {uc.plantilla_id: uc for uc in ucs}
+
+    return [_to_out(p, user_configs.get(p.id)) for p in plantillas]
 
 
 @router.post("/plantillas", response_model=PlantillaOut, status_code=201)
@@ -209,18 +222,28 @@ def update_plantilla(pid: int, body: PlantillaCreate, db: Session = Depends(get_
 
 @router.put("/plantillas/{pid}/programacion", response_model=PlantillaOut)
 def update_programacion(pid: int, body: ProgramacionUpdate,
-                        db: Session = Depends(get_db), _=Depends(get_current_user)):
+                        db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     p = db.get(models.ReportePlantilla, pid)
     if not p:
         raise HTTPException(404, "Plantilla no encontrada")
-    p.destinatarios = body.destinatarios
-    p.prog_hora = body.prog_hora
-    p.prog_dia_semana = body.prog_dia_semana
-    p.prog_activo = body.prog_activo
-    p.prog_recurrencia = 'semanal'
+
+    uc = db.query(models.ReportePlantillaUserConfig).filter_by(
+        plantilla_id=pid, usuario_id=current_user.id
+    ).first()
+    if uc is None:
+        uc = models.ReportePlantillaUserConfig(
+            plantilla_id=pid,
+            usuario_id=current_user.id,
+        )
+        db.add(uc)
+
+    uc.destinatarios = body.destinatarios
+    uc.prog_hora = body.prog_hora
+    uc.prog_dia_semana = body.prog_dia_semana
+    uc.prog_activo = body.prog_activo
     db.commit()
-    db.refresh(p)
-    return _to_out(p)
+    db.refresh(uc)
+    return _to_out(p, uc)
 
 
 @router.delete("/plantillas/{pid}", status_code=204)
@@ -1381,9 +1404,9 @@ def _build_word(p: models.ReportePlantilla, data: dict, fi: datetime, ff: dateti
 # ─── Helper email (reutilizado por enviar + scheduler) ────────────────────────
 
 def _send_email_report(p: models.ReportePlantilla, pdf: bytes, data: dict,
-                       fi: datetime, ff: datetime, db: Session):
+                       fi: datetime, ff: datetime, db: Session, destinatarios_override=None):
     from app.routers.configuracion import _load_smtp
-    destinatarios = p.destinatarios or []
+    destinatarios = destinatarios_override or p.destinatarios or []
     if not destinatarios:
         raise ValueError("Sin destinatarios")
     smtp = _load_smtp(db)
@@ -1444,8 +1467,8 @@ def _send_email_report(p: models.ReportePlantilla, pdf: bytes, data: dict,
     return {"ok": True, "enviado_a": destinatarios, "archivo": fname}
 
 
-def auto_send(db: Session, p: models.ReportePlantilla, fi: datetime, ff: datetime):
-    """Llamado por el scheduler. Genera PDF y envía."""
+def auto_send(db: Session, p: models.ReportePlantilla, fi: datetime, ff: datetime, user_config=None):
+    """Llamado por el scheduler. Genera PDF y envía usando la config del usuario."""
     tipo = p.tipo or 'rf'
     data: dict = {}
     if tipo in ('rf', 'ambos'):
@@ -1453,7 +1476,8 @@ def auto_send(db: Session, p: models.ReportePlantilla, fi: datetime, ff: datetim
     if tipo in ('rs', 'ambos'):
         data['rs'] = _gather_rs(db, p.evento_rs_id, fi, ff)
     pdf = _build_pdf(p, data, fi, ff)
-    _send_email_report(p, pdf, data, fi, ff, db)
+    destinatarios = (user_config.destinatarios if user_config else None) or p.destinatarios or []
+    _send_email_report(p, pdf, data, fi, ff, db, destinatarios_override=destinatarios)
 
 
 def _resolver_fechas_ultimo_evento(db: Session, p: models.ReportePlantilla, before_date=None):
@@ -1522,13 +1546,19 @@ def enviar_pdf(
     fecha_inicio: datetime,
     fecha_fin: datetime,
     db: Session = Depends(get_db),
-    _=Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     p = db.get(models.ReportePlantilla, pid)
     if not p:
         raise HTTPException(404, "Plantilla no encontrada")
-    if not p.destinatarios:
-        raise HTTPException(400, "La plantilla no tiene destinatarios configurados")
+
+    uc = db.query(models.ReportePlantillaUserConfig).filter_by(
+        plantilla_id=pid, usuario_id=current_user.id
+    ).first()
+    destinatarios = (uc.destinatarios if uc else None) or p.destinatarios or []
+    if not destinatarios:
+        raise HTTPException(400, "No tienes destinatarios configurados para este reporte")
+
     tipo = p.tipo or 'rf'
     data: dict = {}
     if tipo in ('rf', 'ambos'):
@@ -1537,7 +1567,7 @@ def enviar_pdf(
         data['rs'] = _gather_rs(db, p.evento_rs_id, fecha_inicio, fecha_fin)
     pdf = _build_pdf(p, data, fecha_inicio, fecha_fin)
     try:
-        return _send_email_report(p, pdf, data, fecha_inicio, fecha_fin, db)
+        return _send_email_report(p, pdf, data, fecha_inicio, fecha_fin, db, destinatarios_override=destinatarios)
     except ValueError as e:
         raise HTTPException(400, str(e))
     except Exception as e:

@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, Integer, String, Boolean, DateTime, Text,
-    ForeignKey, BigInteger, Index
+    ForeignKey, BigInteger, Index, UniqueConstraint
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
@@ -278,6 +278,26 @@ class ReportePlantilla(Base):
     evento_rf = relationship("Evento", foreign_keys=[evento_rf_id])
     evento_rs = relationship("Evento", foreign_keys=[evento_rs_id])
     usuario = relationship("Usuario", foreign_keys=[usuario_id])
+    user_configs = relationship("ReportePlantillaUserConfig", back_populates="plantilla", cascade="all, delete-orphan")
+
+
+class ReportePlantillaUserConfig(Base):
+    """Configuración de envío automático por usuario para cada plantilla de reporte."""
+    __tablename__ = "reporte_plantilla_user_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    plantilla_id = Column(Integer, ForeignKey("reporte_plantillas.id", ondelete="CASCADE"), nullable=False)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
+    destinatarios = Column(JSONB, nullable=False, default=list)
+    prog_hora = Column(String(5), nullable=True)
+    prog_dia_semana = Column(Integer, nullable=True)
+    prog_activo = Column(Boolean, default=False)
+    prog_ultima_ejecucion = Column(DateTime(timezone=True), nullable=True)
+
+    plantilla = relationship("ReportePlantilla", back_populates="user_configs")
+    usuario = relationship("Usuario")
+
+    __table_args__ = (UniqueConstraint("plantilla_id", "usuario_id", name="uq_plantilla_usuario_config"),)
 
 
 class AuditLog(Base):

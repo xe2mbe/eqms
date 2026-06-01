@@ -147,6 +147,19 @@ async def lifespan(app: FastAPI):
         conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS prog_activo BOOLEAN DEFAULT FALSE"))
         conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS prog_ultima_ejecucion TIMESTAMPTZ"))
         conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS modo_fecha VARCHAR(15) NOT NULL DEFAULT 'ultimo_evento'"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS reporte_plantilla_user_configs (
+                id SERIAL PRIMARY KEY,
+                plantilla_id INTEGER NOT NULL REFERENCES reporte_plantillas(id) ON DELETE CASCADE,
+                usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                destinatarios JSONB NOT NULL DEFAULT '[]',
+                prog_hora VARCHAR(5),
+                prog_dia_semana INTEGER,
+                prog_activo BOOLEAN DEFAULT FALSE,
+                prog_ultima_ejecucion TIMESTAMPTZ,
+                CONSTRAINT uq_plantilla_usuario_config UNIQUE (plantilla_id, usuario_id)
+            )
+        """))
         conn.commit()
 
     db = SessionLocal()
@@ -179,26 +192,27 @@ def _run_scheduled_reports():
     db = SessionLocal()
     try:
         from app import models
-        plantillas = db.query(models.ReportePlantilla).filter(
-            models.ReportePlantilla.prog_activo == True,
-            models.ReportePlantilla.prog_hora == hhmm,
-            models.ReportePlantilla.prog_dia_semana == dow,
+        configs = db.query(models.ReportePlantillaUserConfig).filter(
+            models.ReportePlantillaUserConfig.prog_activo == True,
+            models.ReportePlantillaUserConfig.prog_hora == hhmm,
+            models.ReportePlantillaUserConfig.prog_dia_semana == dow,
         ).all()
 
-        for p in plantillas:
+        for uc in configs:
+            p = uc.plantilla
             today = now.date()
             fi, ff = reportes_pdf._resolver_fechas_ultimo_evento(db, p, before_date=today)
             if fi is None:
-                logger.warning(f"Reporte {p.id} ({p.nombre}): sin evento previo a {today}, se omite.")
+                logger.warning(f"Reporte {p.id} ({p.nombre}) usuario {uc.usuario_id}: sin evento previo a {today}, se omite.")
                 continue
 
             try:
-                reportes_pdf.auto_send(db, p, fi, ff)
-                p.prog_ultima_ejecucion = now
+                reportes_pdf.auto_send(db, p, fi, ff, user_config=uc)
+                uc.prog_ultima_ejecucion = now
                 db.commit()
-                logger.info(f"Reporte programado enviado: {p.nombre} ({p.id})")
+                logger.info(f"Reporte programado enviado: {p.nombre} ({p.id}) → usuario {uc.usuario_id}")
             except Exception as e:
-                logger.error(f"Error en reporte programado {p.id}: {e}")
+                logger.error(f"Error en reporte programado {p.id} usuario {uc.usuario_id}: {e}")
     finally:
         db.close()
 
