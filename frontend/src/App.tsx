@@ -47,7 +47,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/fmre" element={<PublicFMREPage />} />
+        <Route path="/actividad" element={<PublicFMREPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/cambiar-contrasena" element={<ChangePasswordPage />} />
         <Route element={<ProtectedRoute />}>
