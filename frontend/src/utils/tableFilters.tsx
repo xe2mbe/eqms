@@ -40,9 +40,10 @@ export function textFilterProps(dataIndex: string) {
 }
 
 /** Filtro de selección con checklist — para columnas categóricas */
-export function selectFilterProps<T extends Record<string, unknown>>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function selectFilterProps(
   options: { text: string; value: string }[],
-  onFilter: (value: unknown, record: T) => boolean,
+  onFilter: (value: unknown, record: any) => boolean,
 ) {
   return {
     filters: options,
@@ -55,9 +56,10 @@ export function selectFilterProps<T extends Record<string, unknown>>(
 }
 
 /** Extrae valores únicos de un array de objetos para usar como opciones de filtro */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function uniqueFilterOptions(
-  data: Record<string, unknown>[],
-  getValue: (r: Record<string, unknown>) => string | null | undefined,
+  data: any[],
+  getValue: (r: any) => string | null | undefined,
 ): { text: string; value: string }[] {
   const seen = new Set<string>()
   const opts: { text: string; value: string }[] = []

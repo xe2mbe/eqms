@@ -176,7 +176,7 @@ export default function ReportesRSPage() {
       },
       ...selectFilterProps(
         plataformas.map(p => ({ text: p.nombre, value: p.nombre })),
-        (value, record) => (record as unknown as ReporteRS).plataforma?.nombre === value,
+        (value, record) => (record).plataforma?.nombre === value,
       ),
     },
     ciudad: {
@@ -188,15 +188,15 @@ export default function ReportesRSPage() {
       title: 'País', dataIndex: 'pais', width: 140,
       render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
       ...selectFilterProps(
-        uniqueFilterOptions(data as any, r => (r as ReporteRS).pais ?? undefined),
-        (value, record) => (record as unknown as ReporteRS).pais === value,
+        uniqueFilterOptions(data as any, r => (r).pais ?? undefined),
+        (value, record) => (record).pais === value,
       ),
     },
     estado: {
       title: 'Estado', dataIndex: 'estado', width: 130,
       ...selectFilterProps(
-        uniqueFilterOptions(data as any, r => (r as ReporteRS).estado ?? undefined),
-        (value, record) => (record as unknown as ReporteRS).estado === value,
+        uniqueFilterOptions(data as any, r => (r).estado ?? undefined),
+        (value, record) => (record).estado === value,
       ),
     },
     zona: {
@@ -209,7 +209,7 @@ export default function ReportesRSPage() {
       },
       ...selectFilterProps(
         zonas.map(z => ({ text: z.codigo, value: z.codigo })),
-        (value, record) => (record as unknown as ReporteRS).zona?.codigo === value,
+        (value, record) => (record).zona?.codigo === value,
       ),
     },
     evento: {
@@ -221,7 +221,7 @@ export default function ReportesRSPage() {
       },
       ...selectFilterProps(
         eventos.map(e => ({ text: e.tipo, value: e.tipo })),
-        (value, record) => (record as unknown as ReporteRS).evento?.tipo === value,
+        (value, record) => (record).evento?.tipo === value,
       ),
     },
     estacion: {
@@ -232,8 +232,8 @@ export default function ReportesRSPage() {
         return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{record.estacion.qrz}</Tag>
       },
       ...selectFilterProps(
-        uniqueFilterOptions(data as any, r => (r as ReporteRS).estacion?.qrz ?? undefined),
-        (value, record) => (record as unknown as ReporteRS).estacion?.qrz === value,
+        uniqueFilterOptions(data as any, r => (r).estacion?.qrz ?? undefined),
+        (value, record) => (record).estacion?.qrz === value,
       ),
     },
     fecha_reporte: {
@@ -250,8 +250,8 @@ export default function ReportesRSPage() {
       title: 'Capturado por', dataIndex: 'capturado_por_nombre', width: 140,
       render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
       ...selectFilterProps(
-        uniqueFilterOptions(data as any, r => (r as ReporteRS).capturado_por_nombre ?? undefined),
-        (value, record) => (record as unknown as ReporteRS).capturado_por_nombre === value,
+        uniqueFilterOptions(data as any, r => (r).capturado_por_nombre ?? undefined),
+        (value, record) => (record).capturado_por_nombre === value,
       ),
     },
   }
