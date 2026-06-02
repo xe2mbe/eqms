@@ -111,7 +111,8 @@ export default function FMREPage() {
         <img src="/mexico.webp" alt="" aria-hidden="true"
           style={{ position: 'absolute', right: '-2%', top: '5%',
             width: '52%', maxWidth: 500, pointerEvents: 'none',
-            opacity: 0.08, filter: 'brightness(0) invert(1) blur(0.5px)',
+            opacity: 0.18,
+            filter: 'invert(1) grayscale(1) brightness(0.6)',
             mixBlendMode: 'screen' }} />
 
         {/* Antena Yagi — elemento técnico radioafición */}
