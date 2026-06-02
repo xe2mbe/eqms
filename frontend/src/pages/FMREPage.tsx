@@ -115,11 +115,33 @@ export default function FMREPage() {
             filter: 'invert(1) grayscale(1) brightness(0.6)',
             mixBlendMode: 'screen' }} />
 
-        {/* Transceptor Yaesu FT-710 — elemento técnico radioafición */}
+        {/* Antena Yagi — elemento técnico radioafición */}
+        <svg style={{ position: 'absolute', top: 18, right: 32, opacity: 0.1, pointerEvents: 'none' }}
+          width="220" height="200" viewBox="0 0 220 200">
+          <line x1="10" y1="80" x2="210" y2="80" stroke="white" strokeWidth="2.5"/>
+          <line x1="22" y1="38" x2="22" y2="122" stroke="white" strokeWidth="2.5"/>
+          <line x1="70" y1="44" x2="70" y2="68" stroke="white" strokeWidth="2.5"/>
+          <line x1="70" y1="92" x2="70" y2="116" stroke="white" strokeWidth="2.5"/>
+          <rect x="62" y="68" width="16" height="24" stroke="white" strokeWidth="1.5" fill="none" rx="2"/>
+          <line x1="110" y1="48" x2="110" y2="112" stroke="white" strokeWidth="2"/>
+          <line x1="148" y1="52" x2="148" y2="108" stroke="white" strokeWidth="2"/>
+          <line x1="182" y1="56" x2="182" y2="104" stroke="white" strokeWidth="1.5"/>
+          <line x1="208" y1="60" x2="208" y2="100" stroke="white" strokeWidth="1"/>
+          <line x1="70" y1="80" x2="70" y2="165" stroke="white" strokeWidth="1.5" strokeDasharray="5,4"/>
+          <circle cx="70" cy="170" r="6" stroke="white" strokeWidth="1.5" fill="none"/>
+          <circle cx="70" cy="170" r="2" fill="white"/>
+          {[0,1,2,3,4].map(i => (
+            <path key={i} d={`M ${56+i*6},185 Q ${59+i*6},178 ${62+i*6},185`} stroke="white" strokeWidth="1.5" fill="none"/>
+          ))}
+          <line x1="56" y1="185" x2="56" y2="192" stroke="white" strokeWidth="1.5"/>
+          <line x1="86" y1="185" x2="86" y2="192" stroke="white" strokeWidth="1.5"/>
+        </svg>
+
+        {/* Transceptor Yaesu FT-710 — lado opuesto a XE (bottom-right) */}
         <img src="/yaesu.png" alt="" aria-hidden="true"
-          style={{ position: 'absolute', right: '-4%', top: '2%',
-            width: '58%', maxWidth: 580, pointerEvents: 'none',
-            opacity: 0.55, mixBlendMode: 'screen' }} />
+          style={{ position: 'absolute', right: '0%', bottom: 16,
+            width: '32%', maxWidth: 320, pointerEvents: 'none',
+            opacity: 0.22, mixBlendMode: 'screen' }} />
 
         {/* XE — identidad */}
         <div style={{ position: 'absolute', left: 24, bottom: 24, opacity: 0.05, fontSize: 180, fontWeight: 900, color: 'white', lineHeight: 1, letterSpacing: -8 }}>XE</div>
