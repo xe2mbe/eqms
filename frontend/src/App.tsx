@@ -34,51 +34,56 @@ export default function App() {
 
   useEffect(() => { checkAuth() }, [checkAuth])
 
-  if (isLoading) {
-    return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Spin size="large">
-          <div style={{ padding: 32, color: '#999' }}>Cargando...</div>
-        </Spin>
-      </div>
-    )
-  }
-
   return (
     <BrowserRouter>
       <Routes>
+        {/* Rutas públicas — siempre accesibles sin auth */}
         <Route path="/actividad" element={<PublicFMREPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/cambiar-contrasena" element={<ChangePasswordPage />} />
-        <Route element={<ProtectedRoute />}>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<Navigate to="/dashboard/rf" replace />} />
-            <Route path="/dashboard" element={<Navigate to="/dashboard/rf" replace />} />
-            <Route path="/dashboard/rf" element={<DashboardPage />} />
-            <Route path="/dashboard/rs" element={<DashboardRSPage />} />
-            <Route path="/reportes" element={<ReportesPage />} />
-            <Route path="/reportes/nuevo" element={<NuevoReportePage />} />
-            <Route path="/reportes-rs" element={<ReportesRSPage />} />
-            <Route path="/libreta" element={<LibretaPage />} />
-            <Route path="/libreta-rs" element={<LibretaRSPage />} />
-            <Route path="/estadisticas" element={<Navigate to="/estadisticas/rf" replace />} />
-            <Route path="/estadisticas/rf" element={<EstadisticasPage />} />
-            <Route path="/estadisticas/rs" element={<EstadisticasRSPage />} />
-            <Route path="/estadisticas/reportes" element={<EstadisticasReportesPage />} />
-            <Route path="/gestion/usuarios"       element={<UsuariosPage />} />
-            <Route path="/gestion/eventos"        element={<EventosPage />} />
-            <Route path="/gestion/zonas"          element={<ZonasPage />} />
-            <Route path="/gestion/sistemas"       element={<SistemasPage />} />
-            <Route path="/gestion/estaciones"     element={<EstacionesPage />} />
-            <Route path="/gestion/redes-sociales" element={<RedesSocialesPage />} />
-            <Route path="/gestion/radioexperimentadores" element={<RadioexperimentadoresPage />} />
-            <Route path="/gestion/reportes-pdf"          element={<ReportesPDFPage />} />
-            <Route path="/configuracion" element={<ConfiguracionPage />} />
-            <Route path="/perfil" element={<PerfilPage />} />
-            <Route path="/premios" element={<PremiosPage />} />
-          </Route>
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
+
+        {/* Rutas protegidas — esperan a que checkAuth termine */}
+        {isLoading ? (
+          <Route path="*" element={
+            <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Spin size="large">
+                <div style={{ padding: 32, color: '#999' }}>Cargando...</div>
+              </Spin>
+            </div>
+          } />
+        ) : (
+          <>
+            <Route element={<ProtectedRoute />}>
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<Navigate to="/dashboard/rf" replace />} />
+                <Route path="/dashboard" element={<Navigate to="/dashboard/rf" replace />} />
+                <Route path="/dashboard/rf" element={<DashboardPage />} />
+                <Route path="/dashboard/rs" element={<DashboardRSPage />} />
+                <Route path="/reportes" element={<ReportesPage />} />
+                <Route path="/reportes/nuevo" element={<NuevoReportePage />} />
+                <Route path="/reportes-rs" element={<ReportesRSPage />} />
+                <Route path="/libreta" element={<LibretaPage />} />
+                <Route path="/libreta-rs" element={<LibretaRSPage />} />
+                <Route path="/estadisticas" element={<Navigate to="/estadisticas/rf" replace />} />
+                <Route path="/estadisticas/rf" element={<EstadisticasPage />} />
+                <Route path="/estadisticas/rs" element={<EstadisticasRSPage />} />
+                <Route path="/estadisticas/reportes" element={<EstadisticasReportesPage />} />
+                <Route path="/gestion/usuarios"       element={<UsuariosPage />} />
+                <Route path="/gestion/eventos"        element={<EventosPage />} />
+                <Route path="/gestion/zonas"          element={<ZonasPage />} />
+                <Route path="/gestion/sistemas"       element={<SistemasPage />} />
+                <Route path="/gestion/estaciones"     element={<EstacionesPage />} />
+                <Route path="/gestion/redes-sociales" element={<RedesSocialesPage />} />
+                <Route path="/gestion/radioexperimentadores" element={<RadioexperimentadoresPage />} />
+                <Route path="/gestion/reportes-pdf"          element={<ReportesPDFPage />} />
+                <Route path="/configuracion" element={<ConfiguracionPage />} />
+                <Route path="/perfil" element={<PerfilPage />} />
+                <Route path="/premios" element={<PremiosPage />} />
+              </Route>
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </>
+        )}
       </Routes>
     </BrowserRouter>
   )
