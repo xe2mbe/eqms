@@ -140,8 +140,8 @@ export default function FMREPage() {
             Federación Mexicana de Radio Experimentadores A.C.
           </h1>
           <p style={{ color: '#8ab4e0', fontSize: 'clamp(14px, 2vw, 18px)', lineHeight: 1.7, margin: '0 0 32px' }}>
-            Más de 90 años uniendo a los radioaficionados de México. Representamos,
-            promovemos y defendemos el espectro radioeléctrico para las generaciones presentes y futuras.
+            Más de 90 años como máxima autoridad de la práctica de la radioafición en México.
+            Representamos, promovemos y defendemos el espectro radioeléctrico para las generaciones presentes y futuras.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button onClick={() => scrollTo('afiliacion')}
