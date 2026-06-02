@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
-import { Alert, Tag, Steps, Button } from 'antd'
+import { useState, useEffect } from 'react'
+import { Alert, Tag, Steps } from 'antd'
 import {
   MenuOutlined, CloseOutlined, GlobalOutlined,
   WarningOutlined, MailOutlined, PhoneOutlined,
-  CheckCircleOutlined, FileTextOutlined, RadioOutlined,
+  CheckCircleOutlined, FileTextOutlined, AudioOutlined,
   SoundOutlined, TeamOutlined,
 } from '@ant-design/icons'
 
@@ -307,7 +307,7 @@ export default function FMREPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                 <div style={{ width: 44, height: 44, borderRadius: 10, background: '#fff7e6',
                   display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <RadioOutlined style={{ color: FMRE_GOLD, fontSize: 20 }} />
+                  <AudioOutlined style={{ color: FMRE_GOLD, fontSize: 20 }} />
                 </div>
                 <h3 style={{ margin: 0, color: FMRE_DARK, fontWeight: 700, fontSize: 17 }}>
                   ¿Qué es la Radioafición?
@@ -358,7 +358,7 @@ export default function FMREPage() {
                 items: ['HF · 7.082 MHz SSB', 'AllStar Link · Nodo XE1LM', 'IRLP · Cobertura nacional', 'Redes sociales en vivo'],
               },
               {
-                icon: <RadioOutlined style={{ fontSize: 36, color: '#722ed1' }} />,
+                icon: <AudioOutlined style={{ fontSize: 36, color: '#722ed1' }} />,
                 bg: '#f9f0ff',
                 title: 'Retransmisión',
                 subtitle: 'Red nacional de retransmisión',
