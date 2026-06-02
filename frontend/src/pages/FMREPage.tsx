@@ -135,10 +135,12 @@ export default function FMREPage() {
               borderBottom: '1px dotted rgba(212,160,23,0.5)', paddingBottom: 1 }}>
             ▶ MIEMBRO DE LA IARU REGIÓN 2
           </a>
-          <img src="/fmre.webp" alt="FMRE" style={{ height: 140, marginBottom: 24, filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.4))' }} />
-          <h1 style={{ color: 'white', fontSize: 'clamp(26px, 4vw, 48px)', fontWeight: 900, margin: '0 0 16px', lineHeight: 1.15 }}>
-            Federación Mexicana de Radio Experimentadores A.C.
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, flexWrap: 'wrap', marginBottom: 16 }}>
+            <img src="/fmre.webp" alt="FMRE" style={{ height: 120, filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.4))', flexShrink: 0 }} />
+            <h1 style={{ color: 'white', fontSize: 'clamp(24px, 4vw, 46px)', fontWeight: 900, margin: 0, lineHeight: 1.2, textAlign: 'left' }}>
+              Federación Mexicana<br />de Radio Experimentadores<br />A.C.
+            </h1>
+          </div>
           <p style={{ color: '#8ab4e0', fontSize: 'clamp(14px, 2vw, 18px)', lineHeight: 1.7, margin: '0 0 32px' }}>
             Más de 90 años como máxima autoridad de la práctica de la radioafición en México.
             Representamos, promovemos y defendemos el espectro radioeléctrico para las generaciones presentes y futuras.
