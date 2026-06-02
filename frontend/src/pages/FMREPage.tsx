@@ -107,16 +107,55 @@ export default function FMREPage() {
         padding: '0 0 48px',
         position: 'relative', overflow: 'hidden',
       }}>
-        {/* Decoración ondas */}
-        <svg style={{ position: 'absolute', top: 20, right: 40, opacity: 0.07 }} width="300" height="200" viewBox="0 0 300 200">
-          {[0,30,60,90].map((d,i) => (
-            <ellipse key={i} cx="150" cy="100" rx={60+d} ry={40+d*0.6}
+        {/* Silueta del territorio mexicano */}
+        <svg style={{ position: 'absolute', right: '-2%', top: '8%', opacity: 0.05, width: '50%', maxWidth: 460, pointerEvents: 'none' }}
+          viewBox="0 0 460 300" xmlns="http://www.w3.org/2000/svg">
+          <path fill="white" d="
+            M 20,75 L 80,52 L 160,38 L 240,34 L 320,42 L 385,58 L 410,80
+            L 415,105 L 408,130 L 418,158 L 412,178 L 420,200 L 432,218
+            L 438,238 L 424,248 L 415,232 L 405,245 L 390,255 L 370,248
+            L 352,262 L 330,268 L 305,258 L 278,252 L 248,258 L 215,248
+            L 178,238 L 140,222 L 105,205 L 72,188 L 46,168 L 28,148
+            L 18,122 L 20,98 Z
+          "/>
+          {/* Baja California */}
+          <path fill="white" d="M 20,75 L 12,95 L 8,130 L 14,165 L 22,185 L 28,175 L 26,148 L 28,115 L 24,90 Z"/>
+          {/* Yucatán */}
+          <path fill="white" d="M 432,218 L 445,215 L 455,202 L 450,188 L 438,190 L 432,200 Z"/>
+        </svg>
+
+        {/* Antena Yagi — elemento técnico radioafición */}
+        <svg style={{ position: 'absolute', top: 18, right: 32, opacity: 0.1, pointerEvents: 'none' }}
+          width="220" height="200" viewBox="0 0 220 200">
+          {/* Boom horizontal */}
+          <line x1="10" y1="80" x2="210" y2="80" stroke="white" strokeWidth="2.5"/>
+          {/* Reflector (más largo, izquierda) */}
+          <line x1="22" y1="38" x2="22" y2="122" stroke="white" strokeWidth="2.5"/>
+          {/* Elemento radiante (dipolo partido) */}
+          <line x1="70" y1="44" x2="70" y2="68" stroke="white" strokeWidth="2.5"/>
+          <line x1="70" y1="92" x2="70" y2="116" stroke="white" strokeWidth="2.5"/>
+          <rect x="62" y="68" width="16" height="24" stroke="white" strokeWidth="1.5" fill="none" rx="2"/>
+          {/* Directores */}
+          <line x1="110" y1="48" x2="110" y2="112" stroke="white" strokeWidth="2"/>
+          <line x1="148" y1="52" x2="148" y2="108" stroke="white" strokeWidth="2"/>
+          <line x1="182" y1="56" x2="182" y2="104" stroke="white" strokeWidth="1.5"/>
+          <line x1="208" y1="60" x2="208" y2="100" stroke="white" strokeWidth="1"/>
+          {/* Línea de bajada (coaxial) */}
+          <line x1="70" y1="80" x2="70" y2="165" stroke="white" strokeWidth="1.5" strokeDasharray="5,4"/>
+          {/* Conector */}
+          <circle cx="70" cy="170" r="6" stroke="white" strokeWidth="1.5" fill="none"/>
+          <circle cx="70" cy="170" r="2" fill="white"/>
+          {/* Bobina (tuner) */}
+          {[0,1,2,3,4].map(i => (
+            <path key={i} d={`M ${56+i*6},185 Q ${59+i*6},178 ${62+i*6},185`}
               stroke="white" strokeWidth="1.5" fill="none"/>
           ))}
-          <line x1="150" y1="0" x2="150" y2="200" stroke="white" strokeWidth="1"/>
-          <line x1="0" y1="100" x2="300" y2="100" stroke="white" strokeWidth="1"/>
+          <line x1="56" y1="185" x2="56" y2="192" stroke="white" strokeWidth="1.5"/>
+          <line x1="86" y1="185" x2="86" y2="192" stroke="white" strokeWidth="1.5"/>
         </svg>
-        <div style={{ position: 'absolute', left: 30, bottom: 30, opacity: 0.05, fontSize: 180, fontWeight: 900, color: 'white', lineHeight: 1 }}>XE</div>
+
+        {/* XE — identidad */}
+        <div style={{ position: 'absolute', left: 24, bottom: 24, opacity: 0.05, fontSize: 180, fontWeight: 900, color: 'white', lineHeight: 1, letterSpacing: -8 }}>XE</div>
 
         {/* Top bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '20px 32px 0' }}>
