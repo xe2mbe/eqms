@@ -135,11 +135,12 @@ export default function FMREPage() {
 
         {/* Contenido hero */}
         <div style={{ maxWidth: 800, margin: '40px auto 0', padding: '0 32px', position: 'relative', zIndex: 1, textAlign: 'center' }}>
-          <div style={{ color: FMRE_GOLD, fontWeight: 700, letterSpacing: 4, fontSize: 11, marginBottom: 12 }}>
+          <div style={{ color: FMRE_GOLD, fontWeight: 700, letterSpacing: 4, fontSize: 11, marginBottom: 20 }}>
             ▶ CQ CQ — MIEMBRO DE LA IARU REGIÓN 2
           </div>
+          <img src="/fmre.webp" alt="FMRE" style={{ height: 140, marginBottom: 24, filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.4))' }} />
           <h1 style={{ color: 'white', fontSize: 'clamp(26px, 4vw, 48px)', fontWeight: 900, margin: '0 0 16px', lineHeight: 1.15 }}>
-            La voz de los Radioaficionados Mexicanos
+            Federación Mexicana de Radio Experimentadores A.C.
           </h1>
           <p style={{ color: '#8ab4e0', fontSize: 'clamp(14px, 2vw, 18px)', lineHeight: 1.7, margin: '0 0 32px' }}>
             Más de 90 años uniendo a los radioaficionados de México. Representamos,
