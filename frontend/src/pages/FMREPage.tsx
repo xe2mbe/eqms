@@ -107,21 +107,67 @@ export default function FMREPage() {
         padding: '0 0 48px',
         position: 'relative', overflow: 'hidden',
       }}>
-        {/* Silueta del territorio mexicano */}
-        <svg style={{ position: 'absolute', right: '-2%', top: '8%', opacity: 0.05, width: '50%', maxWidth: 460, pointerEvents: 'none' }}
-          viewBox="0 0 460 300" xmlns="http://www.w3.org/2000/svg">
+        {/* Silueta del territorio mexicano — coordenadas geográficas reales mapeadas */}
+        <svg style={{ position: 'absolute', right: '-1%', top: '5%', opacity: 0.06,
+          width: '52%', maxWidth: 500, pointerEvents: 'none',
+          filter: 'blur(0.5px)' }}
+          viewBox="0 0 500 340" xmlns="http://www.w3.org/2000/svg">
+          {/* Territorio continental */}
           <path fill="white" d="
-            M 20,75 L 80,52 L 160,38 L 240,34 L 320,42 L 385,58 L 410,80
-            L 415,105 L 408,130 L 418,158 L 412,178 L 420,200 L 432,218
-            L 438,238 L 424,248 L 415,232 L 405,245 L 390,255 L 370,248
-            L 352,262 L 330,268 L 305,258 L 278,252 L 248,258 L 215,248
-            L 178,238 L 140,222 L 105,205 L 72,188 L 46,168 L 28,148
-            L 18,122 L 20,98 Z
+            M 0,12
+            L 28,0
+            L 105,28
+            L 178,20
+            L 215,62
+            L 275,70
+            L 292,102
+            L 312,128
+            L 305,172
+            L 318,200
+            L 328,225
+            L 348,254
+            L 378,272
+            L 408,265
+            L 442,242
+            L 458,218
+            L 495,205
+            L 492,225
+            L 480,262
+            L 460,278
+            L 420,275
+            L 408,312
+            L 362,308
+            L 328,312
+            L 285,295
+            L 248,275
+            L 212,255
+            L 196,228
+            L 176,180
+            L 135,135
+            L 105,95
+            L 88,74
+            L 60,32
+            Z
           "/>
-          {/* Baja California */}
-          <path fill="white" d="M 20,75 L 12,95 L 8,130 L 14,165 L 22,185 L 28,175 L 26,148 L 28,115 L 24,90 Z"/>
-          {/* Yucatán */}
-          <path fill="white" d="M 432,218 L 445,215 L 455,202 L 450,188 L 438,190 L 432,200 Z"/>
+          {/* Península de Baja California */}
+          <path fill="white" d="
+            M 0,12
+            L 10,26
+            L 18,52
+            L 22,80
+            L 52,98
+            L 96,134
+            L 115,170
+            L 120,190
+            L 110,174
+            L 94,140
+            L 76,114
+            L 50,104
+            L 34,82
+            L 24,55
+            L 10,32
+            Z
+          "/>
         </svg>
 
         {/* Antena Yagi — elemento técnico radioafición */}
