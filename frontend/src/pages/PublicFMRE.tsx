@@ -226,10 +226,9 @@ export default function PublicFMREPage() {
       {/* ── HEADER ── */}
       <header style={{ background: FMRE_DARK, padding: '12px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <img src="/LogoFMRE.png" alt="FMRE" style={{ height: 48 }} />
-          <div>
-            <div style={{ color: 'white', fontWeight: 700, fontSize: 16, letterSpacing: 1 }}>FMRE</div>
-            <div style={{ color: '#8ab4e0', fontSize: 11 }}>Federación Mexicana de Radioexperimentadores</div>
+          <img src="/LogoFMRE.png" alt="FMRE" style={{ height: 52 }} />
+          <div style={{ color: 'white', fontWeight: 800, fontSize: 'clamp(14px, 2vw, 22px)', lineHeight: 1.2, letterSpacing: 0.3 }}>
+            Federación Mexicana de Radioexperimentadores, A.C.
           </div>
         </div>
         <div style={{ color: '#8ab4e0', fontSize: 12, textAlign: 'right' }}>
@@ -600,7 +599,7 @@ export default function PublicFMREPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <img src="/LogoFMRE.png" alt="FMRE" style={{ height: 36, opacity: 0.9 }} />
             <div>
-              <div style={{ color: 'white', fontWeight: 700, fontSize: 13 }}>Federación Mexicana de Radioexperimentadores</div>
+              <div style={{ color: 'white', fontWeight: 800, fontSize: 14 }}>Federación Mexicana de Radioexperimentadores, A.C.</div>
               <div style={{ color: '#8ab4e0', fontSize: 11 }}>Sistema QMS — Gestión de Actividad en Red</div>
             </div>
           </div>
