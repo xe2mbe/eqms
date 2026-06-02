@@ -168,7 +168,7 @@ export default function FMREPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, flexWrap: 'wrap', marginBottom: 16 }}>
             <img src="/fmre.webp" alt="FMRE" style={{ height: 120, filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.4))', flexShrink: 0 }} />
             <h1 style={{ color: 'white', fontSize: 'clamp(24px, 4vw, 46px)', fontWeight: 900, margin: 0, lineHeight: 1.2, textAlign: 'left' }}>
-              Federación Mexicana<br />de Radio Experimentadores<br />A.C.
+              Federación Mexicana<br />de Radioexperimentadores<br />A.C.
             </h1>
           </div>
           <p style={{ color: '#8ab4e0', fontSize: 'clamp(14px, 2vw, 18px)', lineHeight: 1.7, margin: '0 0 32px' }}>
