@@ -28,6 +28,7 @@ import PremiosPage from '@/pages/Premios'
 import ReportesPDFPage from '@/pages/gestion/ReportesPDF'
 import EstadisticasReportesPage from '@/pages/EstadisticasReportes'
 import PublicFMREPage from '@/pages/PublicFMRE'
+import FMREPage from '@/pages/FMREPage'
 
 export default function App() {
   const { checkAuth, isLoading } = useAuthStore()
@@ -38,6 +39,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Rutas públicas — siempre accesibles sin auth */}
+        <Route path="/fmre" element={<FMREPage />} />
         <Route path="/actividad" element={<PublicFMREPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/cambiar-contrasena" element={<ChangePasswordPage />} />
