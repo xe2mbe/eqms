@@ -7,6 +7,9 @@ import {
   SoundOutlined, TeamOutlined,
 } from '@ant-design/icons'
 
+// URL del sistema EQMS — vacío = mismo servidor, URL completa = servidor externo
+const EQMS_URL = (import.meta.env.VITE_EQMS_URL as string) || ''
+
 // ─── Colores ─────────────────────────────────────────────────────────────────
 const FMRE_BLUE   = '#1A569E'
 const FMRE_DARK   = '#0D2E5F'
@@ -542,7 +545,7 @@ export default function FMREPage() {
           </div>
 
           <div style={{ textAlign: 'center', padding: '8px 0' }}>
-            <a href="/login" style={{ textDecoration: 'none' }}>
+            <a href={`${EQMS_URL}/login`} style={{ textDecoration: 'none' }}>
               <button style={{
                 background: `linear-gradient(135deg, ${FMRE_BLUE}, #2563a8)`,
                 color: 'white', border: 'none', borderRadius: 10,
@@ -555,7 +558,7 @@ export default function FMREPage() {
             </a>
             <p style={{ color: '#888', fontSize: 13, marginTop: 12 }}>
               ¿Ya tienes cuenta?{' '}
-              <a href="/login" style={{ color: FMRE_BLUE, fontWeight: 600 }}>Inicia sesión aquí</a>
+              <a href={`${EQMS_URL}/login`} style={{ color: FMRE_BLUE, fontWeight: 600 }}>Inicia sesión aquí</a>
             </p>
           </div>
         </section>
