@@ -107,68 +107,12 @@ export default function FMREPage() {
         padding: '0 0 48px',
         position: 'relative', overflow: 'hidden',
       }}>
-        {/* Silueta del territorio mexicano — coordenadas geográficas reales mapeadas */}
-        <svg style={{ position: 'absolute', right: '-1%', top: '5%', opacity: 0.06,
-          width: '52%', maxWidth: 500, pointerEvents: 'none',
-          filter: 'blur(0.5px)' }}
-          viewBox="0 0 500 340" xmlns="http://www.w3.org/2000/svg">
-          {/* Territorio continental */}
-          <path fill="white" d="
-            M 0,12
-            L 28,0
-            L 105,28
-            L 178,20
-            L 215,62
-            L 275,70
-            L 292,102
-            L 312,128
-            L 305,172
-            L 318,200
-            L 328,225
-            L 348,254
-            L 378,272
-            L 408,265
-            L 442,242
-            L 458,218
-            L 495,205
-            L 492,225
-            L 480,262
-            L 460,278
-            L 420,275
-            L 408,312
-            L 362,308
-            L 328,312
-            L 285,295
-            L 248,275
-            L 212,255
-            L 196,228
-            L 176,180
-            L 135,135
-            L 105,95
-            L 88,74
-            L 60,32
-            Z
-          "/>
-          {/* Península de Baja California */}
-          <path fill="white" d="
-            M 0,12
-            L 10,26
-            L 18,52
-            L 22,80
-            L 52,98
-            L 96,134
-            L 115,170
-            L 120,190
-            L 110,174
-            L 94,140
-            L 76,114
-            L 50,104
-            L 34,82
-            L 24,55
-            L 10,32
-            Z
-          "/>
-        </svg>
+        {/* Silueta del territorio mexicano */}
+        <img src="/mexico.webp" alt="" aria-hidden="true"
+          style={{ position: 'absolute', right: '-2%', top: '5%',
+            width: '52%', maxWidth: 500, pointerEvents: 'none',
+            opacity: 0.08, filter: 'brightness(0) invert(1) blur(0.5px)',
+            mixBlendMode: 'screen' }} />
 
         {/* Antena Yagi — elemento técnico radioafición */}
         <svg style={{ position: 'absolute', top: 18, right: 32, opacity: 0.1, pointerEvents: 'none' }}
