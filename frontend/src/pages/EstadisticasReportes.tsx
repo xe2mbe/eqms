@@ -208,8 +208,13 @@ export default function EstadisticasReportesPage() {
     }
   }
 
+  const toDateRangeParams = (fi: string, ff: string): [string, string] => [
+    dayjs(fi).startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+    dayjs(ff).endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+  ]
+
   const handleEnviar = async (p: PlantillaOut) => {
-    const [fi, ff] = getEffectiveRange(p.id)
+    const [fi, ff] = toDateRangeParams(...getEffectiveRange(p.id))
     setSending(p.id)
     try {
       await reportesPdfApi.enviar(p.id, fi, ff)
@@ -222,7 +227,7 @@ export default function EstadisticasReportesPage() {
   }
 
   const handleDescargar = async (p: PlantillaOut, formato: 'pdf' | 'word') => {
-    const [fi, ff] = getEffectiveRange(p.id)
+    const [fi, ff] = toDateRangeParams(...getEffectiveRange(p.id))
     setDownloading(p.id)
     try {
       const res = formato === 'pdf'
