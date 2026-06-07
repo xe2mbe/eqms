@@ -55,6 +55,26 @@ function validarIndicativo(ind: string): boolean {
 const normalizarRST = (val: string) => val.replace(/[^0-9]/g, '').slice(0, 3)
 const NOMBRES_DIA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
+// ── Celda editable de indicativo (estado local para evitar re-renders del padre) ──
+function IndicativoCell({ value, rowKey, onCommit }: {
+  value: string
+  rowKey: string
+  onCommit: (key: string, nuevo: string) => void
+}) {
+  const [local, setLocal] = React.useState(value)
+  useEffect(() => { setLocal(value) }, [value])
+  return (
+    <Input
+      size="small"
+      value={local}
+      variant="borderless"
+      onChange={e => setLocal(e.target.value.toUpperCase())}
+      onBlur={() => onCommit(rowKey, local.trim().toUpperCase())}
+      style={{ fontWeight: 700, color: '#1A569E', fontSize: 14 }}
+    />
+  )
+}
+
 // ── Tipo fila libreta RS ──────────────────────────────────────────────────────
 interface FilaRS {
   key: string
@@ -333,7 +353,6 @@ export default function LibretaRSPage() {
 
   const relookupFila = async (key: string, nuevoIndicativo: string) => {
     const cs = nuevoIndicativo.trim().toUpperCase()
-    console.log('[relookup] llamado con', cs, 'válido:', validarIndicativo(cs))
     if (!cs || !validarIndicativo(cs)) return
 
     const [opRes, prefixRes] = await Promise.allSettled([
@@ -506,10 +525,14 @@ export default function LibretaRSPage() {
     {
       title: 'Indicativo', dataIndex: 'indicativo', width: 110,
       render: (v: string, row: FilaRS) => (
-        <Input size="small" value={v} variant="borderless"
-          onChange={e => actualizarFila(row.key, 'indicativo', e.target.value.toUpperCase())}
-          onBlur={e => { const nuevo = e.target.value.trim().toUpperCase(); console.log('[onBlur indicativo]', nuevo); if (validarIndicativo(nuevo)) relookupFila(row.key, nuevo) }}
-          style={{ fontWeight: 700, color: '#1A569E', fontSize: 14 }} />
+        <IndicativoCell
+          value={v}
+          rowKey={row.key}
+          onCommit={(key, nuevo) => {
+            actualizarFila(key, 'indicativo', nuevo)
+            if (validarIndicativo(nuevo)) relookupFila(key, nuevo)
+          }}
+        />
       ),
     },
     {
