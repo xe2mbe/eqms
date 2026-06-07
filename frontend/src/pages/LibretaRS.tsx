@@ -103,6 +103,7 @@ export default function LibretaRSPage() {
   const [buscando, setBuscando] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const inputRef = useRef<InputRef>(null)
+  const editingOrigRef = useRef<string>('')
 
   // ── Reportes guardados ──
   const [reportes, setReportes] = useState<ReporteRS[]>([])
@@ -506,7 +507,8 @@ export default function LibretaRSPage() {
       render: (v: string, row: FilaRS) => (
         <Input size="small" value={v} variant="borderless"
           onChange={e => actualizarFila(row.key, 'indicativo', e.target.value.toUpperCase())}
-          onBlur={e => { const nuevo = e.target.value.trim().toUpperCase(); if (nuevo !== row.indicativo) relookupFila(row.key, nuevo) }}
+          onFocus={e => { editingOrigRef.current = e.target.value.trim().toUpperCase() }}
+          onBlur={e => { const nuevo = e.target.value.trim().toUpperCase(); if (nuevo !== editingOrigRef.current) relookupFila(row.key, nuevo) }}
           style={{ fontWeight: 700, color: '#1A569E', fontSize: 14 }} />
       ),
     },
