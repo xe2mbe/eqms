@@ -55,7 +55,7 @@ function validarIndicativo(ind: string): boolean {
 const normalizarRST = (val: string) => val.replace(/[^0-9]/g, '').slice(0, 3)
 const NOMBRES_DIA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
-// ── Celda editable de indicativo (estado local para evitar re-renders del padre) ──
+// ── Celda editable de indicativo ─────────────────────────────────────────────
 function IndicativoCell({ value, rowKey, onCommit }: {
   value: string
   rowKey: string
@@ -63,13 +63,16 @@ function IndicativoCell({ value, rowKey, onCommit }: {
 }) {
   const [local, setLocal] = React.useState(value)
   useEffect(() => { setLocal(value) }, [value])
+  const commit = (val: string) => onCommit(rowKey, val.trim().toUpperCase())
   return (
-    <Input
+    <Input.Search
       size="small"
       value={local}
       variant="borderless"
+      enterButton={<span style={{ fontSize: 11 }}>↵</span>}
       onChange={e => setLocal(e.target.value.toUpperCase())}
-      onBlur={() => onCommit(rowKey, local.trim().toUpperCase())}
+      onSearch={val => commit(val)}
+      onBlur={() => commit(local)}
       style={{ fontWeight: 700, color: '#1A569E', fontSize: 14 }}
     />
   )
