@@ -330,6 +330,45 @@ export default function LibretaRSPage() {
   const actualizarFila = (key: string, campo: keyof FilaRS, valor: string) =>
     setFilas(prev => prev.map(f => f.key === key ? { ...f, [campo]: valor } : f))
 
+  const relookupFila = async (key: string, nuevoIndicativo: string) => {
+    const cs = nuevoIndicativo.trim().toUpperCase()
+    if (!cs || !validarIndicativo(cs)) return
+
+    const [opRes, prefixRes] = await Promise.allSettled([
+      client.get(`/operadores/buscar/${encodeURIComponent(cs)}`),
+      catalogosApi.lookupPrefijo(cs),
+    ])
+    const op = opRes.status === 'fulfilled' ? opRes.value.data : null
+    const prefix = prefixRes.status === 'fulfilled' ? prefixRes.value.data : null
+
+    let zona = zonaExtranjero
+    let pais = prefix?.pais || 'Desconocido'
+    if (prefix?.zona_codigo) {
+      const zonaDB = zonas.find(z => z.codigo === prefix.zona_codigo)
+      zona = zonaDB ? zonaDB.codigo : zonaExtranjero
+    }
+    const estadoVal = op?.estado || ''
+    if (estadoVal) {
+      const estDB = estados.find(e => e.nombre === estadoVal)
+      if (estDB?.zona) {
+        const zonaDB = zonas.find(z => z.codigo === estDB.zona)
+        if (zonaDB) zona = zonaDB.codigo
+      }
+    }
+
+    setFilas(prev => prev.map(f => f.key === key ? {
+      ...f,
+      indicativo: cs,
+      nombre_completo: op?.nombre_completo || '',
+      municipio: op?.municipio || '',
+      estado: estadoVal,
+      zona,
+      pais,
+      status: op ? 'ok' : 'notfound',
+    } : f))
+    if (!op) message.info(`${cs} no está en el catálogo. Puedes editar los datos en la tabla.`)
+  }
+
   const eliminarFila = (key: string) => setFilas(prev => prev.filter(f => f.key !== key))
 
   // ── Guardar todo ──
@@ -467,6 +506,7 @@ export default function LibretaRSPage() {
       render: (v: string, row: FilaRS) => (
         <Input size="small" value={v} variant="borderless"
           onChange={e => actualizarFila(row.key, 'indicativo', e.target.value.toUpperCase())}
+          onBlur={e => { const nuevo = e.target.value.trim().toUpperCase(); if (nuevo !== row.indicativo) relookupFila(row.key, nuevo) }}
           style={{ fontWeight: 700, color: '#1A569E', fontSize: 14 }} />
       ),
     },
