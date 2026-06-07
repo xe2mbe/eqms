@@ -130,14 +130,46 @@ def list_operadores(
 
 @router.get("/buscar/{indicativo}", response_model=OperadorOut)
 def buscar_operador(indicativo: str, db: Session = Depends(get_db)):
+    cs = indicativo.strip().upper()
     op = (
         db.query(models.Radioexperimentador)
-        .filter(models.Radioexperimentador.indicativo == indicativo.strip().upper())
+        .filter(models.Radioexperimentador.indicativo == cs)
         .first()
     )
-    if not op:
+    if op:
+        return op
+
+    # Fallback: buscar nombre en el historial de reportes (RS primero, luego RF)
+    from sqlalchemy import text as sa_text
+    row = db.execute(
+        sa_text("""
+            SELECT operador, estado, ciudad AS municipio
+            FROM (
+                SELECT operador, estado, ciudad, fecha_reporte
+                FROM reportes_rs
+                WHERE indicativo = :cs AND operador IS NOT NULL AND operador <> ''
+                UNION ALL
+                SELECT operador, estado, ciudad, fecha_reporte
+                FROM reportes
+                WHERE indicativo = :cs AND operador IS NOT NULL AND operador <> ''
+            ) t
+            ORDER BY fecha_reporte DESC
+            LIMIT 1
+        """),
+        {"cs": cs},
+    ).fetchone()
+
+    if not row:
         raise HTTPException(status_code=404, detail="Operador no encontrado")
-    return op
+
+    return OperadorOut(
+        id=0,
+        indicativo=cs,
+        nombre_completo=row.operador,
+        estado=row.estado,
+        municipio=row.municipio,
+        activo=True,
+    )
 
 
 @router.post("", response_model=OperadorOut, status_code=201)
