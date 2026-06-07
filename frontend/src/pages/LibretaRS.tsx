@@ -333,6 +333,7 @@ export default function LibretaRSPage() {
 
   const relookupFila = async (key: string, nuevoIndicativo: string) => {
     const cs = nuevoIndicativo.trim().toUpperCase()
+    console.log('[relookup] llamado con', cs, 'válido:', validarIndicativo(cs))
     if (!cs || !validarIndicativo(cs)) return
 
     const [opRes, prefixRes] = await Promise.allSettled([
@@ -507,7 +508,7 @@ export default function LibretaRSPage() {
       render: (v: string, row: FilaRS) => (
         <Input size="small" value={v} variant="borderless"
           onChange={e => actualizarFila(row.key, 'indicativo', e.target.value.toUpperCase())}
-          onBlur={e => { const nuevo = e.target.value.trim().toUpperCase(); if (validarIndicativo(nuevo)) relookupFila(row.key, nuevo) }}
+          onBlur={e => { const nuevo = e.target.value.trim().toUpperCase(); console.log('[onBlur indicativo]', nuevo); if (validarIndicativo(nuevo)) relookupFila(row.key, nuevo) }}
           style={{ fontWeight: 700, color: '#1A569E', fontSize: 14 }} />
       ),
     },
