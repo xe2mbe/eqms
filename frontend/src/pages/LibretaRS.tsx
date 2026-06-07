@@ -125,7 +125,6 @@ export default function LibretaRSPage() {
   const [buscando, setBuscando] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const inputRef = useRef<InputRef>(null)
-  const editingOrigRef = useRef<string>('')
 
   // ── Reportes guardados ──
   const [reportes, setReportes] = useState<ReporteRS[]>([])
