@@ -851,7 +851,7 @@ export default function LibretaPage() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="page-container">
-      <Title level={4} style={{ margin: '0 0 16px' }}>Libreta</Title>
+      <Title level={4} style={{ margin: '0 0 16px' }}>Libreta v3 TEST</Title>
 
       {/* Modal: selección de fecha */}
       <Modal title={<><CalendarOutlined style={{ marginRight: 8 }} />Fecha de captura</>}
