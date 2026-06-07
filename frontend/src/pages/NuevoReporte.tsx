@@ -52,8 +52,15 @@ export default function NuevoReportePage() {
           fecha_reporte: dayjs(data.fecha_reporte),
         })
         setLoadingData(false)
-        // Disparar lookup automático para mostrar info del último registro
-        if (data.indicativo) setTimeout(() => handleCallsignBlur(), 100)
+        // Cargar info del último registro directamente
+        if (data.indicativo) {
+          libretaApi.checkIndicativo(data.indicativo).then(({ data: check }) => {
+            setUltimoRegistro({
+              fecha: check.ultima_aparicion ?? null,
+              primeraVez: !!check.es_primera_vez,
+            })
+          }).catch(() => {})
+        }
       })
     }
   }, [editId])
