@@ -55,25 +55,24 @@ function validarIndicativo(ind: string): boolean {
 const normalizarRST = (val: string) => val.replace(/[^0-9]/g, '').slice(0, 3)
 const NOMBRES_DIA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
-// ── Celda editable de indicativo ─────────────────────────────────────────────
+// ── Celda editable de indicativo (estado local — no re-renderiza al padre durante tipeo) ──
 function IndicativoCell({ value, rowKey, onCommit }: {
   value: string
   rowKey: string
-  onCommit: (key: string, nuevo: string) => void
+  onCommit: (key: string, nuevo: string, anterior: string) => void
 }) {
   const [local, setLocal] = React.useState(value)
-  useEffect(() => { setLocal(value) }, [value])
+  const originalRef = useRef(value)
+  useEffect(() => { setLocal(value); originalRef.current = value }, [value])
   return (
-    <Tooltip title="Edita y presiona Enter para buscar" mouseEnterDelay={1}>
-      <Input
-        size="small"
-        value={local}
-        variant="borderless"
-        onChange={e => setLocal(e.target.value.toUpperCase())}
-        onPressEnter={() => onCommit(rowKey, local.trim().toUpperCase())}
-        style={{ fontWeight: 700, color: '#1A569E', fontSize: 14 }}
-      />
-    </Tooltip>
+    <Input
+      size="small"
+      value={local}
+      variant="borderless"
+      onChange={e => setLocal(e.target.value.toUpperCase())}
+      onBlur={() => onCommit(rowKey, local.trim().toUpperCase(), originalRef.current)}
+      style={{ fontWeight: 700, color: '#1A569E', fontSize: 14 }}
+    />
   )
 }
 
@@ -391,6 +390,13 @@ export default function LibretaRSPage() {
     if (!op) message.info(`${cs} no está en el catálogo. Puedes editar los datos en la tabla.`)
   }
 
+  const onCommitIndicativo = (key: string, nuevo: string, anterior: string) => {
+    if (!validarIndicativo(nuevo)) return
+    if (nuevo === anterior) return
+    actualizarFila(key, 'indicativo', nuevo)
+    relookupFila(key, nuevo)
+  }
+
   const eliminarFila = (key: string) => setFilas(prev => prev.filter(f => f.key !== key))
 
   // ── Guardar todo ──
@@ -524,22 +530,15 @@ export default function LibretaRSPage() {
       ),
     },
     {
-      title: 'Indicativo', dataIndex: 'indicativo', width: 140,
+      title: 'Indicativo', dataIndex: 'indicativo', width: 150,
       render: (v: string, row: FilaRS) => (
-        <Space size={2}>
-          <IndicativoCell
-            value={v}
-            rowKey={row.key}
-            onCommit={(key, nuevo) => {
-              actualizarFila(key, 'indicativo', nuevo)
-              if (validarIndicativo(nuevo)) relookupFila(key, nuevo)
-            }}
-          />
-          <Tooltip title="Buscar datos del indicativo">
+        <Space size={0}>
+          <IndicativoCell value={v} rowKey={row.key} onCommit={onCommitIndicativo} />
+          <Tooltip title="Re-buscar datos del indicativo">
             <Button
               size="small" type="text" icon={<ReloadOutlined />}
               onClick={() => { if (validarIndicativo(row.indicativo)) relookupFila(row.key, row.indicativo) }}
-              style={{ color: '#8c8c8c' }}
+              style={{ color: '#8c8c8c', padding: '0 4px' }}
             />
           </Tooltip>
         </Space>
