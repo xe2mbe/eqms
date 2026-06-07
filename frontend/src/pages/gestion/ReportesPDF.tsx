@@ -132,8 +132,6 @@ export default function ReportesPDFPage() {
   const [form] = Form.useForm()
   const [tipo, setTipo] = useState<TipoReporte>('rf')
   const [secciones, setSecciones] = useState<SeccionesConfig>({ ...DEFAULT_SECCIONES })
-  const [eventosRfIds, setEventosRfIds] = useState<number[]>([])
-  const [eventosRsIds, setEventosRsIds] = useState<number[]>([])
   const [saving, setSaving] = useState(false)
 
   // Panel generar / enviar
@@ -184,12 +182,10 @@ export default function ReportesPDFPage() {
     setEditing(null)
     setTipo('rf')
     setSecciones({ ...DEFAULT_SECCIONES })
-    setEventosRfIds([])
-    setEventosRsIds([])
     form.setFieldsValue({
-      nombre: '', destinatarios: [],
-      asunto_email: 'Estadísticas {evento} – {fecha}', activa: true,
-      rol_asignado: null, usuario_id: null,
+      nombre: '', eventos_rf_ids: [], eventos_rs_ids: [],
+      destinatarios: [], asunto_email: 'Estadísticas {evento} – {fecha}',
+      activa: true, rol_asignado: null, usuario_id: null,
     })
     setDrawerOpen(true)
   }
@@ -197,8 +193,6 @@ export default function ReportesPDFPage() {
   const openEdit = (p: PlantillaOut) => {
     setEditing(p)
     setTipo(p.tipo || 'rf')
-    setEventosRfIds(p.eventos_rf_ids ?? (p.evento_rf_id ? [p.evento_rf_id] : []))
-    setEventosRsIds(p.eventos_rs_ids ?? (p.evento_rs_id ? [p.evento_rs_id] : []))
     setSecciones({
       resumen_general:     p.secciones.resumen_general     ?? true,
       por_zona:            p.secciones.por_zona            ?? true,
@@ -215,12 +209,14 @@ export default function ReportesPDFPage() {
       desglose_plataformas: p.secciones.desglose_plataformas ?? true,
     })
     form.setFieldsValue({
-      nombre:        p.nombre,
-      destinatarios: p.destinatarios,
-      asunto_email:  p.asunto_email,
-      activa:        p.activa,
-      rol_asignado:  p.rol_asignado ?? null,
-      usuario_id:    p.usuario_id ?? null,
+      nombre:          p.nombre,
+      eventos_rf_ids:  p.eventos_rf_ids?.length ? p.eventos_rf_ids : (p.evento_rf_id ? [p.evento_rf_id] : []),
+      eventos_rs_ids:  p.eventos_rs_ids?.length ? p.eventos_rs_ids : (p.evento_rs_id ? [p.evento_rs_id] : []),
+      destinatarios:   p.destinatarios,
+      asunto_email:    p.asunto_email,
+      activa:          p.activa,
+      rol_asignado:    p.rol_asignado ?? null,
+      usuario_id:      p.usuario_id ?? null,
     })
     setDrawerOpen(true)
   }
@@ -228,13 +224,15 @@ export default function ReportesPDFPage() {
   const handleSave = async () => {
     try { await form.validateFields() } catch { return }
     const vals = form.getFieldsValue()
+    const evRfIds: number[] = vals.eventos_rf_ids || []
+    const evRsIds: number[] = vals.eventos_rs_ids || []
     const body: PlantillaCreate = {
       nombre:           vals.nombre,
       tipo,
-      evento_rf_id:     eventosRfIds[0] ?? null,
-      evento_rs_id:     eventosRsIds[0] ?? null,
-      eventos_rf_ids:   eventosRfIds,
-      eventos_rs_ids:   eventosRsIds,
+      evento_rf_id:     evRfIds[0] ?? null,
+      evento_rs_id:     evRsIds[0] ?? null,
+      eventos_rf_ids:   evRfIds,
+      eventos_rs_ids:   evRsIds,
       secciones,
       destinatarios:    vals.destinatarios || [],
       asunto_email:     vals.asunto_email || null,
@@ -520,13 +518,12 @@ export default function ReportesPDFPage() {
             {(tipo === 'rf' || tipo === 'ambos') && (
               <Col span={tipo === 'ambos' ? 12 : 24}>
                 <Form.Item
+                  name="eventos_rf_ids"
                   label={<Space><Tag color="blue">📡 Eventos RF</Tag><Text type="secondary" style={{ fontSize: 12 }}>uno o varios</Text></Space>}
                   help="Deja vacío para incluir todos los eventos RF">
                   <Select
                     mode="multiple"
                     placeholder="Todos los eventos RF"
-                    value={eventosRfIds}
-                    onChange={setEventosRfIds}
                     allowClear showSearch optionFilterProp="label"
                     options={eventosRF.map(e => ({ value: e.id, label: e.tipo }))}
                     optionRender={opt => {
@@ -546,13 +543,12 @@ export default function ReportesPDFPage() {
             {(tipo === 'rs' || tipo === 'ambos') && (
               <Col span={tipo === 'ambos' ? 12 : 24}>
                 <Form.Item
+                  name="eventos_rs_ids"
                   label={<Space><Tag color="purple">📱 Eventos RS</Tag><Text type="secondary" style={{ fontSize: 12 }}>uno o varios</Text></Space>}
                   help="Deja vacío para incluir todos los eventos RS">
                   <Select
                     mode="multiple"
                     placeholder="Todos los eventos RS"
-                    value={eventosRsIds}
-                    onChange={setEventosRsIds}
                     allowClear showSearch optionFilterProp="label"
                     options={eventosRS.map(e => ({ value: e.id, label: e.tipo }))}
                     optionRender={opt => {
