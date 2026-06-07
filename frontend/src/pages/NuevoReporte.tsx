@@ -8,6 +8,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { reportesApi } from '@/api/reportes'
 import { catalogosApi } from '@/api/catalogos'
+import { operadoresApi } from '@/api/operadores'
+import { libretaApi } from '@/api/libreta'
 import { validateCallsignClient } from '@/utils/validators'
 import type { Evento, Sistema, Estado, Zona, Estacion } from '@/types'
 
@@ -53,20 +55,43 @@ export default function NuevoReportePage() {
     }
   }, [editId])
 
-  const handleCallsignBlur = () => {
-    const val = form.getFieldValue('indicativo') as string
+  const handleCallsignBlur = async () => {
+    const val = (form.getFieldValue('indicativo') as string)?.trim().toUpperCase()
     if (!val) { setCallsignStatus('idle'); return }
     const result = validateCallsignClient(val)
-    if (result.valid) {
-      setCallsignStatus('ok')
-      setCallsignMsg(`Zona: ${result.zona} – ${result.tipo}`)
-      if (result.zona && result.zona !== 'Extranjero' && result.zona !== 'Error') {
-        const z = zonas.find(z => z.codigo === result.zona)
-        if (z) form.setFieldValue('zona_id', z.id)
-      }
-    } else {
+    if (!result.valid) {
       setCallsignStatus('error')
       setCallsignMsg('Indicativo no reconocido')
+      return
+    }
+    setCallsignStatus('ok')
+    setCallsignMsg(`Zona: ${result.zona} – ${result.tipo}`)
+    if (result.zona && result.zona !== 'Extranjero' && result.zona !== 'Error') {
+      const z = zonas.find(z => z.codigo === result.zona)
+      if (z) form.setFieldValue('zona_id', z.id)
+    }
+
+    // Lookup completo: operador + último reporte (sistema)
+    const [opRes, checkRes] = await Promise.allSettled([
+      operadoresApi.buscar(val),
+      libretaApi.checkIndicativo(val),
+    ])
+    const op = opRes.status === 'fulfilled' ? opRes.value.data : null
+    const check = checkRes.status === 'fulfilled' ? checkRes.value.data : null
+
+    if (op?.nombre_completo) form.setFieldValue('operador', op.nombre_completo)
+    if (op?.estado) form.setFieldValue('estado', op.estado)
+    if (op?.municipio) form.setFieldValue('ciudad', op.municipio)
+    if (op?.estado) {
+      const est = estados.find(e => e.nombre === op.estado)
+      if (est?.zona) {
+        const z = zonas.find(z => z.codigo === est.zona)
+        if (z) form.setFieldValue('zona_id', z.id)
+      }
+    }
+    if (check?.ultimo_sistema) {
+      const s = sistemas.find(s => s.codigo === check.ultimo_sistema)
+      if (s) form.setFieldValue('sistema_id', s.id)
     }
   }
 

@@ -622,14 +622,12 @@ export default function LibretaPage() {
     if (!cs || !validarIndicativo(cs)) return
 
     const swl = esSWL(cs)
-    const [opRes, prefixRes, checkRes] = await Promise.allSettled([
+    const [opRes, prefixRes] = await Promise.allSettled([
       operadoresApi.buscar(cs),
       catalogosApi.lookupPrefijo(cs),
-      swl ? Promise.resolve({ data: null }) : libretaApi.checkIndicativo(cs),
     ])
     const op = opRes.status === 'fulfilled' ? opRes.value.data : null
     const prefix = prefixRes.status === 'fulfilled' ? prefixRes.value.data : null
-    const check = checkRes.status === 'fulfilled' ? (checkRes.value as any).data : null
 
     let zona = zonaExtranjero
     const pais = swl ? 'México' : (prefix?.pais || 'Desconocido')
@@ -654,12 +652,6 @@ export default function LibretaPage() {
       }
     }
 
-    const sistemaVal = check?.ultimo_sistema
-      || inputSistema
-      || sesionConfig?.sistema_default
-      || ''
-    const ultimaAparicion = check?.ultima_aparicion ?? null
-
     setFilas(prev => prev.map(f => f.key === key ? {
       ...f,
       indicativo: cs,
@@ -668,8 +660,6 @@ export default function LibretaPage() {
       estado: estadoVal,
       zona,
       pais,
-      sistema: sistemaVal,
-      ultimaAparicion,
       status: op ? 'ok' : 'notfound',
     } : f))
     if (!op) message.info(`${cs} no está en el catálogo. Puedes editar los datos en la tabla.`)
