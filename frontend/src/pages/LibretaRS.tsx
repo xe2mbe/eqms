@@ -507,8 +507,7 @@ export default function LibretaRSPage() {
       render: (v: string, row: FilaRS) => (
         <Input size="small" value={v} variant="borderless"
           onChange={e => actualizarFila(row.key, 'indicativo', e.target.value.toUpperCase())}
-          onFocus={e => { editingOrigRef.current = e.target.value.trim().toUpperCase() }}
-          onBlur={e => { const nuevo = e.target.value.trim().toUpperCase(); if (nuevo !== editingOrigRef.current) relookupFila(row.key, nuevo) }}
+          onBlur={e => { const nuevo = e.target.value.trim().toUpperCase(); if (validarIndicativo(nuevo)) relookupFila(row.key, nuevo) }}
           style={{ fontWeight: 700, color: '#1A569E', fontSize: 14 }} />
       ),
     },
