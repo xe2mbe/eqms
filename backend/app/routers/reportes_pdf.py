@@ -80,6 +80,8 @@ class PlantillaCreate(BaseModel):
     tipo: str = 'rf'
     evento_rf_id: Optional[int] = None
     evento_rs_id: Optional[int] = None
+    eventos_rf_ids: List[int] = []
+    eventos_rs_ids: List[int] = []
     secciones: SeccionesConfig = SeccionesConfig()
     destinatarios: List[str] = []
     asunto_email: Optional[str] = "Estadísticas {evento} – {fecha}"
@@ -102,8 +104,10 @@ class PlantillaOut(BaseModel):
     tipo: str
     evento_rf_id: Optional[int] = None
     evento_rs_id: Optional[int] = None
-    evento_rf_tipo: Optional[str] = None
-    evento_rs_tipo: Optional[str] = None
+    eventos_rf_ids: List[int] = []
+    eventos_rs_ids: List[int] = []
+    eventos_rf_tipos: List[str] = []
+    eventos_rs_tipos: List[str] = []
     secciones: dict
     destinatarios: List[str]
     asunto_email: Optional[str]
@@ -124,16 +128,51 @@ class PlantillaOut(BaseModel):
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
-def _to_out(p: models.ReportePlantilla, user_config=None) -> PlantillaOut:
+def _ev_filter(ev_ids: List[int], alias: str = 'r') -> tuple:
+    """Devuelve (fragmento_sql, params) para filtrar por múltiples eventos."""
+    if not ev_ids:
+        return "", {}
+    phs = ', '.join(f':_ev{i}' for i in range(len(ev_ids)))
+    return f"AND {alias}.evento_id IN ({phs})", {f'_ev{i}': v for i, v in enumerate(ev_ids)}
+
+
+def _ev_filter_bare(ev_ids: List[int], col: str = 'evento_id') -> tuple:
+    """Igual que _ev_filter pero sin alias de tabla."""
+    if not ev_ids:
+        return "", {}
+    phs = ', '.join(f':_ev{i}' for i in range(len(ev_ids)))
+    return f"AND {col} IN ({phs})", {f'_ev{i}': v for i, v in enumerate(ev_ids)}
+
+
+def _to_out(p: models.ReportePlantilla, db: Session = None, user_config=None) -> PlantillaOut:
     uc = user_config
+    ev_rf_ids: List[int] = list(p.eventos_rf_ids or [])
+    ev_rs_ids: List[int] = list(p.eventos_rs_ids or [])
+
+    # Nombres de los eventos para mostrar en UI
+    ev_rf_tipos: List[str] = []
+    ev_rs_tipos: List[str] = []
+    if db and ev_rf_ids:
+        rows = db.execute(text("SELECT id, tipo FROM eventos WHERE id = ANY(:ids)"),
+                          {"ids": ev_rf_ids}).fetchall()
+        id_tipo = {r[0]: r[1] for r in rows}
+        ev_rf_tipos = [id_tipo[i] for i in ev_rf_ids if i in id_tipo]
+    if db and ev_rs_ids:
+        rows = db.execute(text("SELECT id, tipo FROM eventos WHERE id = ANY(:ids)"),
+                          {"ids": ev_rs_ids}).fetchall()
+        id_tipo = {r[0]: r[1] for r in rows}
+        ev_rs_tipos = [id_tipo[i] for i in ev_rs_ids if i in id_tipo]
+
     return PlantillaOut(
         id=p.id,
         nombre=p.nombre,
         tipo=p.tipo or 'rf',
         evento_rf_id=p.evento_rf_id,
         evento_rs_id=p.evento_rs_id,
-        evento_rf_tipo=p.evento_rf.tipo if p.evento_rf else None,
-        evento_rs_tipo=p.evento_rs.tipo if p.evento_rs else None,
+        eventos_rf_ids=ev_rf_ids,
+        eventos_rs_ids=ev_rs_ids,
+        eventos_rf_tipos=ev_rf_tipos,
+        eventos_rs_tipos=ev_rs_tipos,
         secciones=p.secciones or {},
         destinatarios=(uc.destinatarios if uc else None) or p.destinatarios or [],
         asunto_email=p.asunto_email,
@@ -177,16 +216,20 @@ def list_plantillas(db: Session = Depends(get_db), current_user=Depends(get_curr
         ).all()
         user_configs = {uc.plantilla_id: uc for uc in ucs}
 
-    return [_to_out(p, user_configs.get(p.id)) for p in plantillas]
+    return [_to_out(p, db, user_configs.get(p.id)) for p in plantillas]
 
 
 @router.post("/plantillas", response_model=PlantillaOut, status_code=201)
 def create_plantilla(body: PlantillaCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
+    ev_rf_ids = body.eventos_rf_ids or ([body.evento_rf_id] if body.evento_rf_id else [])
+    ev_rs_ids = body.eventos_rs_ids or ([body.evento_rs_id] if body.evento_rs_id else [])
     p = models.ReportePlantilla(
         nombre=body.nombre,
         tipo=body.tipo,
-        evento_rf_id=body.evento_rf_id,
-        evento_rs_id=body.evento_rs_id,
+        evento_rf_id=ev_rf_ids[0] if ev_rf_ids else None,
+        evento_rs_id=ev_rs_ids[0] if ev_rs_ids else None,
+        eventos_rf_ids=ev_rf_ids,
+        eventos_rs_ids=ev_rs_ids,
         secciones=body.secciones.model_dump(),
         destinatarios=body.destinatarios,
         asunto_email=body.asunto_email,
@@ -197,7 +240,7 @@ def create_plantilla(body: PlantillaCreate, db: Session = Depends(get_db), _=Dep
     db.add(p)
     db.commit()
     db.refresh(p)
-    return _to_out(p)
+    return _to_out(p, db)
 
 
 @router.put("/plantillas/{pid}", response_model=PlantillaOut)
@@ -205,10 +248,14 @@ def update_plantilla(pid: int, body: PlantillaCreate, db: Session = Depends(get_
     p = db.get(models.ReportePlantilla, pid)
     if not p:
         raise HTTPException(404, "Plantilla no encontrada")
+    ev_rf_ids = body.eventos_rf_ids or ([body.evento_rf_id] if body.evento_rf_id else [])
+    ev_rs_ids = body.eventos_rs_ids or ([body.evento_rs_id] if body.evento_rs_id else [])
     p.nombre = body.nombre
     p.tipo = body.tipo
-    p.evento_rf_id = body.evento_rf_id
-    p.evento_rs_id = body.evento_rs_id
+    p.evento_rf_id = ev_rf_ids[0] if ev_rf_ids else None
+    p.evento_rs_id = ev_rs_ids[0] if ev_rs_ids else None
+    p.eventos_rf_ids = ev_rf_ids
+    p.eventos_rs_ids = ev_rs_ids
     p.secciones = body.secciones.model_dump()
     p.destinatarios = body.destinatarios
     p.asunto_email = body.asunto_email
@@ -217,7 +264,7 @@ def update_plantilla(pid: int, body: PlantillaCreate, db: Session = Depends(get_
     p.usuario_id = body.usuario_id
     db.commit()
     db.refresh(p)
-    return _to_out(p)
+    return _to_out(p, db)
 
 
 @router.put("/plantillas/{pid}/programacion", response_model=PlantillaOut)
@@ -243,7 +290,7 @@ def update_programacion(pid: int, body: ProgramacionUpdate,
     uc.prog_activo = body.prog_activo
     db.commit()
     db.refresh(uc)
-    return _to_out(p, uc)
+    return _to_out(p, db, uc)
 
 
 @router.delete("/plantillas/{pid}", status_code=204)
@@ -274,37 +321,34 @@ def _detectar_cluster(rows) -> tuple:
     return fi, ff, sorted(cluster, key=lambda x: x["fecha"])
 
 
-def _cluster_rf(db: Session, ev_id: Optional[int], before_date=None) -> Optional[dict]:
-    ev_filter = "AND r.evento_id = :ev" if ev_id is not None else ""
-    params = {"ev": ev_id}
+def _cluster_rf(db: Session, ev_ids: List[int], before_date=None) -> Optional[dict]:
+    evf, evp = _ev_filter(ev_ids, alias='r')
+    evf_bare, _ = _ev_filter_bare(ev_ids)
     date_cap = "AND fecha_reporte::date < :before_date" if before_date else ""
 
-    # Nombre del evento
     evento_nombre = None
-    if ev_id:
-        row = db.execute(text("SELECT tipo FROM eventos WHERE id = :ev"), params).fetchone()
-        evento_nombre = row[0] if row else None
+    if ev_ids:
+        rows_ev = db.execute(text("SELECT tipo FROM eventos WHERE id = ANY(:ids)"),
+                             {"ids": ev_ids}).fetchall()
+        evento_nombre = " + ".join(r[0] for r in rows_ev) if rows_ev else None
 
-    # Última fecha (anterior a before_date si se indica)
     ultima = db.execute(text(f"""
         SELECT MAX(fecha_reporte::date) FROM reportes WHERE 1=1
-        {ev_filter.replace('r.', '')} {date_cap}
-    """), {**params, "before_date": before_date}).scalar()
+        {evf_bare} {date_cap}
+    """), {**evp, "before_date": before_date}).scalar()
     if ultima is None:
         return None
 
-    # Cluster global
     rows = db.execute(text(f"""
         SELECT r.fecha_reporte::date AS fecha, COUNT(*) AS cnt
         FROM reportes r
-        WHERE r.fecha_reporte::date <= :ultima {ev_filter}
+        WHERE r.fecha_reporte::date <= :ultima {evf}
         GROUP BY r.fecha_reporte::date ORDER BY fecha DESC
-    """), {**params, "ultima": ultima}).fetchall()
+    """), {**evp, "ultima": ultima}).fetchall()
     fi, ff, _ = _detectar_cluster(rows)
     if not fi:
         return None
 
-    # Por sistema dentro del clúster
     sistemas = db.execute(text(f"""
         SELECT s.id, s.nombre, s.color
         FROM sistemas s
@@ -312,10 +356,10 @@ def _cluster_rf(db: Session, ev_id: Optional[int], before_date=None) -> Optional
             SELECT DISTINCT r.sistema_id FROM reportes r
             WHERE r.sistema_id IS NOT NULL
               AND r.fecha_reporte::date BETWEEN :fi AND :ff
-              {ev_filter}
+              {evf}
         )
         ORDER BY s.nombre
-    """), {**params, "fi": fi, "ff": ff}).fetchall()
+    """), {**evp, "fi": fi, "ff": ff}).fetchall()
 
     origenes = []
     for sid, snombre, scolor in sistemas:
@@ -324,9 +368,9 @@ def _cluster_rf(db: Session, ev_id: Optional[int], before_date=None) -> Optional
             FROM reportes r
             WHERE r.sistema_id = :sid
               AND r.fecha_reporte::date BETWEEN :fi AND :ff
-              {ev_filter}
+              {evf}
             GROUP BY fecha_reporte::date ORDER BY fecha
-        """), {**params, "sid": sid, "fi": fi, "ff": ff}).fetchall()
+        """), {**evp, "sid": sid, "fi": fi, "ff": ff}).fetchall()
         fechas = [{"fecha": f.isoformat(), "count": int(c)} for f, c in fd]
         if fechas:
             origenes.append({
@@ -338,15 +382,14 @@ def _cluster_rf(db: Session, ev_id: Optional[int], before_date=None) -> Optional
                 "fechas": fechas,
             })
 
-    # Registros sin sistema asignado
     sin_sistema = db.execute(text(f"""
         SELECT fecha_reporte::date AS fecha, COUNT(*) AS cnt
         FROM reportes r
         WHERE r.sistema_id IS NULL
           AND r.fecha_reporte::date BETWEEN :fi AND :ff
-          {ev_filter}
+          {evf}
         GROUP BY fecha_reporte::date ORDER BY fecha
-    """), {**params, "fi": fi, "ff": ff}).fetchall()
+    """), {**evp, "fi": fi, "ff": ff}).fetchall()
     if sin_sistema:
         fechas = [{"fecha": f.isoformat(), "count": int(c)} for f, c in sin_sistema]
         origenes.append({
@@ -361,29 +404,30 @@ def _cluster_rf(db: Session, ev_id: Optional[int], before_date=None) -> Optional
     return {"fi": fi, "ff": ff, "evento_nombre": evento_nombre, "origenes": origenes}
 
 
-def _cluster_rs(db: Session, ev_id: Optional[int], before_date=None) -> Optional[dict]:
-    ev_filter = "AND r.evento_id = :ev" if ev_id is not None else ""
-    params = {"ev": ev_id}
+def _cluster_rs(db: Session, ev_ids: List[int], before_date=None) -> Optional[dict]:
+    evf, evp = _ev_filter(ev_ids, alias='r')
+    evf_bare, _ = _ev_filter_bare(ev_ids)
     date_cap = "AND fecha_reporte::date < :before_date" if before_date else ""
 
     evento_nombre = None
-    if ev_id:
-        row = db.execute(text("SELECT tipo FROM eventos WHERE id = :ev"), params).fetchone()
-        evento_nombre = row[0] if row else None
+    if ev_ids:
+        rows_ev = db.execute(text("SELECT tipo FROM eventos WHERE id = ANY(:ids)"),
+                             {"ids": ev_ids}).fetchall()
+        evento_nombre = " + ".join(r[0] for r in rows_ev) if rows_ev else None
 
     ultima = db.execute(text(f"""
         SELECT MAX(fecha_reporte::date) FROM reportes_rs WHERE 1=1
-        {ev_filter.replace('r.', '')} {date_cap}
-    """), {**params, "before_date": before_date}).scalar()
+        {evf_bare} {date_cap}
+    """), {**evp, "before_date": before_date}).scalar()
     if ultima is None:
         return None
 
     rows = db.execute(text(f"""
         SELECT r.fecha_reporte::date AS fecha, COUNT(*) AS cnt
         FROM reportes_rs r
-        WHERE r.fecha_reporte::date <= :ultima {ev_filter}
+        WHERE r.fecha_reporte::date <= :ultima {evf}
         GROUP BY r.fecha_reporte::date ORDER BY fecha DESC
-    """), {**params, "ultima": ultima}).fetchall()
+    """), {**evp, "ultima": ultima}).fetchall()
     fi, ff, _ = _detectar_cluster(rows)
     if not fi:
         return None
@@ -394,10 +438,10 @@ def _cluster_rs(db: Session, ev_id: Optional[int], before_date=None) -> Optional
         WHERE pl.id IN (
             SELECT DISTINCT r.plataforma_id FROM reportes_rs r
             WHERE r.fecha_reporte::date BETWEEN :fi AND :ff
-              {ev_filter}
+              {evf}
         )
         ORDER BY pl.nombre
-    """), {**params, "fi": fi, "ff": ff}).fetchall()
+    """), {**evp, "fi": fi, "ff": ff}).fetchall()
 
     origenes = []
     for plid, plnombre, plcolor in plataformas:
@@ -406,9 +450,9 @@ def _cluster_rs(db: Session, ev_id: Optional[int], before_date=None) -> Optional
             FROM reportes_rs r
             WHERE r.plataforma_id = :plid
               AND r.fecha_reporte::date BETWEEN :fi AND :ff
-              {ev_filter}
+              {evf}
             GROUP BY fecha_reporte::date ORDER BY fecha
-        """), {**params, "plid": plid, "fi": fi, "ff": ff}).fetchall()
+        """), {**evp, "plid": plid, "fi": fi, "ff": ff}).fetchall()
         fechas = [{"fecha": f.isoformat(), "count": int(c)} for f, c in fd]
         if fechas:
             origenes.append({
@@ -431,8 +475,10 @@ def ultimo_evento(pid: int, db: Session = Depends(get_db), _=Depends(get_current
         raise HTTPException(404, "Plantilla no encontrada")
 
     tipo = p.tipo or 'rf'
-    rf_data = _cluster_rf(db, p.evento_rf_id) if tipo in ('rf', 'ambos') else None
-    rs_data = _cluster_rs(db, p.evento_rs_id) if tipo in ('rs', 'ambos') else None
+    ev_rf = list(p.eventos_rf_ids or [])
+    ev_rs = list(p.eventos_rs_ids or [])
+    rf_data = _cluster_rf(db, ev_rf) if tipo in ('rf', 'ambos') else None
+    rs_data = _cluster_rs(db, ev_rs) if tipo in ('rs', 'ambos') else None
 
     fechas_fi = [d["fi"] for d in [rf_data, rs_data] if d and d["fi"]]
     fechas_ff = [d["ff"] for d in [rf_data, rs_data] if d and d["ff"]]
@@ -447,81 +493,74 @@ def ultimo_evento(pid: int, db: Session = Depends(get_db), _=Depends(get_current
 
 # ─── Datos RF ─────────────────────────────────────────────────────────────────
 
-def _gather_rf(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime) -> dict:
-    p = {"fi": fi, "ff": ff, "ev": evento_id}
+def _gather_rf(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> dict:
+    evf, evp = _ev_filter(ev_ids, alias='r')
+    evf_bare, evp_bare = _ev_filter_bare(ev_ids)
+    base = {"fi": fi, "ff": ff}
 
-    total = db.execute(text("""
+    total = db.execute(text(f"""
         SELECT COUNT(*) FROM reportes
-        WHERE fecha_reporte >= :fi AND fecha_reporte <= :ff
-          AND (:ev IS NULL OR evento_id = :ev)
-    """), p).scalar() or 0
+        WHERE fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+    """), {**base, **evp_bare}).scalar() or 0
 
-    estaciones = db.execute(text("""
+    estaciones = db.execute(text(f"""
         SELECT COUNT(DISTINCT indicativo) FROM reportes
-        WHERE fecha_reporte >= :fi AND fecha_reporte <= :ff
-          AND (:ev IS NULL OR evento_id = :ev)
-    """), p).scalar() or 0
+        WHERE fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+    """), {**base, **evp_bare}).scalar() or 0
 
-    estados_cnt = db.execute(text("""
+    estados_cnt = db.execute(text(f"""
         SELECT COUNT(DISTINCT estado) FROM reportes
         WHERE estado IS NOT NULL
-          AND fecha_reporte >= :fi AND fecha_reporte <= :ff
-          AND (:ev IS NULL OR evento_id = :ev)
-    """), p).scalar() or 0
+          AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+    """), {**base, **evp_bare}).scalar() or 0
 
-    por_zona = db.execute(text("""
+    por_zona = db.execute(text(f"""
         SELECT z.codigo, z.nombre, COUNT(*) AS total, COUNT(DISTINCT r.indicativo) AS ests
         FROM reportes r JOIN zonas z ON z.id = r.zona_id
         WHERE r.zona_id IS NOT NULL
-          AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
-          AND (:ev IS NULL OR r.evento_id = :ev)
+          AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
         GROUP BY z.codigo, z.nombre ORDER BY total DESC
-    """), p).fetchall()
+    """), {**base, **evp}).fetchall()
 
-    por_sistema = db.execute(text("""
+    por_sistema = db.execute(text(f"""
         SELECT s.codigo, COUNT(*) AS total
         FROM reportes r JOIN sistemas s ON s.id = r.sistema_id
         WHERE r.sistema_id IS NOT NULL
-          AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
-          AND (:ev IS NULL OR r.evento_id = :ev)
+          AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
         GROUP BY s.codigo ORDER BY total DESC
-    """), p).fetchall()
+    """), {**base, **evp}).fetchall()
 
-    top_ests = db.execute(text("""
+    top_ests = db.execute(text(f"""
         SELECT r.indicativo, COALESCE(rx.nombre_completo,''), COALESCE(r.estado,''), COUNT(*) AS total
         FROM reportes r
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
-        WHERE r.fecha_reporte <= :ff
-          AND (:ev IS NULL OR r.evento_id = :ev)
+        WHERE r.fecha_reporte <= :ff {evf}
         GROUP BY r.indicativo, rx.nombre_completo, r.estado
         ORDER BY total DESC LIMIT 50
-    """), p).fetchall()
+    """), {"ff": ff, **evp}).fetchall()
 
-    por_estado = db.execute(text("""
+    por_estado = db.execute(text(f"""
         SELECT estado, COUNT(*) AS total FROM reportes
         WHERE estado IS NOT NULL
-          AND fecha_reporte >= :fi AND fecha_reporte <= :ff
-          AND (:ev IS NULL OR evento_id = :ev)
+          AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
         GROUP BY estado ORDER BY total DESC LIMIT 32
-    """), p).fetchall()
+    """), {**base, **evp_bare}).fetchall()
 
-    primera_vez = db.execute(text("""
+    primera_vez = db.execute(text(f"""
         SELECT r.indicativo, COALESCE(rx.nombre_completo,''), COALESCE(r.estado,'')
         FROM reportes r
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
-        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
-          AND (:ev IS NULL OR r.evento_id = :ev)
+        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
           AND NOT EXISTS (
               SELECT 1 FROM reportes r2
-              WHERE r2.indicativo = r.indicativo
-                AND (:ev IS NULL OR r2.evento_id = :ev)
+              WHERE r2.indicativo = r.indicativo {evf.replace('r.', 'r2.')}
                 AND r2.fecha_reporte < :fi
           )
         GROUP BY r.indicativo, rx.nombre_completo, r.estado
         ORDER BY r.indicativo
-    """), p).fetchall()
+    """), {**base, **evp}).fetchall()
 
-    detalle = db.execute(text("""
+    detalle = db.execute(text(f"""
         SELECT r.indicativo, COALESCE(rx.nombre_completo,''), r.senal,
                COALESCE(r.estado,''), COALESCE(s.codigo,''), COALESCE(z.codigo,''),
                r.fecha_reporte
@@ -529,12 +568,20 @@ def _gather_rf(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
         LEFT JOIN sistemas s ON s.id = r.sistema_id
         LEFT JOIN zonas z ON z.id = r.zona_id
-        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
-          AND (:ev IS NULL OR r.evento_id = :ev)
+        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
         ORDER BY r.fecha_reporte, r.indicativo
-    """), p).fetchall()
+    """), {**base, **evp}).fetchall()
+
+    # Etiqueta de eventos para el encabezado del PDF
+    if ev_ids:
+        rows_ev = db.execute(text("SELECT tipo FROM eventos WHERE id = ANY(:ids) ORDER BY tipo"),
+                             {"ids": ev_ids}).fetchall()
+        eventos_label = " + ".join(r[0] for r in rows_ev) if rows_ev else "Todos los eventos"
+    else:
+        eventos_label = "Todos los eventos"
 
     return {
+        "_eventos_label": eventos_label,
         "total": int(total),
         "estaciones": int(estaciones),
         "estados_cnt": int(estados_cnt),
@@ -549,55 +596,52 @@ def _gather_rf(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
 
 # ─── Datos RS ─────────────────────────────────────────────────────────────────
 
-def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime) -> dict:
-    p = {"fi": fi, "ff": ff, "ev": evento_id}
+def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> dict:
+    evf, evp = _ev_filter(ev_ids, alias='r')
+    evf_bare, evp_bare = _ev_filter_bare(ev_ids)
+    base = {"fi": fi, "ff": ff}
 
-    total = db.execute(text("""
+    total = db.execute(text(f"""
         SELECT COUNT(*) FROM reportes_rs
-        WHERE fecha_reporte >= :fi AND fecha_reporte <= :ff
-          AND (:ev IS NULL OR evento_id = :ev)
-    """), p).scalar() or 0
+        WHERE fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+    """), {**base, **evp_bare}).scalar() or 0
 
-    estaciones = db.execute(text("""
+    estaciones = db.execute(text(f"""
         SELECT COUNT(DISTINCT indicativo) FROM reportes_rs
-        WHERE fecha_reporte >= :fi AND fecha_reporte <= :ff
-          AND (:ev IS NULL OR evento_id = :ev)
-    """), p).scalar() or 0
+        WHERE fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+    """), {**base, **evp_bare}).scalar() or 0
 
-    por_plataforma = db.execute(text("""
+    por_plataforma = db.execute(text(f"""
         SELECT pl.nombre, COUNT(r.id) AS cnt
         FROM reportes_rs r
         JOIN plataformas_rs pl ON pl.id = r.plataforma_id
-        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
-          AND (:ev IS NULL OR r.evento_id = :ev)
+        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
         GROUP BY pl.nombre ORDER BY cnt DESC
-    """), p).fetchall()
+    """), {**base, **evp}).fetchall()
 
-    por_zona = db.execute(text("""
+    por_zona = db.execute(text(f"""
         SELECT z.codigo, z.nombre, COUNT(*) AS total, COUNT(DISTINCT r.indicativo) AS ests
         FROM reportes_rs r JOIN zonas z ON z.id = r.zona_id
         WHERE r.zona_id IS NOT NULL
-          AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
-          AND (:ev IS NULL OR r.evento_id = :ev)
+          AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
         GROUP BY z.codigo, z.nombre ORDER BY total DESC
-    """), p).fetchall()
+    """), {**base, **evp}).fetchall()
 
-    top_ests = db.execute(text("""
+    top_ests = db.execute(text(f"""
         SELECT r.indicativo, COALESCE(rx.nombre_completo,''), COUNT(*) AS total
         FROM reportes_rs r
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
-        WHERE r.fecha_reporte <= :ff
-          AND (:ev IS NULL OR r.evento_id = :ev)
+        WHERE r.fecha_reporte <= :ff {evf}
         GROUP BY r.indicativo, rx.nombre_completo
         ORDER BY total DESC LIMIT 50
-    """), p).fetchall()
+    """), {"ff": ff, **evp}).fetchall()
 
     metricas_rows = db.execute(text("""
         SELECT pl.nombre, e.valores
         FROM estadisticas_rs e
         JOIN plataformas_rs pl ON pl.id = e.plataforma_id
         WHERE e.fecha_reporte >= :fi AND e.fecha_reporte <= :ff
-    """), {"fi": fi, "ff": ff}).fetchall()
+    """), base).fetchall()
 
     metricas: dict = {}
     for row in metricas_rows:
@@ -608,15 +652,14 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         for k, v in vals.items():
             metricas[pl_name][k] = metricas[pl_name].get(k, 0) + (v or 0)
 
-    por_estado_rs = db.execute(text("""
+    por_estado_rs = db.execute(text(f"""
         SELECT estado, COUNT(*) AS total FROM reportes_rs
         WHERE estado IS NOT NULL AND estado <> ''
-          AND fecha_reporte >= :fi AND fecha_reporte <= :ff
-          AND (:ev IS NULL OR evento_id = :ev)
+          AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
         GROUP BY estado ORDER BY total DESC LIMIT 32
-    """), p).fetchall()
+    """), {**base, **evp_bare}).fetchall()
 
-    detalle_rs = db.execute(text("""
+    detalle_rs = db.execute(text(f"""
         SELECT r.indicativo, COALESCE(rx.nombre_completo,''), pl.nombre,
                COALESCE(r.estado,''), COALESCE(z.codigo,''), r.fecha_reporte,
                COALESCE(r.url_publicacion,'')
@@ -624,61 +667,55 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
         JOIN plataformas_rs pl ON pl.id = r.plataforma_id
         LEFT JOIN zonas z ON z.id = r.zona_id
-        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
-          AND (:ev IS NULL OR r.evento_id = :ev)
+        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
         ORDER BY r.fecha_reporte, r.indicativo
-    """), p).fetchall()
+    """), {**base, **evp}).fetchall()
 
     # Per-platform breakdown
-    platforms_in_range = db.execute(text("""
+    platforms_in_range = db.execute(text(f"""
         SELECT DISTINCT pl.id, pl.nombre
         FROM reportes_rs r
         JOIN plataformas_rs pl ON pl.id = r.plataforma_id
-        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
-          AND (:ev IS NULL OR r.evento_id = :ev)
+        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
         ORDER BY pl.nombre
-    """), p).fetchall()
+    """), {**base, **evp}).fetchall()
 
     por_plataforma_data: dict = {}
     for pl_id, pl_nombre in platforms_in_range:
-        pp = {"fi": fi, "ff": ff, "ev": evento_id, "pl": pl_id}
+        pp_base = {"fi": fi, "ff": ff, "pl": pl_id}
 
-        pl_total = db.execute(text("""
+        pl_total = db.execute(text(f"""
             SELECT COUNT(*) FROM reportes_rs
-            WHERE plataforma_id = :pl AND fecha_reporte >= :fi AND fecha_reporte <= :ff
-              AND (:ev IS NULL OR evento_id = :ev)
-        """), pp).scalar() or 0
+            WHERE plataforma_id = :pl AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+        """), {**pp_base, **evp_bare}).scalar() or 0
 
-        pl_estaciones = db.execute(text("""
+        pl_estaciones = db.execute(text(f"""
             SELECT COUNT(DISTINCT indicativo) FROM reportes_rs
-            WHERE plataforma_id = :pl AND fecha_reporte >= :fi AND fecha_reporte <= :ff
-              AND (:ev IS NULL OR evento_id = :ev)
-        """), pp).scalar() or 0
+            WHERE plataforma_id = :pl AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+        """), {**pp_base, **evp_bare}).scalar() or 0
 
-        pl_top_ests = db.execute(text("""
+        pl_top_ests = db.execute(text(f"""
             SELECT r.indicativo, COALESCE(rx.nombre_completo,''), COUNT(*) AS total
             FROM reportes_rs r
             LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
-            WHERE r.plataforma_id = :pl AND r.fecha_reporte <= :ff
-              AND (:ev IS NULL OR r.evento_id = :ev)
+            WHERE r.plataforma_id = :pl AND r.fecha_reporte <= :ff {evf}
             GROUP BY r.indicativo, rx.nombre_completo
             ORDER BY total DESC LIMIT 50
-        """), pp).fetchall()
+        """), {"ff": ff, "pl": pl_id, **evp}).fetchall()
 
-        pl_por_zona = db.execute(text("""
+        pl_por_zona = db.execute(text(f"""
             SELECT z.codigo, z.nombre, COUNT(*) AS total, COUNT(DISTINCT r.indicativo) AS ests
             FROM reportes_rs r JOIN zonas z ON z.id = r.zona_id
             WHERE r.plataforma_id = :pl AND r.zona_id IS NOT NULL
-              AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
-              AND (:ev IS NULL OR r.evento_id = :ev)
+              AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
             GROUP BY z.codigo, z.nombre ORDER BY total DESC
-        """), pp).fetchall()
+        """), {**pp_base, **evp}).fetchall()
 
         pl_metricas_rows = db.execute(text("""
             SELECT e.valores FROM estadisticas_rs e
             WHERE e.plataforma_id = :pl
               AND e.fecha_reporte >= :fi AND e.fecha_reporte <= :ff
-        """), pp).fetchall()
+        """), pp_base).fetchall()
         pl_metricas: dict = {}
         for row in pl_metricas_rows:
             for k, v in (row[0] or {}).items():
@@ -690,24 +727,22 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
             ORDER BY orden, id
         """), {"pl": pl_id}).fetchall()
 
-        pl_por_estado = db.execute(text("""
+        pl_por_estado = db.execute(text(f"""
             SELECT estado, COUNT(*) AS total FROM reportes_rs
             WHERE plataforma_id = :pl AND estado IS NOT NULL AND estado <> ''
-              AND fecha_reporte >= :fi AND fecha_reporte <= :ff
-              AND (:ev IS NULL OR evento_id = :ev)
+              AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
             GROUP BY estado ORDER BY total DESC LIMIT 32
-        """), pp).fetchall()
+        """), {**pp_base, **evp_bare}).fetchall()
 
-        pl_detalle = db.execute(text("""
+        pl_detalle = db.execute(text(f"""
             SELECT r.indicativo, COALESCE(rx.nombre_completo,''),
                    COALESCE(r.estado,''), COALESCE(z.codigo,''), r.fecha_reporte
             FROM reportes_rs r
             LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
             LEFT JOIN zonas z ON z.id = r.zona_id
-            WHERE r.plataforma_id = :pl AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff
-              AND (:ev IS NULL OR r.evento_id = :ev)
+            WHERE r.plataforma_id = :pl AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
             ORDER BY r.fecha_reporte, r.indicativo
-        """), pp).fetchall()
+        """), {**pp_base, **evp}).fetchall()
 
         por_plataforma_data[pl_nombre] = {
             "total":        int(pl_total),
@@ -725,7 +760,15 @@ def _gather_rs(db: Session, evento_id: Optional[int], fi: datetime, ff: datetime
         for pl_nombre, pl_data in por_plataforma_data.items()
     }
 
+    if ev_ids:
+        rows_ev = db.execute(text("SELECT tipo FROM eventos WHERE id = ANY(:ids) ORDER BY tipo"),
+                             {"ids": ev_ids}).fetchall()
+        eventos_label = " + ".join(r[0] for r in rows_ev) if rows_ev else "Todos los eventos"
+    else:
+        eventos_label = "Todos los eventos"
+
     return {
+        "_eventos_label": eventos_label,
         "total_rs": int(total),
         "estaciones_rs": int(estaciones),
         "por_plataforma": [{"nombre": r[0], "cnt": r[1]} for r in por_plataforma],
@@ -863,8 +906,10 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
 
     tipo = p.tipo or 'rf'
     sec  = p.secciones or {}
-    evento_rf_nombre = p.evento_rf.tipo if p.evento_rf else "Todos los eventos"
-    evento_rs_nombre = p.evento_rs.tipo if p.evento_rs else "Todos los eventos"
+    ev_rf_ids = list(p.eventos_rf_ids or [])
+    ev_rs_ids = list(p.eventos_rs_ids or [])
+    evento_rf_nombre = data.get('rf', {}).get('_eventos_label') or "Todos los eventos"
+    evento_rs_nombre = data.get('rs', {}).get('_eventos_label') or "Todos los eventos"
     evento_nombre = evento_rf_nombre if tipo != 'rs' else evento_rs_nombre
     fecha_str = fi.strftime('%d/%m/%Y')
     if fi.date() != ff.date():
@@ -1286,8 +1331,7 @@ def _build_word(p: models.ReportePlantilla, data: dict, fi: datetime, ff: dateti
 
     tipo = p.tipo or 'rf'
     sec  = p.secciones or {}
-    evento_nombre = (p.evento_rf.tipo if p.evento_rf else p.nombre) if tipo != 'rs' \
-        else (p.evento_rs.tipo if p.evento_rs else p.nombre)
+    evento_nombre = data.get('rf', data.get('rs', {})).get('_eventos_label') or p.nombre
     fecha_str = fi.strftime('%d/%m/%Y')
     if fi.date() != ff.date():
         fecha_str += f" – {ff.strftime('%d/%m/%Y')}"
@@ -1413,7 +1457,7 @@ def _send_email_report(p: models.ReportePlantilla, pdf: bytes, data: dict,
     if not smtp.host or not smtp.usuario or not smtp.password:
         raise ValueError("SMTP no configurado")
 
-    evento    = p.evento_rf.tipo if p.evento_rf else p.nombre
+    evento    = data.get('rf', data.get('rs', {})).get('_eventos_label') or p.nombre
     fname     = f"qms_{evento.replace(' ', '_').lower()}_{fi.strftime('%Y%m%d')}.pdf"
     fecha_str = fi.strftime('%d/%m/%Y')
     asunto    = (p.asunto_email or "Estadísticas {evento} – {fecha}") \
@@ -1470,11 +1514,12 @@ def _send_email_report(p: models.ReportePlantilla, pdf: bytes, data: dict,
 def auto_send(db: Session, p: models.ReportePlantilla, fi: datetime, ff: datetime, user_config=None):
     """Llamado por el scheduler. Genera PDF y envía usando la config del usuario."""
     tipo = p.tipo or 'rf'
+    tipo = p.tipo or 'rf'
     data: dict = {}
     if tipo in ('rf', 'ambos'):
-        data['rf'] = _gather_rf(db, p.evento_rf_id, fi, ff)
+        data['rf'] = _gather_rf(db, list(p.eventos_rf_ids or []), fi, ff)
     if tipo in ('rs', 'ambos'):
-        data['rs'] = _gather_rs(db, p.evento_rs_id, fi, ff)
+        data['rs'] = _gather_rs(db, list(p.eventos_rs_ids or []), fi, ff)
     pdf = _build_pdf(p, data, fi, ff)
     destinatarios = (user_config.destinatarios if user_config else None) or p.destinatarios or []
     _send_email_report(p, pdf, data, fi, ff, db, destinatarios_override=destinatarios)
@@ -1488,13 +1533,13 @@ def _resolver_fechas_ultimo_evento(db: Session, p: models.ReportePlantilla, befo
     fi_str = ff_str = None
 
     if tipo in ('rf', 'ambos'):
-        rf = _cluster_rf(db, p.evento_rf_id, before_date=before_date)
+        rf = _cluster_rf(db, list(p.eventos_rf_ids or []), before_date=before_date)
         if rf and rf['fi']:
             fi_str = rf['fi']
             ff_str = rf['ff']
 
     if tipo in ('rs', 'ambos'):
-        rs = _cluster_rs(db, p.evento_rs_id, before_date=before_date)
+        rs = _cluster_rs(db, list(p.eventos_rs_ids or []), before_date=before_date)
         if rs and rs['fi']:
             fi_str = min(fi_str, rs['fi']) if fi_str else rs['fi']
             ff_str = max(ff_str, rs['ff']) if ff_str else rs['ff']
@@ -1524,14 +1569,13 @@ def generar_pdf(
     tipo = p.tipo or 'rf'
     data: dict = {}
     if tipo in ('rf', 'ambos'):
-        data['rf'] = _gather_rf(db, p.evento_rf_id, fecha_inicio, fecha_fin)
+        data['rf'] = _gather_rf(db, list(p.eventos_rf_ids or []), fecha_inicio, fecha_fin)
     if tipo in ('rs', 'ambos'):
-        data['rs'] = _gather_rs(db, p.evento_rs_id, fecha_inicio, fecha_fin)
+        data['rs'] = _gather_rs(db, list(p.eventos_rs_ids or []), fecha_inicio, fecha_fin)
 
     pdf = _build_pdf(p, data, fecha_inicio, fecha_fin)
 
-    evento = (p.evento_rf.tipo if p.evento_rf else p.nombre).replace(' ', '_').lower()
-    fname  = f"qms_{evento}_{fecha_inicio.strftime('%Y%m%d')}.pdf"
+    fname  = f"qms_{p.nombre.replace(' ', '_').lower()}_{fecha_inicio.strftime('%Y%m%d')}.pdf"
 
     return StreamingResponse(
         io.BytesIO(pdf),
@@ -1562,9 +1606,9 @@ def enviar_pdf(
     tipo = p.tipo or 'rf'
     data: dict = {}
     if tipo in ('rf', 'ambos'):
-        data['rf'] = _gather_rf(db, p.evento_rf_id, fecha_inicio, fecha_fin)
+        data['rf'] = _gather_rf(db, list(p.eventos_rf_ids or []), fecha_inicio, fecha_fin)
     if tipo in ('rs', 'ambos'):
-        data['rs'] = _gather_rs(db, p.evento_rs_id, fecha_inicio, fecha_fin)
+        data['rs'] = _gather_rs(db, list(p.eventos_rs_ids or []), fecha_inicio, fecha_fin)
     pdf = _build_pdf(p, data, fecha_inicio, fecha_fin)
     try:
         return _send_email_report(p, pdf, data, fecha_inicio, fecha_fin, db, destinatarios_override=destinatarios)
@@ -1588,12 +1632,11 @@ def generar_word(
     tipo = p.tipo or 'rf'
     data: dict = {}
     if tipo in ('rf', 'ambos'):
-        data['rf'] = _gather_rf(db, p.evento_rf_id, fecha_inicio, fecha_fin)
+        data['rf'] = _gather_rf(db, list(p.eventos_rf_ids or []), fecha_inicio, fecha_fin)
     if tipo in ('rs', 'ambos'):
-        data['rs'] = _gather_rs(db, p.evento_rs_id, fecha_inicio, fecha_fin)
+        data['rs'] = _gather_rs(db, list(p.eventos_rs_ids or []), fecha_inicio, fecha_fin)
     docx_bytes = _build_word(p, data, fecha_inicio, fecha_fin)
-    evento = (p.evento_rf.tipo if p.evento_rf else p.nombre).replace(' ', '_').lower()
-    fname  = f"qms_{evento}_{fecha_inicio.strftime('%Y%m%d')}.docx"
+    fname  = f"qms_{p.nombre.replace(' ', '_').lower()}_{fecha_inicio.strftime('%Y%m%d')}.docx"
     return StreamingResponse(
         io.BytesIO(docx_bytes),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",

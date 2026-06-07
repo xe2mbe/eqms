@@ -147,6 +147,20 @@ async def lifespan(app: FastAPI):
         conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS prog_activo BOOLEAN DEFAULT FALSE"))
         conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS prog_ultima_ejecucion TIMESTAMPTZ"))
         conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS modo_fecha VARCHAR(15) NOT NULL DEFAULT 'ultimo_evento'"))
+        # Soporte multi-evento: listas de IDs de eventos RF y RS
+        conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS eventos_rf_ids JSONB NOT NULL DEFAULT '[]'"))
+        conn.execute(text("ALTER TABLE reporte_plantillas ADD COLUMN IF NOT EXISTS eventos_rs_ids JSONB NOT NULL DEFAULT '[]'"))
+        # Migrar registros existentes: copiar evento_rf_id / evento_rs_id → arrays si el array está vacío
+        conn.execute(text("""
+            UPDATE reporte_plantillas
+            SET eventos_rf_ids = json_build_array(evento_rf_id)
+            WHERE evento_rf_id IS NOT NULL AND eventos_rf_ids = '[]'::jsonb
+        """))
+        conn.execute(text("""
+            UPDATE reporte_plantillas
+            SET eventos_rs_ids = json_build_array(evento_rs_id)
+            WHERE evento_rs_id IS NOT NULL AND eventos_rs_ids = '[]'::jsonb
+        """))
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS reporte_plantilla_user_configs (
                 id SERIAL PRIMARY KEY,

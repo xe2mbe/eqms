@@ -275,6 +275,9 @@ class ReportePlantilla(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    eventos_rf_ids = Column(JSONB, nullable=False, default=list)   # [1, 2, 3]
+    eventos_rs_ids = Column(JSONB, nullable=False, default=list)   # [4, 5]
+
     evento_rf = relationship("Evento", foreign_keys=[evento_rf_id])
     evento_rs = relationship("Evento", foreign_keys=[evento_rs_id])
     usuario = relationship("Usuario", foreign_keys=[usuario_id])

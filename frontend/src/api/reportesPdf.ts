@@ -26,8 +26,10 @@ export interface PlantillaOut {
   tipo: TipoReporte
   evento_rf_id: number | null
   evento_rs_id: number | null
-  evento_rf_tipo: string | null
-  evento_rs_tipo: string | null
+  eventos_rf_ids: number[]
+  eventos_rs_ids: number[]
+  eventos_rf_tipos: string[]
+  eventos_rs_tipos: string[]
   secciones: SeccionesConfig
   destinatarios: string[]
   asunto_email: string | null
@@ -48,6 +50,8 @@ export interface PlantillaCreate {
   tipo: TipoReporte
   evento_rf_id: number | null
   evento_rs_id: number | null
+  eventos_rf_ids: number[]
+  eventos_rs_ids: number[]
   secciones: SeccionesConfig
   destinatarios: string[]
   asunto_email: string | null
