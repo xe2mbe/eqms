@@ -525,16 +525,25 @@ export default function LibretaRSPage() {
       ),
     },
     {
-      title: 'Indicativo', dataIndex: 'indicativo', width: 110,
+      title: 'Indicativo', dataIndex: 'indicativo', width: 140,
       render: (v: string, row: FilaRS) => (
-        <IndicativoCell
-          value={v}
-          rowKey={row.key}
-          onCommit={(key, nuevo) => {
-            actualizarFila(key, 'indicativo', nuevo)
-            if (validarIndicativo(nuevo)) relookupFila(key, nuevo)
-          }}
-        />
+        <Space size={2}>
+          <IndicativoCell
+            value={v}
+            rowKey={row.key}
+            onCommit={(key, nuevo) => {
+              actualizarFila(key, 'indicativo', nuevo)
+              if (validarIndicativo(nuevo)) relookupFila(key, nuevo)
+            }}
+          />
+          <Tooltip title="Buscar datos del indicativo">
+            <Button
+              size="small" type="text" icon={<ReloadOutlined />}
+              onClick={() => { if (validarIndicativo(row.indicativo)) relookupFila(row.key, row.indicativo) }}
+              style={{ color: '#8c8c8c' }}
+            />
+          </Tooltip>
+        </Space>
       ),
     },
     {
