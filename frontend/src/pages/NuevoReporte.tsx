@@ -52,6 +52,8 @@ export default function NuevoReportePage() {
           fecha_reporte: dayjs(data.fecha_reporte),
         })
         setLoadingData(false)
+        // Disparar lookup automático para mostrar info del último registro
+        if (data.indicativo) setTimeout(() => handleCallsignBlur(), 100)
       })
     }
   }, [editId])
@@ -155,25 +157,13 @@ export default function NuevoReportePage() {
               name="indicativo"
               validateStatus={callsignStatus === 'error' ? 'error' : callsignStatus === 'ok' ? 'success' : ''}
               help={callsignStatus !== 'idle' ? (
-                <span>
-                  <span style={{ color: callsignStatus === 'ok' ? '#52c41a' : '#ff4d4f' }}>
-                    {callsignStatus === 'ok' && <CheckCircleOutlined style={{ marginRight: 4 }} />}
-                    {callsignMsg}
-                  </span>
-                  {ultimoRegistro && (
-                    <div style={{ marginTop: 4 }}>
-                      {ultimoRegistro.primeraVez ? (
-                        <Tag color="green" style={{ fontSize: 11 }}>⭐ Primera aparición</Tag>
-                      ) : ultimoRegistro.fecha ? (
-                        <Tag color="cyan" style={{ fontSize: 11 }}>
-                          📡 Último registro: {dayjs(ultimoRegistro.fecha).format('DD/MM/YYYY HH:mm')}
-                        </Tag>
-                      ) : null}
-                    </div>
-                  )}
+                <span style={{ color: callsignStatus === 'ok' ? '#52c41a' : '#ff4d4f' }}>
+                  {callsignStatus === 'ok' && <CheckCircleOutlined style={{ marginRight: 4 }} />}
+                  {callsignMsg}
                 </span>
               ) : null}
               rules={[{ required: true, message: 'Indicativo requerido' }]}
+              style={{ marginBottom: ultimoRegistro ? 4 : undefined }}
             >
               <Input
                 placeholder="XE2MBE"
@@ -186,6 +176,18 @@ export default function NuevoReportePage() {
                 }}
               />
             </Form.Item>
+
+            {ultimoRegistro && (
+              <div style={{ marginBottom: 16, marginTop: -4 }}>
+                {ultimoRegistro.primeraVez ? (
+                  <Tag color="green" style={{ fontSize: 12, padding: '2px 8px' }}>⭐ Primera aparición — sin registros previos</Tag>
+                ) : ultimoRegistro.fecha ? (
+                  <Tag color="cyan" style={{ fontSize: 12, padding: '2px 8px' }}>
+                    📡 Último registro: {dayjs(ultimoRegistro.fecha).format('DD/MM/YYYY HH:mm')}
+                  </Tag>
+                ) : null}
+              </div>
+            )}
 
             <Form.Item label="Operador" name="operador">
               <Input placeholder="Nombre completo" />
