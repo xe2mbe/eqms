@@ -16,6 +16,7 @@ export interface LibretaConfig {
 export interface CheckIndicativoResult {
   es_primera_vez: boolean
   ultima_aparicion?: string | null
+  ultimo_sistema?: string | null
   dias_sin_aparecer?: number | null
   dias_reaparicion: number
   es_reaparicion: boolean

@@ -69,14 +69,22 @@ def check_indicativo(
     dias_reaparicion = _get_dias_reaparicion(db)
     ind = indicativo.strip().upper()
 
-    ultima = (
-        db.query(func.max(models.Reporte.fecha_reporte))
+    ultimo_reporte = (
+        db.query(models.Reporte)
         .filter(models.Reporte.indicativo == ind)
-        .scalar()
+        .order_by(models.Reporte.fecha_reporte.desc())
+        .first()
     )
 
+    ultima = ultimo_reporte.fecha_reporte if ultimo_reporte else None
     es_primera_vez = ultima is None
     dias_sin_aparecer = None
+    ultimo_sistema = None
+
+    if ultimo_reporte and ultimo_reporte.sistema_id:
+        sistema = db.get(models.Sistema, ultimo_reporte.sistema_id)
+        if sistema:
+            ultimo_sistema = sistema.codigo
 
     if ultima is not None:
         now = datetime.now(timezone.utc)
@@ -87,6 +95,7 @@ def check_indicativo(
     return {
         "es_primera_vez": es_primera_vez,
         "ultima_aparicion": ultima.isoformat() if ultima else None,
+        "ultimo_sistema": ultimo_sistema,
         "dias_sin_aparecer": dias_sin_aparecer,
         "dias_reaparicion": dias_reaparicion,
         "es_reaparicion": (
