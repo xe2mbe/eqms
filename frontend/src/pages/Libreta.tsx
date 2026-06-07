@@ -49,6 +49,27 @@ const normalizarRST = (val: string) => val.replace(/[^0-9]/g, '').slice(0, 3)
 
 const NOMBRES_DIA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
+// ── Celda editable de indicativo (estado local — no re-renderiza al padre durante tipeo) ──
+function IndicativoCell({ value, rowKey, onCommit }: {
+  value: string
+  rowKey: string
+  onCommit: (key: string, nuevo: string, anterior: string) => void
+}) {
+  const [local, setLocal] = useState(value)
+  const originalRef = useRef(value)
+  useEffect(() => { setLocal(value); originalRef.current = value }, [value])
+  return (
+    <Input
+      size="small"
+      value={local}
+      variant="borderless"
+      onChange={e => setLocal(e.target.value.toUpperCase())}
+      onBlur={() => onCommit(rowKey, local.trim().toUpperCase(), originalRef.current)}
+      style={{ fontWeight: 700, color: '#1A569E', fontSize: 14 }}
+    />
+  )
+}
+
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 interface FilaLibreta {
   key: string
@@ -595,6 +616,62 @@ export default function LibretaPage() {
 
   const eliminarFila = (key: string) => setFilas(prev => prev.filter(f => f.key !== key))
 
+  // ── Re-lookup al corregir indicativo ─────────────────────────────────────
+  const relookupFila = async (key: string, nuevoIndicativo: string) => {
+    const cs = nuevoIndicativo.trim().toUpperCase()
+    if (!cs || !validarIndicativo(cs)) return
+
+    const swl = esSWL(cs)
+    const [opRes, prefixRes] = await Promise.allSettled([
+      operadoresApi.buscar(cs),
+      catalogosApi.lookupPrefijo(cs),
+    ])
+    const op = opRes.status === 'fulfilled' ? opRes.value.data : null
+    const prefix = prefixRes.status === 'fulfilled' ? prefixRes.value.data : null
+
+    let zona = zonaExtranjero
+    const pais = swl ? 'México' : (prefix?.pais || 'Desconocido')
+    let zonaEsNacional = false
+    if (prefix?.zona_codigo) {
+      const zonaDB = zonas.find(z => z.codigo === prefix.zona_codigo)
+      zona = zonaDB ? zonaDB.codigo : zonaExtranjero
+      zonaEsNacional = !!zonaDB
+    }
+
+    const estadoVal = op?.estado
+      || (considerarSwl && sesionConfig ? sesionConfig.estado_default || '' : '')
+    const municipioVal = op?.municipio
+      || (considerarSwl && sesionConfig ? sesionConfig.ciudad_default || '' : '')
+
+    if (swl && sesionConfig?.zona_swl_default) zona = sesionConfig.zona_swl_default
+    if ((zonaEsNacional || swl) && estadoVal) {
+      const estDB = estados.find(e => e.nombre === estadoVal)
+      if (estDB?.zona) {
+        const zonaDB = zonas.find(z => z.codigo === estDB.zona)
+        if (zonaDB) zona = zonaDB.codigo
+      }
+    }
+
+    setFilas(prev => prev.map(f => f.key === key ? {
+      ...f,
+      indicativo: cs,
+      nombre_completo: op?.nombre_completo || '',
+      municipio: municipioVal,
+      estado: estadoVal,
+      zona,
+      pais,
+      status: op ? 'ok' : 'notfound',
+    } : f))
+    if (!op) message.info(`${cs} no está en el catálogo. Puedes editar los datos en la tabla.`)
+  }
+
+  const onCommitIndicativo = (key: string, nuevo: string, anterior: string) => {
+    if (!validarIndicativo(nuevo)) return
+    if (nuevo === anterior) return
+    actualizarFila(key, 'indicativo', nuevo)
+    relookupFila(key, nuevo)
+  }
+
   const eliminarSeleccionados = () => {
     setFilas(prev => prev.filter(f => !selectedKeys.includes(f.key)))
     setSelectedKeys([])
@@ -628,7 +705,7 @@ export default function LibretaPage() {
   }
 
   // ── Columnas tabla ────────────────────────────────────────────────────────
-  const INITIAL_WIDTHS = [32, 110, 180, 130, 160, 100, 130, 110, 70, 110, 40]
+  const INITIAL_WIDTHS = [32, 150, 180, 130, 160, 100, 130, 110, 70, 110, 40]
   const { applyWidths, components } = useResizableColumns(INITIAL_WIDTHS)
 
   const baseColumns = [
@@ -643,11 +720,18 @@ export default function LibretaPage() {
       ),
     },
     {
-      title: 'Indicativo', dataIndex: 'indicativo', width: 110,
+      title: 'Indicativo', dataIndex: 'indicativo', width: 140,
       render: (v: string, row: FilaLibreta) => (
-        <Input size="small" value={v} variant="borderless"
-          onChange={e => actualizarFila(row.key, 'indicativo', e.target.value.toUpperCase())}
-          style={{ fontWeight: 700, color: '#1A569E', fontSize: 14 }} />
+        <Space size={0}>
+          <IndicativoCell value={v} rowKey={row.key} onCommit={onCommitIndicativo} />
+          <Tooltip title="Re-buscar datos del indicativo">
+            <Button
+              size="small" type="text" icon={<ReloadOutlined />}
+              onClick={() => { if (validarIndicativo(row.indicativo)) relookupFila(row.key, row.indicativo) }}
+              style={{ color: '#8c8c8c', padding: '0 4px' }}
+            />
+          </Tooltip>
+        </Space>
       ),
     },
     {
@@ -767,7 +851,7 @@ export default function LibretaPage() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="page-container">
-      <Title level={4} style={{ margin: '0 0 16px' }}>Libreta v3 TEST</Title>
+      <Title level={4} style={{ margin: '0 0 16px' }}>Libreta</Title>
 
       {/* Modal: selección de fecha */}
       <Modal title={<><CalendarOutlined style={{ marginRight: 8 }} />Fecha de captura</>}
