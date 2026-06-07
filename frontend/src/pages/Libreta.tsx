@@ -705,7 +705,7 @@ export default function LibretaPage() {
   }
 
   // ── Columnas tabla ────────────────────────────────────────────────────────
-  const INITIAL_WIDTHS = [32, 110, 180, 130, 160, 100, 130, 110, 70, 110, 40]
+  const INITIAL_WIDTHS = [32, 150, 180, 130, 160, 100, 130, 110, 70, 110, 40]
   const { applyWidths, components } = useResizableColumns(INITIAL_WIDTHS)
 
   const baseColumns = [
