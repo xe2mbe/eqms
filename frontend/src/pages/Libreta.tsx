@@ -720,7 +720,7 @@ export default function LibretaPage() {
       ),
     },
     {
-      title: 'Indicativo', dataIndex: 'indicativo', width: 140,
+      title: 'Indicativo 🔄v2', dataIndex: 'indicativo', width: 140,
       render: (v: string, row: FilaLibreta) => (
         <Space size={0}>
           <IndicativoCell value={v} rowKey={row.key} onCommit={onCommitIndicativo} />
