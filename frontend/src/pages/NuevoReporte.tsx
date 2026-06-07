@@ -27,6 +27,7 @@ export default function NuevoReportePage() {
   const [loadingData, setLoadingData] = useState(false)
   const [callsignStatus, setCallsignStatus] = useState<'idle' | 'ok' | 'error'>('idle')
   const [callsignMsg, setCallsignMsg] = useState('')
+  const [ultimoRegistro, setUltimoRegistro] = useState<{ fecha: string | null; primeraVez: boolean } | null>(null)
   const [eventos, setEventos] = useState<Evento[]>([])
   const [sistemas, setSistemas] = useState<Sistema[]>([])
   const [estados, setEstados] = useState<Estado[]>([])
@@ -93,6 +94,10 @@ export default function NuevoReportePage() {
       const s = sistemas.find(s => s.codigo === check.ultimo_sistema)
       if (s) form.setFieldValue('sistema_id', s.id)
     }
+    setUltimoRegistro(check ? {
+      fecha: check.ultima_aparicion ?? null,
+      primeraVez: !!check.es_primera_vez,
+    } : null)
   }
 
   const onFinish = async (values: any) => {
@@ -150,9 +155,22 @@ export default function NuevoReportePage() {
               name="indicativo"
               validateStatus={callsignStatus === 'error' ? 'error' : callsignStatus === 'ok' ? 'success' : ''}
               help={callsignStatus !== 'idle' ? (
-                <span style={{ color: callsignStatus === 'ok' ? '#52c41a' : '#ff4d4f' }}>
-                  {callsignStatus === 'ok' && <CheckCircleOutlined style={{ marginRight: 4 }} />}
-                  {callsignMsg}
+                <span>
+                  <span style={{ color: callsignStatus === 'ok' ? '#52c41a' : '#ff4d4f' }}>
+                    {callsignStatus === 'ok' && <CheckCircleOutlined style={{ marginRight: 4 }} />}
+                    {callsignMsg}
+                  </span>
+                  {ultimoRegistro && (
+                    <div style={{ marginTop: 4 }}>
+                      {ultimoRegistro.primeraVez ? (
+                        <Tag color="green" style={{ fontSize: 11 }}>⭐ Primera aparición</Tag>
+                      ) : ultimoRegistro.fecha ? (
+                        <Tag color="cyan" style={{ fontSize: 11 }}>
+                          📡 Último registro: {dayjs(ultimoRegistro.fecha).format('DD/MM/YYYY HH:mm')}
+                        </Tag>
+                      ) : null}
+                    </div>
+                  )}
                 </span>
               ) : null}
               rules={[{ required: true, message: 'Indicativo requerido' }]}
@@ -164,6 +182,7 @@ export default function NuevoReportePage() {
                 onChange={(e) => {
                   form.setFieldValue('indicativo', e.target.value.toUpperCase())
                   setCallsignStatus('idle')
+                  setUltimoRegistro(null)
                 }}
               />
             </Form.Item>
