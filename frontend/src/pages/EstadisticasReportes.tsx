@@ -287,12 +287,12 @@ export default function EstadisticasReportesPage() {
                   }
                 >
                   {/* Info evento */}
-                  {(p.evento_rf_tipo || p.evento_rs_tipo) && (
+                  {(p.eventos_rf_tipos?.length || p.eventos_rs_tipos?.length) ? (
                     <div style={{ marginBottom: 8, fontSize: 12, color: '#888' }}>
                       <CalendarOutlined style={{ marginRight: 4 }} />
-                      {p.evento_rf_tipo ?? p.evento_rs_tipo}
+                      {[...(p.eventos_rf_tipos ?? []), ...(p.eventos_rs_tipos ?? [])].join(' + ')}
                     </div>
-                  )}
+                  ) : null}
 
                   {/* Programación activa */}
                   {p.prog_activo && p.prog_hora && p.prog_dia_semana != null ? (
