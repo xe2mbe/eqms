@@ -63,18 +63,17 @@ function IndicativoCell({ value, rowKey, onCommit }: {
 }) {
   const [local, setLocal] = React.useState(value)
   useEffect(() => { setLocal(value) }, [value])
-  const commit = (val: string) => onCommit(rowKey, val.trim().toUpperCase())
   return (
-    <Input.Search
-      size="small"
-      value={local}
-      variant="borderless"
-      enterButton={<span style={{ fontSize: 11 }}>↵</span>}
-      onChange={e => setLocal(e.target.value.toUpperCase())}
-      onSearch={val => commit(val)}
-      onBlur={() => commit(local)}
-      style={{ fontWeight: 700, color: '#1A569E', fontSize: 14 }}
-    />
+    <Tooltip title="Edita y presiona Enter para buscar" mouseEnterDelay={1}>
+      <Input
+        size="small"
+        value={local}
+        variant="borderless"
+        onChange={e => setLocal(e.target.value.toUpperCase())}
+        onPressEnter={() => onCommit(rowKey, local.trim().toUpperCase())}
+        style={{ fontWeight: 700, color: '#1A569E', fontSize: 14 }}
+      />
+    </Tooltip>
   )
 }
 
