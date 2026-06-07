@@ -500,25 +500,25 @@ def _gather_rf(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
 
     total = db.execute(text(f"""
         SELECT COUNT(*) FROM reportes
-        WHERE fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+        WHERE fecha_reporte::date >= :fi::date AND fecha_reporte::date <= :ff::date {evf_bare}
     """), {**base, **evp_bare}).scalar() or 0
 
     estaciones = db.execute(text(f"""
         SELECT COUNT(DISTINCT indicativo) FROM reportes
-        WHERE fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+        WHERE fecha_reporte::date >= :fi::date AND fecha_reporte::date <= :ff::date {evf_bare}
     """), {**base, **evp_bare}).scalar() or 0
 
     estados_cnt = db.execute(text(f"""
         SELECT COUNT(DISTINCT estado) FROM reportes
         WHERE estado IS NOT NULL
-          AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+          AND fecha_reporte::date >= :fi::date AND fecha_reporte::date <= :ff::date {evf_bare}
     """), {**base, **evp_bare}).scalar() or 0
 
     por_zona = db.execute(text(f"""
         SELECT z.codigo, z.nombre, COUNT(*) AS total, COUNT(DISTINCT r.indicativo) AS ests
         FROM reportes r JOIN zonas z ON z.id = r.zona_id
         WHERE r.zona_id IS NOT NULL
-          AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
+          AND r.fecha_reporte::date >= :fi::date AND r.fecha_reporte::date <= :ff::date {evf}
         GROUP BY z.codigo, z.nombre ORDER BY total DESC
     """), {**base, **evp}).fetchall()
 
@@ -526,7 +526,7 @@ def _gather_rf(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
         SELECT s.codigo, COUNT(*) AS total
         FROM reportes r JOIN sistemas s ON s.id = r.sistema_id
         WHERE r.sistema_id IS NOT NULL
-          AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
+          AND r.fecha_reporte::date >= :fi::date AND r.fecha_reporte::date <= :ff::date {evf}
         GROUP BY s.codigo ORDER BY total DESC
     """), {**base, **evp}).fetchall()
 
@@ -542,7 +542,7 @@ def _gather_rf(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
     por_estado = db.execute(text(f"""
         SELECT estado, COUNT(*) AS total FROM reportes
         WHERE estado IS NOT NULL
-          AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+          AND fecha_reporte::date >= :fi::date AND fecha_reporte::date <= :ff::date {evf_bare}
         GROUP BY estado ORDER BY total DESC LIMIT 32
     """), {**base, **evp_bare}).fetchall()
 
@@ -550,7 +550,7 @@ def _gather_rf(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
         SELECT r.indicativo, COALESCE(rx.nombre_completo,''), COALESCE(r.estado,'')
         FROM reportes r
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
-        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
+        WHERE r.fecha_reporte::date >= :fi::date AND r.fecha_reporte::date <= :ff::date {evf}
           AND NOT EXISTS (
               SELECT 1 FROM reportes r2
               WHERE r2.indicativo = r.indicativo {evf.replace('r.', 'r2.')}
@@ -568,7 +568,7 @@ def _gather_rf(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
         LEFT JOIN sistemas s ON s.id = r.sistema_id
         LEFT JOIN zonas z ON z.id = r.zona_id
-        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
+        WHERE r.fecha_reporte::date >= :fi::date AND r.fecha_reporte::date <= :ff::date {evf}
         ORDER BY r.fecha_reporte, r.indicativo
     """), {**base, **evp}).fetchall()
 
@@ -603,19 +603,19 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
 
     total = db.execute(text(f"""
         SELECT COUNT(*) FROM reportes_rs
-        WHERE fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+        WHERE fecha_reporte::date >= :fi::date AND fecha_reporte::date <= :ff::date {evf_bare}
     """), {**base, **evp_bare}).scalar() or 0
 
     estaciones = db.execute(text(f"""
         SELECT COUNT(DISTINCT indicativo) FROM reportes_rs
-        WHERE fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+        WHERE fecha_reporte::date >= :fi::date AND fecha_reporte::date <= :ff::date {evf_bare}
     """), {**base, **evp_bare}).scalar() or 0
 
     por_plataforma = db.execute(text(f"""
         SELECT pl.nombre, COUNT(r.id) AS cnt
         FROM reportes_rs r
         JOIN plataformas_rs pl ON pl.id = r.plataforma_id
-        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
+        WHERE r.fecha_reporte::date >= :fi::date AND r.fecha_reporte::date <= :ff::date {evf}
         GROUP BY pl.nombre ORDER BY cnt DESC
     """), {**base, **evp}).fetchall()
 
@@ -623,7 +623,7 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
         SELECT z.codigo, z.nombre, COUNT(*) AS total, COUNT(DISTINCT r.indicativo) AS ests
         FROM reportes_rs r JOIN zonas z ON z.id = r.zona_id
         WHERE r.zona_id IS NOT NULL
-          AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
+          AND r.fecha_reporte::date >= :fi::date AND r.fecha_reporte::date <= :ff::date {evf}
         GROUP BY z.codigo, z.nombre ORDER BY total DESC
     """), {**base, **evp}).fetchall()
 
@@ -655,7 +655,7 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
     por_estado_rs = db.execute(text(f"""
         SELECT estado, COUNT(*) AS total FROM reportes_rs
         WHERE estado IS NOT NULL AND estado <> ''
-          AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+          AND fecha_reporte::date >= :fi::date AND fecha_reporte::date <= :ff::date {evf_bare}
         GROUP BY estado ORDER BY total DESC LIMIT 32
     """), {**base, **evp_bare}).fetchall()
 
@@ -667,7 +667,7 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
         JOIN plataformas_rs pl ON pl.id = r.plataforma_id
         LEFT JOIN zonas z ON z.id = r.zona_id
-        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
+        WHERE r.fecha_reporte::date >= :fi::date AND r.fecha_reporte::date <= :ff::date {evf}
         ORDER BY r.fecha_reporte, r.indicativo
     """), {**base, **evp}).fetchall()
 
@@ -676,7 +676,7 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
         SELECT DISTINCT pl.id, pl.nombre
         FROM reportes_rs r
         JOIN plataformas_rs pl ON pl.id = r.plataforma_id
-        WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
+        WHERE r.fecha_reporte::date >= :fi::date AND r.fecha_reporte::date <= :ff::date {evf}
         ORDER BY pl.nombre
     """), {**base, **evp}).fetchall()
 
@@ -686,12 +686,12 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
 
         pl_total = db.execute(text(f"""
             SELECT COUNT(*) FROM reportes_rs
-            WHERE plataforma_id = :pl AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+            WHERE plataforma_id = :pl AND fecha_reporte::date >= :fi::date AND fecha_reporte::date <= :ff::date {evf_bare}
         """), {**pp_base, **evp_bare}).scalar() or 0
 
         pl_estaciones = db.execute(text(f"""
             SELECT COUNT(DISTINCT indicativo) FROM reportes_rs
-            WHERE plataforma_id = :pl AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+            WHERE plataforma_id = :pl AND fecha_reporte::date >= :fi::date AND fecha_reporte::date <= :ff::date {evf_bare}
         """), {**pp_base, **evp_bare}).scalar() or 0
 
         pl_top_ests = db.execute(text(f"""
@@ -707,7 +707,7 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
             SELECT z.codigo, z.nombre, COUNT(*) AS total, COUNT(DISTINCT r.indicativo) AS ests
             FROM reportes_rs r JOIN zonas z ON z.id = r.zona_id
             WHERE r.plataforma_id = :pl AND r.zona_id IS NOT NULL
-              AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
+              AND r.fecha_reporte::date >= :fi::date AND r.fecha_reporte::date <= :ff::date {evf}
             GROUP BY z.codigo, z.nombre ORDER BY total DESC
         """), {**pp_base, **evp}).fetchall()
 
@@ -730,7 +730,7 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
         pl_por_estado = db.execute(text(f"""
             SELECT estado, COUNT(*) AS total FROM reportes_rs
             WHERE plataforma_id = :pl AND estado IS NOT NULL AND estado <> ''
-              AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+              AND fecha_reporte::date >= :fi::date AND fecha_reporte::date <= :ff::date {evf_bare}
             GROUP BY estado ORDER BY total DESC LIMIT 32
         """), {**pp_base, **evp_bare}).fetchall()
 
@@ -740,7 +740,7 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
             FROM reportes_rs r
             LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
             LEFT JOIN zonas z ON z.id = r.zona_id
-            WHERE r.plataforma_id = :pl AND r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
+            WHERE r.plataforma_id = :pl AND r.fecha_reporte::date >= :fi::date AND r.fecha_reporte::date <= :ff::date {evf}
             ORDER BY r.fecha_reporte, r.indicativo
         """), {**pp_base, **evp}).fetchall()
 
