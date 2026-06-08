@@ -1240,6 +1240,14 @@ export default function LibretaPage() {
         </Card>
       )}
 
+      {/* Anuncio: edición de indicativo */}
+      <Alert
+        type="info"
+        showIcon
+        message="Ya puedes editar el indicativo de cualquier registro antes de guardarlo. Al modificarlo se actualizan automáticamente nombre, ciudad, estado, sistema y último registro."
+        style={{ marginBottom: 16 }}
+      />
+
       {/* Tabla de registros */}
       {filas.length > 0 && (
         <Card className="card-shadow"

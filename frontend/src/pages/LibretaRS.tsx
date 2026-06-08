@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import {
   Card, Form, Select, DatePicker, Button, Table, Typography,
   Space, InputNumber, Input, message, Popconfirm, Modal,
-  Row, Col, Divider, Tag, Tooltip, Badge,
+  Row, Col, Divider, Tag, Tooltip, Badge, Alert,
 } from 'antd'
 import type { InputRef } from 'antd'
 import {
@@ -901,6 +901,14 @@ export default function LibretaRSPage() {
               </>
             )}
           </Card>
+
+          {/* Anuncio: edición de indicativo */}
+          <Alert
+            type="info"
+            showIcon
+            message="Ya puedes editar el indicativo de cualquier registro antes de guardarlo. Al modificarlo se actualizan automáticamente nombre, ciudad, estado y zona."
+            style={{ marginBottom: 16 }}
+          />
 
           {/* ── Reportes guardados hoy ── */}
           <Card className="card-shadow"
