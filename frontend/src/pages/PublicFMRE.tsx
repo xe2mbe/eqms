@@ -355,15 +355,12 @@ export default function PublicFMREPage() {
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: '#f5f7fa', minHeight: '100vh' }}>
 
       {/* ── HEADER ── */}
-      <header style={{ background: FMRE_DARK, padding: '12px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <img src="/LogoFMRE.png" alt="FMRE" style={{ height: 52 }} />
-          <div style={{ color: 'white', fontWeight: 800, fontSize: 'clamp(14px, 2vw, 22px)', lineHeight: 1.2, letterSpacing: 0.3 }}>
+      <header style={{ background: FMRE_DARK, padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <img src="/LogoFMRE.png" alt="FMRE" style={{ height: 72 }} />
+          <div style={{ color: 'white', fontWeight: 800, fontSize: 'clamp(18px, 2.5vw, 30px)', lineHeight: 1.2, letterSpacing: 0.3, textAlign: 'center' }}>
             Federación Mexicana de Radioexperimentadores, A.C.
           </div>
-        </div>
-        <div style={{ color: '#8ab4e0', fontSize: 12, textAlign: 'right' }}>
-          <div style={{ color: FMRE_GOLD, fontWeight: 700, fontSize: 14 }}>Sistema QMS</div>
         </div>
       </header>
 
@@ -458,15 +455,21 @@ export default function PublicFMREPage() {
       {/* ── CONVOCATORIA ── */}
       <section style={{ background: FMRE_DARK, padding: '32px 32px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-            <span style={{ fontSize: 22 }}>📅</span>
-            <span style={{ color: FMRE_GOLD, fontWeight: 800, fontSize: 18, letterSpacing: 1 }}>
-              ¿Cómo escuchar el Boletín Dominical?
-            </span>
-            <span style={{
-              background: FMRE_GOLD, color: FMRE_DARK, fontWeight: 800,
-              fontSize: 12, padding: '2px 10px', borderRadius: 20, marginLeft: 8,
-            }}>Todos los Domingos · 09:00 h (UTC−6)</span>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <span style={{ fontSize: 22 }}>📅</span>
+              <span style={{ color: FMRE_GOLD, fontWeight: 800, fontSize: 18, letterSpacing: 1 }}>
+                ¿Cómo escuchar el Boletín Dominical?
+              </span>
+              <span style={{
+                background: FMRE_GOLD, color: FMRE_DARK, fontWeight: 800,
+                fontSize: 12, padding: '2px 10px', borderRadius: 20, marginLeft: 8,
+              }}>Todos los Domingos · 09:00 h (UTC−6)</span>
+            </div>
+            <p style={{ color: '#8ab4e0', fontSize: 14, margin: 0, paddingLeft: 32 }}>
+              Se transmite cada domingo puntualmente a las 09:00 h (UTC−6) de forma simultánea
+              a través de los siguientes medios:
+            </p>
           </div>
 
           <Row gutter={[16, 16]} style={{ alignItems: 'stretch' }}>
@@ -1028,11 +1031,17 @@ export default function PublicFMREPage() {
             <img src="/LogoFMRE.png" alt="FMRE" style={{ height: 36, opacity: 0.9 }} />
             <div>
               <div style={{ color: 'white', fontWeight: 800, fontSize: 14 }}>Federación Mexicana de Radioexperimentadores, A.C.</div>
+              <div style={{ color: '#8ab4e0', fontSize: 11, marginTop: 2 }}>Datos actualizados en tiempo real</div>
             </div>
           </div>
-          <div style={{ color: '#8ab4e0', fontSize: 11, textAlign: 'right' }}>
-            <div>Datos actualizados en tiempo real</div>
-            <div style={{ color: FMRE_GOLD, marginTop: 4 }}>73 de XE — Good DX</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            <div style={{ color: FMRE_GOLD, fontWeight: 700, fontSize: 12 }}>73 de XE — Good DX</div>
+            <a href="https://rcg.org.mx" target="_blank" rel="noopener noreferrer"
+              style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+              <span style={{ color: '#8ab4e0', fontSize: 11 }}>Página diseñada por miembros del</span>
+              <img src="/rcg_small.png" alt="Radio Club Guadiana" style={{ height: 20, width: 'auto', opacity: 0.9 }} />
+              <span style={{ color: 'white', fontSize: 11, fontWeight: 600 }}>Radio Club Guadiana A.C.</span>
+            </a>
           </div>
         </div>
       </footer>
