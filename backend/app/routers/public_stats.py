@@ -68,6 +68,22 @@ def public_stats(db: Session = Depends(get_db)):
         GROUP BY p.nombre ORDER BY total DESC
     """)).fetchall()
 
+    tendencia_rs = db.execute(text("""
+        SELECT TO_CHAR(DATE_TRUNC('month', r.fecha_reporte), 'YYYY-MM') as mes,
+               COALESCE(p.nombre, 'N/D') as plataforma,
+               COUNT(*) as total
+        FROM reportes_rs r
+        LEFT JOIN plataformas_rs p ON p.id = r.plataforma_id
+        WHERE r.fecha_reporte >= NOW() - INTERVAL '12 months'
+        GROUP BY mes, p.nombre ORDER BY mes, p.nombre
+    """)).fetchall()
+
+    por_estado_rs = db.execute(text("""
+        SELECT estado, COUNT(*) as total FROM reportes_rs
+        WHERE estado IS NOT NULL AND estado != '' AND estado != 'Extranjero'
+        GROUP BY estado ORDER BY total DESC
+    """)).fetchall()
+
     top_rs = db.execute(text("""
         SELECT r.indicativo,
                COALESCE(MAX(r.operador), MAX(re.nombre_completo)) as nombre,
@@ -133,6 +149,8 @@ def public_stats(db: Session = Depends(get_db)):
             "total": int(rs_total),
             "indicativos": int(rs_indicativos),
             "por_plataforma": [{"plataforma": r[0], "total": int(r[1])} for r in por_plataforma],
+            "tendencia": [{"mes": r[0], "plataforma": r[1], "total": int(r[2])} for r in tendencia_rs],
+            "por_estado": [{"estado": r[0], "total": int(r[1])} for r in por_estado_rs],
             "top_indicativos": [{"indicativo": r[0], "nombre": r[1], "total": int(r[2])} for r in top_rs],
         },
         "ultimo_evento_rf": {

@@ -155,6 +155,8 @@ type Stats = {
   rs: {
     total: number; indicativos: number
     por_plataforma: { plataforma: string; total: number }[]
+    tendencia: { mes: string; plataforma: string; total: number }[]
+    por_estado: { estado: string; total: number }[]
     top_indicativos: { indicativo: string; nombre: string | null; total: number }[]
   }
   ultimo_evento_rf: { tipo: string; ultima: string; estaciones: number; total_qsos: number } | null
@@ -329,6 +331,65 @@ export default function PublicFMREPage() {
         value: p.total,
         itemStyle: { color: PLAT_COLORS[p.plataforma] ?? FMRE_BLUE, borderRadius: [0, 4, 4, 0] },
       })),
+    }],
+  }
+
+  const tendenciaRSOption = !stats ? {} : (() => {
+    const meses = [...new Set(stats.rs.tendencia.map(t => t.mes))].sort()
+    const plataformas = [...new Set(stats.rs.tendencia.map(t => t.plataforma))].sort()
+    return {
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { data: plataformas, bottom: 0, textStyle: { fontSize: 10 }, itemWidth: 12, itemHeight: 8 },
+      grid: { left: 40, right: 16, top: 8, bottom: 60 },
+      xAxis: {
+        type: 'category',
+        data: meses.map(m => dayjs(m).format('MMM YY')),
+        axisLabel: { color: '#666', fontSize: 11 },
+      },
+      yAxis: { type: 'value', axisLabel: { color: '#666', fontSize: 11 } },
+      series: plataformas.map(plat => ({
+        name: plat,
+        type: 'bar',
+        stack: 'total',
+        data: meses.map(mes => stats.rs.tendencia.find(t => t.mes === mes && t.plataforma === plat)?.total ?? 0),
+        itemStyle: { color: PLAT_COLORS[plat] ?? '#999' },
+      })),
+    }
+  })()
+
+  const plataformaPieOption = !stats ? {} : {
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    series: [{
+      type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'],
+      data: stats.rs.por_plataforma.map(p => ({
+        name: p.plataforma, value: p.total,
+        itemStyle: { color: PLAT_COLORS[p.plataforma] ?? '#722ed1' },
+      })),
+      label: { show: false },
+    }],
+  }
+
+  const mapaRSOption = !stats || !mapReady ? {} : {
+    tooltip: {
+      trigger: 'item',
+      formatter: (p: any) => p.value ? `<b>${p.name}</b><br/>${p.value.toLocaleString()} reportes` : p.name,
+    },
+    visualMap: {
+      min: 0, max: Math.max(...stats.rs.por_estado.map(e => e.total), 1),
+      inRange: { color: ['#f5e8ff', '#722ed1'] },
+      text: ['Alto', 'Bajo'], textStyle: { color: '#666', fontSize: 11 },
+      calculable: true, orient: 'horizontal', left: 'center', bottom: 8,
+    },
+    series: [{
+      type: 'map', map: 'Mexico', roam: false,
+      emphasis: { label: { show: true }, itemStyle: { areaColor: FMRE_GOLD } },
+      data: stats.rs.por_estado.map(e => ({ name: e.estado, value: e.total })),
+      nameMap: {
+        'Baja California': 'Baja California',
+        'Baja California Sur': 'Baja California Sur',
+        'Ciudad de México': 'Ciudad De México',
+        'Estado De México': 'México',
+      },
     }],
   }
 
@@ -875,18 +936,72 @@ export default function PublicFMREPage() {
           </Paragraph>
 
           <Row gutter={[16, 16]}>
-            <Col xs={24} lg={12}>
-              <Card title="Reportes por plataforma" size="small" className="card-shadow">
-                {isLoading ? <Spin /> : (
-                  <ReactECharts option={plataformaOption}
-                    style={{ height: Math.max(120, stats!.rs.por_plataforma.length * 44) }} />
-                )}
+            {/* Tendencia mensual RS */}
+            <Col xs={24} lg={14}>
+              <Card title={<span><RiseOutlined style={{ color: '#722ed1', marginRight: 8 }} />Actividad mensual por plataforma (últimos 12 meses)</span>}
+                    size="small" className="card-shadow">
+                {isLoading ? <Spin /> : <ReactECharts option={tendenciaRSOption} style={{ height: 220 }} />}
               </Card>
             </Col>
 
-            <Col xs={24} lg={12}>
-              <Card title={<span><StarOutlined style={{ color: '#722ed1', marginRight: 8 }} />Top 10 estaciones más activas en RS</span>}
+            {/* Distribución por plataforma pie + tabla */}
+            <Col xs={24} lg={10}>
+              <Card title={<span><GlobalOutlined style={{ color: '#722ed1', marginRight: 8 }} />Distribución por plataforma</span>}
                     size="small" className="card-shadow">
+                {isLoading ? <Spin /> : (() => {
+                  const total = stats!.rs.por_plataforma.reduce((s, r) => s + r.total, 0)
+                  return (
+                    <Row align="middle">
+                      <Col span={12}>
+                        <ReactECharts option={plataformaPieOption} style={{ height: 220 }} />
+                      </Col>
+                      <Col span={12} style={{ paddingLeft: 8 }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr>
+                              <th style={{ textAlign: 'left', fontSize: 11, color: '#aaa', paddingBottom: 6, fontWeight: 500 }}>Plataforma</th>
+                              <th style={{ textAlign: 'right', fontSize: 11, color: '#aaa', paddingBottom: 6, fontWeight: 500 }}>Rep.</th>
+                              <th style={{ textAlign: 'right', fontSize: 11, color: '#aaa', paddingBottom: 6, fontWeight: 500 }}>%</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {stats!.rs.por_plataforma.map(p => (
+                              <tr key={p.plataforma} style={{ borderTop: '1px solid #f0f0f0' }}>
+                                <td style={{ padding: '3px 0', fontSize: 11, color: '#333', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: PLAT_COLORS[p.plataforma] ?? '#722ed1', marginRight: 5, flexShrink: 0 }} />
+                                  {p.plataforma}
+                                </td>
+                                <td style={{ textAlign: 'right', fontSize: 12, fontWeight: 700, paddingRight: 6 }}>
+                                  {p.total.toLocaleString()}
+                                </td>
+                                <td style={{ textAlign: 'right', fontSize: 12, color: '#888' }}>
+                                  {((p.total / total) * 100).toFixed(1)}%
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </Col>
+                    </Row>
+                  )
+                })()}
+              </Card>
+            </Col>
+
+            {/* Mapa RS */}
+            <Col xs={24} lg={14} style={{ display: 'flex', flexDirection: 'column' }}>
+              <Card title={<span><GlobalOutlined style={{ color: '#722ed1', marginRight: 8 }} />Cobertura por estado</span>}
+                    size="small" className="card-shadow" style={{ flex: 1 }}>
+                {isLoading || !mapReady
+                  ? <div style={{ height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
+                  : <ReactECharts option={mapaRSOption} style={{ height: 320 }} />}
+              </Card>
+            </Col>
+
+            {/* Top 10 RS */}
+            <Col xs={24} lg={10} style={{ display: 'flex', flexDirection: 'column' }}>
+              <Card title={<span><StarOutlined style={{ color: '#722ed1', marginRight: 8 }} />Top 10 estaciones más activas en RS</span>}
+                    size="small" className="card-shadow" style={{ flex: 1 }}>
                 {isLoading ? <Spin /> : (
                   <div>
                     {stats!.rs.top_indicativos.map((op, i) => (
@@ -912,6 +1027,37 @@ export default function PublicFMREPage() {
                 )}
               </Card>
             </Col>
+
+            {/* Participación por estado RS */}
+            {stats && stats.rs.por_estado.length > 0 && (
+              <Col xs={24}>
+                <Card title={<span><RadarChartOutlined style={{ color: '#722ed1', marginRight: 8 }} />Participación por Estado</span>}
+                      size="small" className="card-shadow">
+                  {isLoading ? <Spin /> : (
+                    <ReactECharts
+                      option={{
+                        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+                          formatter: (p: any) => `<b>${p[0].name}</b>: ${p[0].value.toLocaleString()} reportes` },
+                        grid: { left: 130, right: 48, top: 8, bottom: 8, containLabel: false },
+                        xAxis: { type: 'value', axisLabel: { color: '#888', fontSize: 11 } },
+                        yAxis: { type: 'category', axisLabel: { color: '#333', fontSize: 12 },
+                          data: stats!.rs.por_estado.slice(0, 25).map(e => e.estado).reverse() },
+                        series: [{
+                          type: 'bar', barMaxWidth: 22,
+                          data: stats!.rs.por_estado.slice(0, 25).map((e, i) => ({
+                            value: e.total,
+                            itemStyle: { color: `hsl(${280 - i * 6}, 60%, ${45 + i * 1.5}%)`, borderRadius: [0, 4, 4, 0] },
+                          })).reverse(),
+                          label: { show: true, position: 'right', fontSize: 11, color: '#555',
+                            formatter: (p: any) => p.value.toLocaleString() },
+                        }],
+                      }}
+                      style={{ height: Math.max(300, stats!.rs.por_estado.slice(0, 25).length * 28) }}
+                    />
+                  )}
+                </Card>
+              </Col>
+            )}
           </Row>
         </div>
 
