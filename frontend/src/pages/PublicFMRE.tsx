@@ -550,8 +550,8 @@ export default function PublicFMREPage() {
           <div style={{ fontSize: 32, marginBottom: 8 }}>📡</div>
           <Title level={3} style={{ color: FMRE_DARK, margin: 0 }}>¿Tomaron mi reporte?</Title>
           <Paragraph style={{ color: '#666', marginTop: 8, marginBottom: 24 }}>
-            Consulta los reportes de cualquier estación radioaficionada registrados en el sistema.
-            Ingresa un indicativo y ve su historial de actividad en RF y redes sociales.
+            Consulta los reportes de tu estación registrados en el sistema.
+            Ingresa tu indicativo y ve el historial de actividad en RF y redes sociales.
           </Paragraph>
           <Input.Search
             size="large"
@@ -698,11 +698,10 @@ export default function PublicFMREPage() {
             <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>
               Actividad por Sistemas RF
             </Title>
-            <Tag color={FMRE_BLUE} style={{ fontWeight: 700 }}>HF · VHF · UHF · Digital</Tag>
+            <Tag color={FMRE_BLUE} style={{ fontWeight: 700 }}>HF · Sistemas RoIP</Tag>
           </div>
           <Paragraph style={{ color: '#666', marginBottom: 24, maxWidth: 700 }}>
-            Registro de estaciones participantes en boletines dominicales, retransmisiones y
-            actividades especiales de la FMRE a través de sistemas de HF, AllStar, IRLP, DMR y otros.
+            Registro de estaciones participantes en boletines dominicales a través de sistemas de HF, AllStar, IRLP, DMR y otros.
           </Paragraph>
 
           <Row gutter={[16, 16]}>
