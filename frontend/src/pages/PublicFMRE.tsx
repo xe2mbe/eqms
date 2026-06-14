@@ -388,6 +388,74 @@ export default function PublicFMREPage() {
         </div>
       )}
 
+      {/* ── CONVOCATORIA ── */}
+      <section style={{ background: FMRE_DARK, padding: '32px 32px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+            <span style={{ fontSize: 22 }}>📅</span>
+            <span style={{ color: FMRE_GOLD, fontWeight: 800, fontSize: 18, letterSpacing: 1 }}>
+              ¿Cómo escuchar el Boletín Dominical?
+            </span>
+            <span style={{
+              background: FMRE_GOLD, color: FMRE_DARK, fontWeight: 800,
+              fontSize: 12, padding: '2px 10px', borderRadius: 20, marginLeft: 8,
+            }}>Todos los Domingos · 09:00 h (UTC−6)</span>
+          </div>
+
+          <Row gutter={[16, 16]}>
+            {/* HF */}
+            <Col xs={24} sm={12} lg={6}>
+              <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 20px', borderLeft: `4px solid ${SISTEMA_COLORS.HF}` }}>
+                <div style={{ color: SISTEMA_COLORS.HF, fontWeight: 800, fontSize: 13, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  📻 HF
+                </div>
+                <div style={{ color: 'white', fontSize: 15, fontWeight: 700, marginBottom: 4 }}>7.082 MHz</div>
+                <div style={{ color: '#8ab4e0', fontSize: 12, marginBottom: 10 }}>LSB</div>
+                <div style={{ color: 'white', fontSize: 15, fontWeight: 700, marginBottom: 4 }}>14.120 MHz</div>
+                <div style={{ color: '#8ab4e0', fontSize: 12 }}>USB</div>
+              </div>
+            </Col>
+
+            {/* IRLP + ASL */}
+            <Col xs={24} sm={12} lg={6}>
+              <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 20px', borderLeft: `4px solid ${SISTEMA_COLORS.IRLP}` }}>
+                <div style={{ color: SISTEMA_COLORS.IRLP, fontWeight: 800, fontSize: 13, marginBottom: 10 }}>
+                  🔗 VoIP / Enlace
+                </div>
+                <div style={{ color: 'white', fontSize: 14, fontWeight: 700, marginBottom: 2 }}>IRLP</div>
+                <div style={{ color: '#8ab4e0', fontSize: 13, marginBottom: 10 }}>Reflector <strong style={{ color: 'white' }}>0077</strong></div>
+                <div style={{ color: 'white', fontSize: 14, fontWeight: 700, marginBottom: 2 }}>AllStar Link</div>
+                <div style={{ color: '#8ab4e0', fontSize: 13 }}>Hub <strong style={{ color: 'white' }}>299081</strong></div>
+              </div>
+            </Col>
+
+            {/* Crossconexiones */}
+            <Col xs={24} sm={24} lg={12}>
+              <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 20px', borderLeft: '4px solid #52c41a' }}>
+                <div style={{ color: '#52c41a', fontWeight: 800, fontSize: 13, marginBottom: 12 }}>
+                  🔁 Crossconexiones activas
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
+                    <div style={{ color: SISTEMA_COLORS.DMR, fontWeight: 700, fontSize: 12 }}>DMR</div>
+                    <div style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>TG 33450</div>
+                    <div style={{ color: '#8ab4e0', fontSize: 11 }}>BrandMeister</div>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
+                    <div style={{ color: SISTEMA_COLORS.FUSION, fontWeight: 700, fontSize: 12 }}>C4FM / Fusion</div>
+                    <div style={{ color: '#8ab4e0', fontSize: 12, marginTop: 4 }}>Crossconexión vía Hub ASL</div>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
+                    <div style={{ color: SISTEMA_COLORS.DSTAR, fontWeight: 700, fontSize: 12 }}>D-Star</div>
+                    <div style={{ color: '#8ab4e0', fontSize: 12, marginTop: 4 }}>Crossconexión vía Hub ASL</div>
+                  </div>
+                </div>
+              </div>
+            </Col>
+          </Row>
+        </div>
+      </section>
+
       {/* ── BÚSQUEDA ── */}
       <section style={{ background: 'white', borderBottom: `3px solid ${FMRE_BLUE}`, padding: '40px 32px' }}>
         <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
