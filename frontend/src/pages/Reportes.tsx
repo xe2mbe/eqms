@@ -269,8 +269,8 @@ export default function ReportesPage() {
             placeholder={['Fecha inicio', 'Fecha fin']}
             onChange={(d) => setTempFilters(prev => ({
               ...prev,
-              fecha_inicio: d?.[0]?.format('YYYY-MM-DDTHH:mm:ss'),
-              fecha_fin: d?.[1]?.format('YYYY-MM-DDTHH:mm:ss'),
+              fecha_inicio: d?.[0]?.startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+              fecha_fin: d?.[1]?.endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
             }))}
           />
           <Select
