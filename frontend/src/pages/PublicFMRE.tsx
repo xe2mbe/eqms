@@ -233,7 +233,6 @@ export default function PublicFMREPage() {
         </div>
         <div style={{ color: '#8ab4e0', fontSize: 12, textAlign: 'right' }}>
           <div style={{ color: FMRE_GOLD, fontWeight: 700, fontSize: 14 }}>Sistema QMS</div>
-          <div>Gestión de Actividad en Red</div>
         </div>
       </header>
 
@@ -599,7 +598,6 @@ export default function PublicFMREPage() {
             <img src="/LogoFMRE.png" alt="FMRE" style={{ height: 36, opacity: 0.9 }} />
             <div>
               <div style={{ color: 'white', fontWeight: 800, fontSize: 14 }}>Federación Mexicana de Radioexperimentadores, A.C.</div>
-              <div style={{ color: '#8ab4e0', fontSize: 11 }}>Sistema QMS — Gestión de Actividad en Red</div>
             </div>
           </div>
           <div style={{ color: '#8ab4e0', fontSize: 11, textAlign: 'right' }}>
