@@ -95,7 +95,8 @@ type Stats = {
 }
 
 type EstacionItem = { indicativo: string; nombre: string | null; total: number; ultima: string | null }
-type UltimoEvDetalle = { evento: string | null; fecha: string | null; participantes: { indicativo: string; nombre: string | null; total: number; sistemas: Record<string, number>; estado: string | null }[] }
+type UltimoEvDetalle   = { evento: string | null; fecha: string | null; participantes: { indicativo: string; nombre: string | null; total: number; sistemas: Record<string, number>; estado: string | null }[] }
+type UltimoEvRSDetalle = { evento: string | null; fecha: string | null; participantes: { indicativo: string; nombre: string | null; total: number; plataformas: Record<string, number>; estado: string | null }[] }
 
 type BusquedaResult = {
   indicativo: string
@@ -128,13 +129,16 @@ export default function PublicFMREPage() {
   const estRFRef    = useRef<HTMLDivElement>(null)
   const estRSRef    = useRef<HTMLDivElement>(null)
   const evRef       = useRef<HTMLDivElement>(null)
+  const evRSRef     = useRef<HTMLDivElement>(null)
 
-  const [estacionesRF, setEstacionesRF]       = useState<EstacionItem[] | null>(null)
-  const [estacionesRS, setEstacionesRS]       = useState<EstacionItem[] | null>(null)
-  const [ultimoEvDetalle, setUltimoEvDetalle] = useState<UltimoEvDetalle | null>(null)
-  const [loadingEstRF, setLoadingEstRF]       = useState(false)
-  const [loadingEstRS, setLoadingEstRS]       = useState(false)
-  const [loadingEv, setLoadingEv]             = useState(false)
+  const [estacionesRF, setEstacionesRF]           = useState<EstacionItem[] | null>(null)
+  const [estacionesRS, setEstacionesRS]           = useState<EstacionItem[] | null>(null)
+  const [ultimoEvDetalle, setUltimoEvDetalle]     = useState<UltimoEvDetalle | null>(null)
+  const [ultimoEvRSDetalle, setUltimoEvRSDetalle] = useState<UltimoEvRSDetalle | null>(null)
+  const [loadingEstRF, setLoadingEstRF]           = useState(false)
+  const [loadingEstRS, setLoadingEstRS]           = useState(false)
+  const [loadingEv, setLoadingEv]                 = useState(false)
+  const [loadingEvRS, setLoadingEvRS]             = useState(false)
 
   const handleCardClick = async (label: string) => {
     if (label === 'Reportes RF') {
@@ -168,6 +172,16 @@ export default function PublicFMREPage() {
       setLoadingEv(false)
     }
     setTimeout(() => evRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
+  }
+
+  const handleUltimoEventoRS = async () => {
+    if (!ultimoEvRSDetalle) {
+      setLoadingEvRS(true)
+      const { data } = await axios.get('/api/public/ultimo-evento-rs-participantes')
+      setUltimoEvRSDetalle(data)
+      setLoadingEvRS(false)
+    }
+    setTimeout(() => evRSRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
   }
 
   const handleBuscar = async () => {
@@ -359,7 +373,12 @@ export default function PublicFMREPage() {
 
       {/* ── ÚLTIMO EVENTO RS ── */}
       {stats?.ultimo_evento_rs && (
-        <div style={{ background: '#722ed1', padding: '10px 32px', textAlign: 'center' }}>
+        <div
+          onClick={handleUltimoEventoRS}
+          style={{ background: '#722ed1', padding: '10px 32px', textAlign: 'center', cursor: 'pointer' }}
+          onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(0.88)')}
+          onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
+        >
           <Text style={{ fontWeight: 700, color: 'white' }}>
             <GlobalOutlined style={{ marginRight: 8 }} />
             Último evento RS: <strong>{stats.ultimo_evento_rs.tipo}</strong> —{' '}
@@ -751,14 +770,14 @@ export default function PublicFMREPage() {
           </div>
         )}
 
-        {/* ── ÚLTIMO EVENTO DETALLE ── */}
+        {/* ── ÚLTIMO EVENTO RF DETALLE ── */}
         {(ultimoEvDetalle || loadingEv) && (
           <div ref={evRef} style={{ marginBottom: 40, scrollMarginTop: 24 }}>
             <Divider style={{ borderColor: '#d0d7e3' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
               <div style={{ width: 4, height: 28, background: FMRE_GOLD, borderRadius: 2 }} />
               <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>
-                {ultimoEvDetalle?.evento ?? 'Último evento'} — {ultimoEvDetalle?.fecha ?? ''}
+                {ultimoEvDetalle?.evento ?? 'Último evento RF'} — {ultimoEvDetalle?.fecha ?? ''}
               </Title>
             </div>
             {loadingEv ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (
@@ -791,6 +810,54 @@ export default function PublicFMREPage() {
                         }
                       >
                         <Tag color="gold" style={{ cursor: 'pointer', fontWeight: 700 }}>{v.toLocaleString()} ▾</Tag>
+                      </Popover>
+                    )},
+                ]}
+              />
+            )}
+          </div>
+        )}
+
+        {/* ── ÚLTIMO EVENTO RS DETALLE ── */}
+        {(ultimoEvRSDetalle || loadingEvRS) && (
+          <div ref={evRSRef} style={{ marginBottom: 40, scrollMarginTop: 24 }}>
+            <Divider style={{ borderColor: '#d0d7e3' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 4, height: 28, background: '#722ed1', borderRadius: 2 }} />
+              <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>
+                {ultimoEvRSDetalle?.evento ?? 'Último evento RS'} — {ultimoEvRSDetalle?.fecha ?? ''}
+              </Title>
+            </div>
+            {loadingEvRS ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (
+              <Table
+                dataSource={ultimoEvRSDetalle?.participantes ?? []}
+                rowKey="indicativo"
+                size="small"
+                pagination={{ pageSize: 50, showSizeChanger: false }}
+                columns={[
+                  { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => (
+                    <span style={{ fontWeight: 700, color: i < 3 ? '#722ed1' : '#8c8c8c' }}>{i + 1}</span>
+                  )},
+                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: '#722ed1' }}>{v}</strong> },
+                  { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? <span style={{ color: '#bbb', fontStyle: 'italic' }}>Sin registro</span> },
+                  { title: 'Estado', dataIndex: 'estado', width: 120, ellipsis: true, render: (v: string | null) => v ?? '—' },
+                  { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const,
+                    render: (v: number, r: { plataformas: Record<string, number> }) => (
+                      <Popover
+                        trigger="click"
+                        title="Desglose por plataforma"
+                        content={
+                          <div style={{ minWidth: 160 }}>
+                            {Object.entries(r.plataformas).map(([p, n]) => (
+                              <div key={p} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '2px 0' }}>
+                                <Tag color={PLAT_COLORS[p] ?? '#722ed1'} style={{ margin: 0 }}>{p}</Tag>
+                                <strong>{n}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        }
+                      >
+                        <Tag color="purple" style={{ cursor: 'pointer', fontWeight: 700 }}>{v.toLocaleString()} ▾</Tag>
                       </Popover>
                     )},
                 ]}

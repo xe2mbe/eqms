@@ -209,6 +209,49 @@ def ultimo_evento_participantes(db: Session = Depends(get_db)):
     return {"evento": ultimo[0], "fecha": str(ultimo[1]), "participantes": participantes}
 
 
+@router.get("/ultimo-evento-rs-participantes")
+def ultimo_evento_rs_participantes(db: Session = Depends(get_db)):
+    ultimo = db.execute(text("""
+        SELECT e.tipo, DATE_TRUNC('day', MAX(r.fecha_reporte))::date AS fecha
+        FROM reportes_rs r JOIN eventos e ON e.id = r.evento_id
+        WHERE r.fecha_reporte >= NOW() - INTERVAL '30 days'
+        GROUP BY e.tipo ORDER BY fecha DESC LIMIT 1
+    """)).first()
+    if not ultimo:
+        return {"evento": None, "fecha": None, "participantes": []}
+    rows = db.execute(text("""
+        SELECT r.indicativo,
+               COALESCE(MAX(r.operador), MAX(re.nombre_completo)) as nombre,
+               COALESCE(p.nombre, 'N/D') as plataforma,
+               COUNT(*) as total,
+               MAX(r.estado) as estado
+        FROM reportes_rs r
+        JOIN eventos e ON e.id = r.evento_id
+        LEFT JOIN radioexperimentadores re ON UPPER(re.indicativo) = UPPER(r.indicativo)
+        LEFT JOIN plataformas_rs p ON p.id = r.plataforma_id
+        WHERE e.tipo = :tipo AND DATE_TRUNC('day', r.fecha_reporte) = :fecha
+        GROUP BY r.indicativo, p.nombre ORDER BY r.indicativo, total DESC
+    """), {"tipo": ultimo[0], "fecha": str(ultimo[1])}).fetchall()
+
+    from collections import defaultdict
+    indicativos: dict = defaultdict(lambda: {"nombre": None, "total": 0, "plataformas": {}, "estado": None})
+    for r in rows:
+        ind = r[0]
+        indicativos[ind]["nombre"] = r[1]
+        indicativos[ind]["total"] += int(r[3])
+        indicativos[ind]["plataformas"][r[2]] = int(r[3])
+        if r[4] and not indicativos[ind]["estado"]:
+            indicativos[ind]["estado"] = r[4]
+
+    participantes = sorted(
+        [{"indicativo": k, "nombre": v["nombre"], "total": v["total"],
+          "plataformas": v["plataformas"], "estado": v["estado"]}
+         for k, v in indicativos.items()],
+        key=lambda x: -x["total"]
+    )
+    return {"evento": ultimo[0], "fecha": str(ultimo[1]), "participantes": participantes}
+
+
 @router.get("/buscar")
 def buscar_indicativo(
     indicativo: str = Query(..., min_length=2, max_length=20),
