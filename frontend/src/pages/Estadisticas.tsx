@@ -59,7 +59,7 @@ export default function EstadisticasPage() {
     setLoading(true)
     const p = { fecha_inicio: dateRange[0], fecha_fin: dateRange[1], evento_id: evento }
     const results = await Promise.allSettled([
-      estadisticasApi.tendencia({ ...p, granularidad: 'dia' }),
+      estadisticasApi.tendencia({ ...p, granularidad: 'mes' }),
       estadisticasApi.porSistema(p),
       estadisticasApi.porEstado(p),
       client.get('/estadisticas/horario', { params: p }),
@@ -88,7 +88,7 @@ export default function EstadisticasPage() {
   const lineOption = {
     tooltip: { trigger: 'axis' },
     grid: { left: 16, right: 16, top: 16, bottom: 8, containLabel: true },
-    xAxis: { type: 'category', data: tendencia.map(t => dayjs(t.periodo).format('DD/MM')) },
+    xAxis: { type: 'category', data: tendencia.map(t => dayjs(t.periodo).format('MMM YY')) },
     yAxis: { type: 'value' },
     series: [{ data: tendencia.map(t => t.total), type: 'line', smooth: true,
       itemStyle: { color: '#5470c6' },
@@ -325,7 +325,7 @@ export default function EstadisticasPage() {
             children: (
               <Row gutter={[16, 16]}>
                 <Col xs={24}>
-                  <Card title="Tendencia diaria de reportes" className="card-shadow">
+                  <Card title="Tendencia mensual de reportes" className="card-shadow">
                     {tendencia.length > 0
                       ? <ReactECharts option={lineOption} style={{ height: 240 }} notMerge />
                       : <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} />
