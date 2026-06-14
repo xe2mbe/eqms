@@ -673,6 +673,27 @@ def tendencia_eventos(
     return [{"mes": str(r[0]), "tipo": r[1], "total": r[2]} for r in rows]
 
 
+@router.get("/sistemas-por-evento")
+def sistemas_por_evento(
+    fecha_inicio: Optional[datetime] = None,
+    fecha_fin: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+):
+    """Distribución de sistemas por tipo de evento."""
+    rows = db.execute(text("""
+        SELECT e.tipo, r.sistema, COUNT(*) AS total
+        FROM reportes r
+        JOIN eventos e ON e.id = r.evento_id
+        WHERE r.evento_id IS NOT NULL
+          AND r.sistema IS NOT NULL
+          AND (:fi IS NULL OR r.fecha_reporte >= :fi)
+          AND (:ff IS NULL OR r.fecha_reporte <= :ff)
+        GROUP BY e.tipo, r.sistema
+        ORDER BY e.tipo, total DESC
+    """), {"fi": fecha_inicio, "ff": fecha_fin}).fetchall()
+    return [{"tipo": r[0], "sistema": r[1], "total": r[2]} for r in rows]
+
+
 @router.get("/ranking-evento")
 def ranking_evento(
     evento_id: int,

@@ -43,6 +43,8 @@ export default function EstadisticasPage() {
   const [sistZona, setSistZona]         = useState<any[]>([])
   const [tendEv, setTendEv]             = useState<any[]>([])
   const [eventosFiltro, setEventosFiltro] = useState<string[]>([])
+  const [sistPorEv, setSistPorEv]       = useState<{ tipo: string; sistema: string; total: number }[]>([])
+  const [sistEvFiltro, setSistEvFiltro] = useState<string[]>([])
   const [cobertura, setCobertura]       = useState<CoberturaEstado[]>([])
 
   // Fetch oldest record date on mount to set default range
@@ -73,6 +75,7 @@ export default function EstadisticasPage() {
       client.get('/estadisticas/tendencia-eventos', { params: p }),
       estadisticasApi.coberturaEstados(p),
       estadisticasApi.operadoresPeriodo(p),
+      client.get('/estadisticas/sistemas-por-evento', { params: p }),
     ])
     const ok = (i: number) =>
       results[i].status === 'fulfilled' ? (results[i] as PromiseFulfilledResult<any>).value.data : []
@@ -80,7 +83,7 @@ export default function EstadisticasPage() {
     setHorario(ok(3));   setTopOps(ok(4));     setZonaAct(ok(5))
     setNuevos(ok(6));    setRetencion(ok(7));  setRstZona(ok(8))
     setSistZona(ok(9));  setTendEv(ok(10));    setCobertura(ok(11))
-    setRankingOps(ok(12))
+    setRankingOps(ok(12)); setSistPorEv(ok(13))
     setLoading(false)
   }
 
@@ -124,19 +127,22 @@ export default function EstadisticasPage() {
     }],
   }
 
-  const radarSistemas = {
-    tooltip: {},
-    radar: {
-      indicator: porSistema.slice(0, 8).map(s => ({
-        name: s.sistema, max: Math.max(...porSistema.map(x => x.total), 1),
-      })),
-      splitArea: { areaStyle: { color: ['rgba(84,112,198,0.04)', 'rgba(84,112,198,0.08)'] } },
-    },
-    series: [{ type: 'radar', data: [{ value: porSistema.slice(0, 8).map(s => s.total), name: 'Reportes',
-      itemStyle: { color: '#5470c6' },
-      lineStyle: { color: '#5470c6', width: 2 },
-      areaStyle: { color: 'rgba(84,112,198,0.25)' },
-    }] }],
+  const sistPorEvData = sistPorEv.length > 0 ? sistPorEv
+    : porSistema.map(r => ({ tipo: 'General', sistema: r.sistema, total: r.total }))
+  const sistEvTipos    = [...new Set(sistPorEvData.map(r => r.tipo))].sort()
+  const sistEvSistemas = [...new Set(sistPorEvData.map(r => r.sistema))].sort()
+  const sistEvFiltrados = sistEvFiltro.length > 0 ? sistEvFiltro : sistEvTipos
+  const sistPorEvOption = {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: sistEvSistemas, bottom: 0, type: 'scroll' },
+    grid: { left: 8, right: 8, top: 10, bottom: 50, containLabel: true },
+    xAxis: { type: 'category', data: sistEvFiltrados, axisLabel: { rotate: 20, fontSize: 11 } },
+    yAxis: { type: 'value' },
+    series: sistEvSistemas.map((s, i) => ({
+      name: s, type: 'bar', stack: 'se',
+      data: sistEvFiltrados.map(t => sistPorEvData.find(r => r.tipo === t && r.sistema === s)?.total ?? 0),
+      itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] },
+    })),
   }
 
   const horarioOption = {
@@ -380,9 +386,27 @@ export default function EstadisticasPage() {
                   </Card>
                 </Col>
                 <Col xs={24} lg={12}>
-                  <Card title="Actividad por Sistema" className="card-shadow">
-                    {porSistema.length > 0
-                      ? <ReactECharts option={radarSistemas} style={{ height: 320 }} notMerge />
+                  <Card
+                    title="Actividad por Sistema"
+                    className="card-shadow"
+                    extra={
+                      sistEvTipos.length > 1 && (
+                        <Select
+                          mode="multiple"
+                          allowClear
+                          placeholder="Todos los eventos"
+                          style={{ minWidth: 180 }}
+                          size="small"
+                          value={sistEvFiltro}
+                          onChange={setSistEvFiltro}
+                          options={sistEvTipos.map(t => ({ value: t, label: t }))}
+                          maxTagCount="responsive"
+                        />
+                      )
+                    }
+                  >
+                    {sistPorEvData.length > 0
+                      ? <ReactECharts option={sistPorEvOption} style={{ height: 320 }} notMerge />
                       : <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 60 }} />
                     }
                   </Card>
