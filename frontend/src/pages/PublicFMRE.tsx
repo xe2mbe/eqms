@@ -506,7 +506,7 @@ export default function PublicFMREPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
             <div style={{ width: 4, height: 28, background: FMRE_BLUE, borderRadius: 2 }} />
             <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>
-              Actividad Radioaficionada — Tradicional (RF)
+              Actividad por Sistemas RF
             </Title>
             <Tag color={FMRE_BLUE} style={{ fontWeight: 700 }}>HF · VHF · UHF · Digital</Tag>
           </div>
@@ -553,11 +553,19 @@ export default function PublicFMREPage() {
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '6px 0', borderBottom: i < 9 ? '1px solid #f0f0f0' : undefined,
                       }}>
-                        <span style={{
-                          width: 24, height: 24, borderRadius: '50%', background: i < 3 ? FMRE_GOLD : FMRE_LIGHT,
-                          color: i < 3 ? FMRE_DARK : '#666', fontWeight: 700, fontSize: 12,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                        }}>{i + 1}</span>
+                        {i === 0 ? (
+                          <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥇</span>
+                        ) : i === 1 ? (
+                          <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥈</span>
+                        ) : i === 2 ? (
+                          <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥉</span>
+                        ) : (
+                          <span style={{
+                            width: 24, height: 24, borderRadius: '50%', background: FMRE_LIGHT,
+                            color: '#666', fontWeight: 700, fontSize: 12,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                          }}>{i + 1}</span>
+                        )}
                         <span style={{ fontWeight: 700, color: FMRE_BLUE, minWidth: 70 }}>{op.indicativo}</span>
                         <span style={{ color: '#666', fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {op.nombre ?? '—'}

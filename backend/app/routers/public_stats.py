@@ -41,6 +41,7 @@ def public_stats(db: Session = Depends(get_db)):
         SELECT r.indicativo, MAX(re.nombre_completo) as nombre, COUNT(*) as total
         FROM reportes r
         LEFT JOIN radioexperimentadores re ON re.indicativo = r.indicativo
+        WHERE UPPER(r.indicativo) NOT LIKE '%SWL%'
         GROUP BY r.indicativo ORDER BY total DESC LIMIT 10
     """)).fetchall()
 
