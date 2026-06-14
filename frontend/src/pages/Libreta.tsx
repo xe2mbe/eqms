@@ -167,8 +167,10 @@ export default function LibretaPage() {
   // Ranking del evento y estadísticas de sesión
   type RankingEntry = { fecha: string; total_reportes: number; total_estaciones: number; posicion: number }
   type MiRankingEntry = { fecha: string; total: number; posicion: number }
+  type RankingOpEntry = { usuario_id: number; nombre: string; total: number; posicion: number }
   const [rankingEvento, setRankingEvento] = useState<RankingEntry[]>([])
   const [miRankingPersonal, setMiRankingPersonal] = useState<MiRankingEntry[]>([])
+  const [rankingOpHistorico, setRankingOpHistorico] = useState<RankingOpEntry[]>([])
   const prevPosicionRef = useRef<number | null>(null)
 
   // Tabla resumen de reportes guardados
@@ -274,7 +276,7 @@ export default function LibretaPage() {
     try {
       const fecha = dayjs(cfg.fecha)
       const eventoId = eventos.find(e => e.tipo === cfg.tipo_evento)?.id
-      const [reportesRes, rankingRes, miRankingRes] = await Promise.all([
+      const [reportesRes, rankingRes, miRankingRes, rankingOpRes] = await Promise.all([
         reportesApi.list({
           fecha_inicio: fecha.startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
           fecha_fin: fecha.endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
@@ -283,10 +285,12 @@ export default function LibretaPage() {
         }),
         eventoId ? estadisticasApi.rankingEvento(eventoId) : Promise.resolve({ data: [] as any }),
         eventoId ? estadisticasApi.miRankingEvento(eventoId) : Promise.resolve({ data: [] as any }),
+        eventoId ? estadisticasApi.rankingOperadores(eventoId) : Promise.resolve({ data: [] as any }),
       ])
       setResumen(reportesRes.data.items)
       setRankingEvento(rankingRes.data)
       setMiRankingPersonal(miRankingRes.data)
+      setRankingOpHistorico(rankingOpRes.data)
     } catch { /* silencioso */ } finally {
       setLoadingResumen(false)
     }
@@ -320,6 +324,19 @@ export default function LibretaPage() {
     return { totalQSOs, estacionesUnicas, posicion, totalSesiones, esRecordQSOs, esRecordEstaciones }
   }, [resumen, rankingEvento, fechaActual])
 
+  // Ranking de operadores de la misma fecha+evento (client-side)
+  const rankingOpSesion = useMemo(() => {
+    const counts: Record<number, { usuario_id: number; nombre: string; total: number }> = {}
+    for (const r of resumen) {
+      if (!r.capturado_por) continue
+      if (!counts[r.capturado_por])
+        counts[r.capturado_por] = { usuario_id: r.capturado_por, nombre: r.capturado_por_nombre || `Op#${r.capturado_por}`, total: 0 }
+      counts[r.capturado_por].total++
+    }
+    return Object.values(counts)
+      .sort((a, b) => b.total - a.total)
+      .map((e, i) => ({ ...e, posicion: i + 1 }))
+  }, [resumen])
 
   useEffect(() => {
     const { posicion, totalQSOs, estacionesUnicas } = statsActuales
@@ -1480,6 +1497,74 @@ export default function LibretaPage() {
                       </div>
                       <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, fontWeight: 600 }}>
                         {`de ${miRankingPersonal.length} ses. · ${hoy.total} QSOs hoy`}
+                      </div>
+                    </div>
+                  </Col>
+                )
+              })()}
+              {/* Tarjeta 5: ranking de operadores en esta fecha+evento */}
+              {rankingOpSesion.length > 0 && (() => {
+                const miOp = rankingOpSesion.find(r => r.usuario_id === user?.id)
+                const totalOps = rankingOpSesion.length + (miOp ? 0 : 1)
+                const posicion = miOp?.posicion ?? totalOps
+                const total = miOp?.total ?? 0
+                const esPrimero = posicion === 1
+                const esTop3 = posicion <= 3
+                return (
+                  <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
+                    <div style={{
+                      background: esPrimero
+                        ? 'linear-gradient(135deg, #096dd9 0%, #0050b3 100%)'
+                        : esTop3
+                          ? 'linear-gradient(135deg, #13c2c2 0%, #006d75 100%)'
+                          : 'linear-gradient(135deg, #434343 0%, #262626 100%)',
+                      borderRadius: 10, padding: '14px 18px', color: '#fff',
+                      boxShadow: esPrimero
+                        ? '0 4px 16px rgba(9,109,217,0.45)'
+                        : '0 4px 12px rgba(0,0,0,0.25)',
+                      transition: 'all 0.4s ease', height: '100%',
+                    }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
+                        👥 Ops en esta fecha
+                      </div>
+                      <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1.1 }}>
+                        {posicion === 1 ? '🥇' : posicion === 2 ? '🥈' : posicion === 3 ? '🥉' : `#${posicion}`}
+                      </div>
+                      <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, fontWeight: 600 }}>
+                        {`de ${totalOps} ops · ${total} QSOs hoy`}
+                      </div>
+                    </div>
+                  </Col>
+                )
+              })()}
+              {/* Tarjeta 6: ranking histórico de operadores del evento */}
+              {rankingOpHistorico.length > 0 && (() => {
+                const miOp = rankingOpHistorico.find(r => r.usuario_id === user?.id)
+                if (!miOp) return null
+                const esPrimero = miOp.posicion === 1
+                const esTop3 = miOp.posicion <= 3
+                return (
+                  <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
+                    <div style={{
+                      background: esPrimero
+                        ? 'linear-gradient(135deg, #389e0d 0%, #237804 100%)'
+                        : esTop3
+                          ? 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)'
+                          : 'linear-gradient(135deg, #595959 0%, #3d3d3d 100%)',
+                      borderRadius: 10, padding: '14px 18px', color: '#fff',
+                      boxShadow: esPrimero
+                        ? '0 4px 16px rgba(56,158,13,0.45)'
+                        : '0 4px 12px rgba(0,0,0,0.2)',
+                      transition: 'all 0.4s ease', height: '100%',
+                    }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
+                        📈 Ranking histórico ops
+                      </div>
+                      <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1.1 }}>
+                        {miOp.posicion === 1 ? '🥇' : miOp.posicion === 2 ? '🥈' : miOp.posicion === 3 ? '🥉' : `#${miOp.posicion}`}
+                      </div>
+                      <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, fontWeight: 600 }}>
+                        {`de ${rankingOpHistorico.length} ops · ${miOp.total} QSOs totales`}
                       </div>
                     </div>
                   </Col>
