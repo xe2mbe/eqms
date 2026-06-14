@@ -533,9 +533,9 @@ export default function PublicFMREPage() {
             </Col>
 
             {/* Mapa de México */}
-            <Col xs={24} lg={14}>
+            <Col xs={24} lg={14} style={{ display: 'flex', flexDirection: 'column' }}>
               <Card title={<span><GlobalOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Cobertura por estado</span>}
-                    size="small" className="card-shadow">
+                    size="small" className="card-shadow" style={{ flex: 1 }}>
                 {isLoading || !mapReady
                   ? <div style={{ height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
                   : <ReactECharts option={mapaOption} style={{ height: 320 }} />}
@@ -543,9 +543,9 @@ export default function PublicFMREPage() {
             </Col>
 
             {/* Top indicativos RF */}
-            <Col xs={24} lg={10}>
+            <Col xs={24} lg={10} style={{ display: 'flex', flexDirection: 'column' }}>
               <Card title={<span><StarOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Top 10 estaciones más activas</span>}
-                    size="small" className="card-shadow" style={{ height: '100%' }}>
+                    size="small" className="card-shadow" style={{ flex: 1 }}>
                 {isLoading ? <Spin /> : (
                   <div>
                     {stats!.rf.top_indicativos.map((op, i) => (
@@ -576,6 +576,35 @@ export default function PublicFMREPage() {
                       </div>
                     ))}
                   </div>
+                )}
+              </Card>
+            </Col>
+
+            {/* Participación por estado — barra horizontal */}
+            <Col xs={24}>
+              <Card title={<span><RadarChartOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Participación por Estado</span>}
+                    size="small" className="card-shadow">
+                {isLoading ? <Spin /> : (
+                  <ReactECharts
+                    option={{
+                      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+                        formatter: (p: any) => `<b>${p[0].name}</b>: ${p[0].value.toLocaleString()} reportes` },
+                      grid: { left: 130, right: 48, top: 8, bottom: 8, containLabel: false },
+                      xAxis: { type: 'value', axisLabel: { color: '#888', fontSize: 11 } },
+                      yAxis: { type: 'category', axisLabel: { color: '#333', fontSize: 12 },
+                        data: stats!.rf.por_estado.slice(0, 25).map(e => e.estado).reverse() },
+                      series: [{
+                        type: 'bar', barMaxWidth: 22,
+                        data: stats!.rf.por_estado.slice(0, 25).map((e, i) => ({
+                          value: e.total,
+                          itemStyle: { color: `hsl(${215 - i * 6}, 70%, ${45 + i * 1.5}%)`, borderRadius: [0, 4, 4, 0] },
+                        })).reverse(),
+                        label: { show: true, position: 'right', fontSize: 11, color: '#555',
+                          formatter: (p: any) => p.value.toLocaleString() },
+                      }],
+                    }}
+                    style={{ height: Math.max(300, stats!.rf.por_estado.slice(0, 25).length * 28) }}
+                  />
                 )}
               </Card>
             </Col>
