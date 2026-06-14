@@ -104,7 +104,7 @@ def estaciones_rf(db: Session = Depends(get_db)):
                TO_CHAR(MAX(r.fecha_reporte), 'YYYY-MM-DD') as ultima
         FROM reportes r
         LEFT JOIN radioexperimentadores re ON re.indicativo = r.indicativo
-        GROUP BY r.indicativo ORDER BY total DESC LIMIT 200
+        GROUP BY r.indicativo ORDER BY total DESC
     """)).fetchall()
     return [{"indicativo": r[0], "nombre": r[1], "total": int(r[2]), "ultima": r[3]} for r in rows]
 
@@ -116,7 +116,7 @@ def estaciones_rs(db: Session = Depends(get_db)):
                TO_CHAR(MAX(r.fecha_reporte), 'YYYY-MM-DD') as ultima
         FROM reportes_rs r
         LEFT JOIN radioexperimentadores re ON re.indicativo = r.indicativo
-        GROUP BY r.indicativo ORDER BY total DESC LIMIT 200
+        GROUP BY r.indicativo ORDER BY total DESC
     """)).fetchall()
     return [{"indicativo": r[0], "nombre": r[1], "total": int(r[2]), "ultima": r[3]} for r in rows]
 
