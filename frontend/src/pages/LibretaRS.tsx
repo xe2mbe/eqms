@@ -957,8 +957,8 @@ export default function LibretaRSPage() {
 
           {/* ── Estadísticas de sesión RS ── */}
           {(statsRS.totalQSOs > 0 || statsRS.posicion !== null) && (
-            <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
-              <Col xs={12} sm={8} md={6}>
+            <Row gutter={[12, 12]} style={{ marginBottom: 12, alignItems: 'stretch' }}>
+              <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
                 <div style={{
                   background: statsRS.esRecordQSOs
                     ? 'linear-gradient(135deg, #faad14 0%, #fa8c16 100%)'
@@ -967,7 +967,7 @@ export default function LibretaRSPage() {
                   boxShadow: statsRS.esRecordQSOs
                     ? '0 4px 16px rgba(250,173,20,0.55)'
                     : '0 4px 12px rgba(22,119,255,0.3)',
-                  transition: 'all 0.4s ease',
+                  transition: 'all 0.4s ease', height: '100%',
                 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
                     {statsRS.esRecordQSOs ? '🏆 Récord QSOs' : '📡 QSOs guardados'}
@@ -982,7 +982,7 @@ export default function LibretaRSPage() {
                   )}
                 </div>
               </Col>
-              <Col xs={12} sm={8} md={6}>
+              <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
                 <div style={{
                   background: statsRS.esRecordEstaciones
                     ? 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)'
@@ -991,7 +991,7 @@ export default function LibretaRSPage() {
                   boxShadow: statsRS.esRecordEstaciones
                     ? '0 4px 16px rgba(82,196,26,0.45)'
                     : '0 4px 12px rgba(19,194,194,0.3)',
-                  transition: 'all 0.4s ease',
+                  transition: 'all 0.4s ease', height: '100%',
                 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
                     {statsRS.esRecordEstaciones ? '🏆 Récord Estaciones' : '👥 Estaciones únicas'}
@@ -1007,7 +1007,7 @@ export default function LibretaRSPage() {
                 </div>
               </Col>
               {statsRS.posicion !== null && (
-                <Col xs={24} sm={8} md={6}>
+                <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
                   <div style={{
                     background: statsRS.posicion === 1
                       ? 'linear-gradient(135deg, #faad14 0%, #d48806 100%)'
@@ -1018,7 +1018,7 @@ export default function LibretaRSPage() {
                     boxShadow: statsRS.posicion === 1
                       ? '0 4px 16px rgba(250,173,20,0.55)'
                       : '0 4px 12px rgba(0,0,0,0.2)',
-                    transition: 'all 0.4s ease',
+                    transition: 'all 0.4s ease', height: '100%',
                   }}>
                     <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
                       📊 Posición del evento

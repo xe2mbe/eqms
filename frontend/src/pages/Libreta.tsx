@@ -1368,8 +1368,8 @@ export default function LibretaPage() {
         >
           {/* ── Estadísticas de sesión ── */}
           {(statsActuales.totalQSOs > 0 || statsActuales.posicion !== null) && (
-            <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-              <Col xs={12} sm={8} md={6}>
+            <Row gutter={[12, 12]} style={{ marginBottom: 16, alignItems: 'stretch' }}>
+              <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
                 <div style={{
                   background: statsActuales.esRecordQSOs
                     ? 'linear-gradient(135deg, #faad14 0%, #fa8c16 100%)'
@@ -1378,7 +1378,7 @@ export default function LibretaPage() {
                   boxShadow: statsActuales.esRecordQSOs
                     ? '0 4px 16px rgba(250,173,20,0.55)'
                     : '0 4px 12px rgba(22,119,255,0.3)',
-                  transition: 'all 0.4s ease',
+                  transition: 'all 0.4s ease', height: '100%',
                 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
                     {statsActuales.esRecordQSOs ? '🏆 Récord QSOs' : '📡 QSOs guardados'}
@@ -1393,7 +1393,7 @@ export default function LibretaPage() {
                   )}
                 </div>
               </Col>
-              <Col xs={12} sm={8} md={6}>
+              <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
                 <div style={{
                   background: statsActuales.esRecordEstaciones
                     ? 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)'
@@ -1402,7 +1402,7 @@ export default function LibretaPage() {
                   boxShadow: statsActuales.esRecordEstaciones
                     ? '0 4px 16px rgba(82,196,26,0.45)'
                     : '0 4px 12px rgba(19,194,194,0.3)',
-                  transition: 'all 0.4s ease',
+                  transition: 'all 0.4s ease', height: '100%',
                 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
                     {statsActuales.esRecordEstaciones ? '🏆 Récord Estaciones' : '👥 Estaciones únicas'}
@@ -1418,7 +1418,7 @@ export default function LibretaPage() {
                 </div>
               </Col>
               {statsActuales.posicion !== null && (
-                <Col xs={24} sm={8} md={6}>
+                <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
                   <div style={{
                     background: statsActuales.posicion === 1
                       ? 'linear-gradient(135deg, #faad14 0%, #d48806 100%)'
@@ -1429,7 +1429,7 @@ export default function LibretaPage() {
                     boxShadow: statsActuales.posicion === 1
                       ? '0 4px 16px rgba(250,173,20,0.55)'
                       : '0 4px 12px rgba(0,0,0,0.2)',
-                    transition: 'all 0.4s ease',
+                    transition: 'all 0.4s ease', height: '100%',
                   }}>
                     <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
                       📊 Posición del evento
