@@ -469,27 +469,27 @@ export default function PublicFMREPage() {
             }}>Todos los Domingos · 09:00 h (UTC−6)</span>
           </div>
 
-          <Row gutter={[16, 16]}>
+          <Row gutter={[16, 16]} style={{ alignItems: 'stretch' }}>
             {/* HF */}
-            <Col xs={24} sm={12} lg={6}>
-              <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 20px', borderLeft: `4px solid ${SISTEMA_COLORS.HF}` }}>
-                <div style={{ color: SISTEMA_COLORS.HF, fontWeight: 800, fontSize: 13, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Col xs={24} sm={12} lg={6} style={{ display: 'flex' }}>
+              <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 20px', borderLeft: `4px solid ${SISTEMA_COLORS.HF}`, flex: 1 }}>
+                <div style={{ color: SISTEMA_COLORS.HF, fontWeight: 800, fontSize: 16, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                   📻 HF
                 </div>
                 <div style={{ color: 'white', fontSize: 15, fontWeight: 700, marginBottom: 4 }}>7.082 MHz</div>
-                <div style={{ color: '#8ab4e0', fontSize: 12, marginBottom: 10 }}>LSB</div>
+                <div style={{ color: '#8ab4e0', fontSize: 12, marginBottom: 12 }}>LSB</div>
                 <div style={{ color: 'white', fontSize: 15, fontWeight: 700, marginBottom: 4 }}>14.120 MHz</div>
                 <div style={{ color: '#8ab4e0', fontSize: 12 }}>USB</div>
               </div>
             </Col>
 
             {/* IRLP + ASL */}
-            <Col xs={24} sm={12} lg={6}>
-              <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 20px', borderLeft: `4px solid ${SISTEMA_COLORS.IRLP}` }}>
-                <div style={{ color: SISTEMA_COLORS.IRLP, fontWeight: 800, fontSize: 13, marginBottom: 12 }}>
+            <Col xs={24} sm={12} lg={6} style={{ display: 'flex' }}>
+              <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 20px', borderLeft: `4px solid ${SISTEMA_COLORS.IRLP}`, flex: 1 }}>
+                <div style={{ color: SISTEMA_COLORS.IRLP, fontWeight: 800, fontSize: 16, marginBottom: 14 }}>
                   🔗 VoIP / Enlace
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
                   <IrlpLogo size={38} />
                   <div>
                     <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>IRLP</div>
@@ -507,9 +507,9 @@ export default function PublicFMREPage() {
             </Col>
 
             {/* Crossconexiones */}
-            <Col xs={24} sm={24} lg={12}>
-              <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 20px', borderLeft: '4px solid #52c41a' }}>
-                <div style={{ color: '#52c41a', fontWeight: 800, fontSize: 13, marginBottom: 12 }}>
+            <Col xs={24} sm={24} lg={12} style={{ display: 'flex' }}>
+              <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 20px', borderLeft: '4px solid #52c41a', flex: 1 }}>
+                <div style={{ color: '#52c41a', fontWeight: 800, fontSize: 16, marginBottom: 14 }}>
                   🔁 Crossconexiones activas
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
