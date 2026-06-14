@@ -152,26 +152,33 @@ def ultimo_evento_participantes(db: Session = Depends(get_db)):
     if not ultimo:
         return {"evento": None, "fecha": None, "participantes": []}
     rows = db.execute(text("""
-        SELECT r.indicativo, MAX(re.nombre_completo) as nombre,
-               COALESCE(s.codigo, 'N/D') as sistema, COUNT(*) as total
+        SELECT r.indicativo,
+               COALESCE(MAX(re.nombre_completo), MAX(u.full_name)) as nombre,
+               COALESCE(s.codigo, 'N/D') as sistema,
+               COUNT(*) as total,
+               MAX(r.estado) as estado
         FROM reportes r
         JOIN eventos e ON e.id = r.evento_id
-        LEFT JOIN radioexperimentadores re ON re.indicativo = r.indicativo
+        LEFT JOIN radioexperimentadores re ON UPPER(re.indicativo) = UPPER(r.indicativo)
+        LEFT JOIN usuarios u ON UPPER(u.indicativo) = UPPER(r.indicativo)
         LEFT JOIN sistemas s ON s.id = r.sistema_id
         WHERE e.tipo = :tipo AND DATE_TRUNC('day', r.fecha_reporte) = :fecha
         GROUP BY r.indicativo, s.codigo ORDER BY r.indicativo, total DESC
     """), {"tipo": ultimo[0], "fecha": str(ultimo[1])}).fetchall()
 
     from collections import defaultdict
-    indicativos: dict = defaultdict(lambda: {"nombre": None, "total": 0, "sistemas": {}})
+    indicativos: dict = defaultdict(lambda: {"nombre": None, "total": 0, "sistemas": {}, "estado": None})
     for r in rows:
         ind = r[0]
         indicativos[ind]["nombre"] = r[1]
         indicativos[ind]["total"] += int(r[3])
         indicativos[ind]["sistemas"][r[2]] = int(r[3])
+        if r[4] and not indicativos[ind]["estado"]:
+            indicativos[ind]["estado"] = r[4]
 
     participantes = sorted(
-        [{"indicativo": k, "nombre": v["nombre"], "total": v["total"], "sistemas": v["sistemas"]}
+        [{"indicativo": k, "nombre": v["nombre"], "total": v["total"],
+          "sistemas": v["sistemas"], "estado": v["estado"]}
          for k, v in indicativos.items()],
         key=lambda x: -x["total"]
     )

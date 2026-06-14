@@ -94,7 +94,7 @@ type Stats = {
 }
 
 type EstacionItem = { indicativo: string; nombre: string | null; total: number; ultima: string | null }
-type UltimoEvDetalle = { evento: string | null; fecha: string | null; participantes: { indicativo: string; nombre: string | null; total: number; sistemas: Record<string, number> }[] }
+type UltimoEvDetalle = { evento: string | null; fecha: string | null; participantes: { indicativo: string; nombre: string | null; total: number; sistemas: Record<string, number>; estado: string | null }[] }
 
 type BusquedaResult = {
   indicativo: string
@@ -757,7 +757,8 @@ export default function PublicFMREPage() {
                     <span style={{ fontWeight: 700, color: i < 3 ? FMRE_GOLD : '#8c8c8c' }}>{i + 1}</span>
                   )},
                   { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: FMRE_BLUE }}>{v}</strong> },
-                  { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? '—' },
+                  { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? <span style={{ color: '#bbb', fontStyle: 'italic' }}>Sin registro</span> },
+                  { title: 'Estado', dataIndex: 'estado', width: 120, ellipsis: true, render: (v: string | null) => v ?? '—' },
                   { title: 'QSOs', dataIndex: 'total', width: 90, align: 'right' as const,
                     render: (v: number, r: { sistemas: Record<string, number> }) => (
                       <Popover
