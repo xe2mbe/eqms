@@ -506,7 +506,7 @@ export default function EstadisticasPage() {
 
           // ── Tab: Operadores ──────────────────────────────────────────────────
           {
-            key: 'operadores', label: '👥 Operadores',
+            key: 'operadores', label: '📻 Estaciones',
             children: (
               <Row gutter={[16, 16]}>
                 <Col xs={24} lg={14}>

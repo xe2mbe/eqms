@@ -424,7 +424,7 @@ export default function EstadisticasRSPage() {
 
           // ── Tab 2: Operadores ──────────────────────────────────────────────
           {
-            key: 'operadores', label: '👥 Operadores',
+            key: 'operadores', label: '📻 Estaciones',
             children: (
               <Row gutter={[16, 16]}>
                 {plataformasOps.length === 0
