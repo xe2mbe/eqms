@@ -75,14 +75,23 @@ def public_stats(db: Session = Depends(get_db)):
         GROUP BY r.indicativo ORDER BY total DESC LIMIT 10
     """)).fetchall()
 
-    ultimo_evento = db.execute(text("""
-        SELECT e.tipo, DATE_TRUNC('day', MAX(r.fecha_reporte)) as ultima,
-               COUNT(DISTINCT r.indicativo) as participantes
+    ultimo_rf = db.execute(text("""
+        SELECT e.tipo, DATE_TRUNC('day', MAX(r.fecha_reporte))::date as ultima,
+               COUNT(DISTINCT r.indicativo) as estaciones,
+               COUNT(*) as total_qsos
         FROM reportes r JOIN eventos e ON e.id = r.evento_id
-        WHERE r.evento_id = :ev_id
-          AND r.fecha_reporte >= NOW() - INTERVAL '30 days'
+        WHERE r.fecha_reporte >= NOW() - INTERVAL '30 days'
         GROUP BY e.tipo ORDER BY ultima DESC LIMIT 1
-    """), {"ev_id": ev_id}).first()
+    """)).first()
+
+    ultimo_rs = db.execute(text("""
+        SELECT e.tipo, DATE_TRUNC('day', MAX(r.fecha_reporte))::date as ultima,
+               COUNT(DISTINCT r.indicativo) as estaciones,
+               COUNT(*) as total_qsos
+        FROM reportes_rs r JOIN eventos e ON e.id = r.evento_id
+        WHERE r.fecha_reporte >= NOW() - INTERVAL '30 days'
+        GROUP BY e.tipo ORDER BY ultima DESC LIMIT 1
+    """)).first()
 
     paises = db.execute(text("""
         SELECT pais, COUNT(DISTINCT indicativo) as indicativos
@@ -108,11 +117,18 @@ def public_stats(db: Session = Depends(get_db)):
             "por_plataforma": [{"plataforma": r[0], "total": int(r[1])} for r in por_plataforma],
             "top_indicativos": [{"indicativo": r[0], "nombre": r[1], "total": int(r[2])} for r in top_rs],
         },
-        "ultimo_evento": {
-            "tipo": ultimo_evento[0],
-            "ultima": str(ultimo_evento[1])[:10],
-            "participantes": int(ultimo_evento[2]),
-        } if ultimo_evento else None,
+        "ultimo_evento_rf": {
+            "tipo": ultimo_rf[0],
+            "ultima": str(ultimo_rf[1]),
+            "estaciones": int(ultimo_rf[2]),
+            "total_qsos": int(ultimo_rf[3]),
+        } if ultimo_rf else None,
+        "ultimo_evento_rs": {
+            "tipo": ultimo_rs[0],
+            "ultima": str(ultimo_rs[1]),
+            "estaciones": int(ultimo_rs[2]),
+            "total_qsos": int(ultimo_rs[3]),
+        } if ultimo_rs else None,
     }
 
 

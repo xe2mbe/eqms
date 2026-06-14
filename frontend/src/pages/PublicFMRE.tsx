@@ -90,7 +90,8 @@ type Stats = {
     por_plataforma: { plataforma: string; total: number }[]
     top_indicativos: { indicativo: string; nombre: string | null; total: number }[]
   }
-  ultimo_evento: { tipo: string; ultima: string; participantes: number } | null
+  ultimo_evento_rf: { tipo: string; ultima: string; estaciones: number; total_qsos: number } | null
+  ultimo_evento_rs: { tipo: string; ultima: string; estaciones: number; total_qsos: number } | null
 }
 
 type EstacionItem = { indicativo: string; nombre: string | null; total: number; ultima: string | null }
@@ -339,17 +340,31 @@ export default function PublicFMREPage() {
         </div>
       </section>
 
-      {/* ── ULTIMO EVENTO ── */}
-      {stats?.ultimo_evento && (
+      {/* ── ÚLTIMO EVENTO RF ── */}
+      {stats?.ultimo_evento_rf && (
         <div
           onClick={handleUltimoEvento}
           style={{ background: FMRE_GOLD, padding: '10px 32px', textAlign: 'center', cursor: 'pointer' }}
+          onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(0.92)')}
+          onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
         >
           <Text style={{ fontWeight: 700, color: FMRE_DARK }}>
-            <StarOutlined style={{ marginRight: 8 }} />
-            Último evento registrado: <strong>{stats.ultimo_evento.tipo}</strong> —{' '}
-            {dayjs(stats.ultimo_evento.ultima).format('D [de] MMMM [de] YYYY')} —{' '}
-            {stats.ultimo_evento.participantes.toLocaleString()} participantes
+            <WifiOutlined style={{ marginRight: 8 }} />
+            Último evento RF: <strong>{stats.ultimo_evento_rf.tipo}</strong> —{' '}
+            {dayjs(stats.ultimo_evento_rf.ultima).format('D [de] MMMM [de] YYYY')} —{' '}
+            {stats.ultimo_evento_rf.total_qsos.toLocaleString()} QSOs · {stats.ultimo_evento_rf.estaciones.toLocaleString()} estaciones
+          </Text>
+        </div>
+      )}
+
+      {/* ── ÚLTIMO EVENTO RS ── */}
+      {stats?.ultimo_evento_rs && (
+        <div style={{ background: '#722ed1', padding: '10px 32px', textAlign: 'center' }}>
+          <Text style={{ fontWeight: 700, color: 'white' }}>
+            <GlobalOutlined style={{ marginRight: 8 }} />
+            Último evento RS: <strong>{stats.ultimo_evento_rs.tipo}</strong> —{' '}
+            {dayjs(stats.ultimo_evento_rs.ultima).format('D [de] MMMM [de] YYYY')} —{' '}
+            {stats.ultimo_evento_rs.total_qsos.toLocaleString()} QSOs · {stats.ultimo_evento_rs.estaciones.toLocaleString()} estaciones
           </Text>
         </div>
       )}
