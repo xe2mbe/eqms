@@ -76,21 +76,37 @@ def public_stats(db: Session = Depends(get_db)):
     """)).fetchall()
 
     ultimo_rf = db.execute(text("""
-        SELECT e.tipo, DATE_TRUNC('day', MAX(r.fecha_reporte))::date as ultima,
-               COUNT(DISTINCT r.indicativo) as estaciones,
-               COUNT(*) as total_qsos
-        FROM reportes r JOIN eventos e ON e.id = r.evento_id
-        WHERE r.fecha_reporte >= NOW() - INTERVAL '30 days'
-        GROUP BY e.tipo ORDER BY ultima DESC LIMIT 1
+        WITH ult AS (
+            SELECT e.tipo, DATE_TRUNC('day', MAX(r.fecha_reporte))::date AS ultima
+            FROM reportes r JOIN eventos e ON e.id = r.evento_id
+            WHERE r.fecha_reporte >= NOW() - INTERVAL '30 days'
+            GROUP BY e.tipo ORDER BY ultima DESC LIMIT 1
+        )
+        SELECT u.tipo, u.ultima,
+               COUNT(DISTINCT r.indicativo) AS estaciones,
+               COUNT(*) AS total_qsos
+        FROM reportes r
+        JOIN eventos e ON e.id = r.evento_id
+        JOIN ult u ON e.tipo = u.tipo
+        WHERE DATE_TRUNC('day', r.fecha_reporte) = u.ultima
+        GROUP BY u.tipo, u.ultima
     """)).first()
 
     ultimo_rs = db.execute(text("""
-        SELECT e.tipo, DATE_TRUNC('day', MAX(r.fecha_reporte))::date as ultima,
-               COUNT(DISTINCT r.indicativo) as estaciones,
-               COUNT(*) as total_qsos
-        FROM reportes_rs r JOIN eventos e ON e.id = r.evento_id
-        WHERE r.fecha_reporte >= NOW() - INTERVAL '30 days'
-        GROUP BY e.tipo ORDER BY ultima DESC LIMIT 1
+        WITH ult AS (
+            SELECT e.tipo, DATE_TRUNC('day', MAX(r.fecha_reporte))::date AS ultima
+            FROM reportes_rs r JOIN eventos e ON e.id = r.evento_id
+            WHERE r.fecha_reporte >= NOW() - INTERVAL '30 days'
+            GROUP BY e.tipo ORDER BY ultima DESC LIMIT 1
+        )
+        SELECT u.tipo, u.ultima,
+               COUNT(DISTINCT r.indicativo) AS estaciones,
+               COUNT(*) AS total_qsos
+        FROM reportes_rs r
+        JOIN eventos e ON e.id = r.evento_id
+        JOIN ult u ON e.tipo = u.tipo
+        WHERE DATE_TRUNC('day', r.fecha_reporte) = u.ultima
+        GROUP BY u.tipo, u.ultima
     """)).first()
 
     paises = db.execute(text("""
