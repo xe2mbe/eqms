@@ -12,7 +12,7 @@ def public_stats(db: Session = Depends(get_db)):
 
     # Obtener el ID del Boletín Dominical
     boletin = db.execute(text(
-        "SELECT id FROM eventos WHERE tipo ILIKE '%boletin%dominical%' LIMIT 1"
+        "SELECT id FROM eventos WHERE tipo ILIKE '%dominical%' LIMIT 1"
     )).first()
     ev_id = boletin[0] if boletin else -1
 
@@ -115,7 +115,7 @@ def public_stats(db: Session = Depends(get_db)):
 @router.get("/estaciones-rf")
 def estaciones_rf(db: Session = Depends(get_db)):
     boletin = db.execute(text(
-        "SELECT id FROM eventos WHERE tipo ILIKE '%boletin%dominical%' LIMIT 1"
+        "SELECT id FROM eventos WHERE tipo ILIKE '%dominical%' LIMIT 1"
     )).first()
     ev_id = boletin[0] if boletin else -1
     rows = db.execute(text("""
