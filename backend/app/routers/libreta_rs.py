@@ -34,7 +34,7 @@ def list_estadisticas_rs(
 
     total = q.count()
     items = (
-        q.order_by(models.EstadisticaRS.fecha_reporte.desc())
+        q.order_by(models.EstadisticaRS.fecha_reporte.desc(), models.EstadisticaRS.id.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()
@@ -150,7 +150,7 @@ def list_reportes_rs(
 
     total = q.count()
     items = (
-        q.order_by(models.ReporteRS.fecha_reporte.desc())
+        q.order_by(models.ReporteRS.fecha_reporte.desc(), models.ReporteRS.id.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()

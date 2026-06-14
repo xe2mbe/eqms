@@ -45,7 +45,7 @@ def list_reportes(
 
     total = q.count()
     items = (
-        q.order_by(models.Reporte.fecha_reporte.desc())
+        q.order_by(models.Reporte.fecha_reporte.desc(), models.Reporte.id.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()
