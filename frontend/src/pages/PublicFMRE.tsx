@@ -199,14 +199,17 @@ export default function PublicFMREPage() {
   const estRSRef    = useRef<HTMLDivElement>(null)
   const evRef       = useRef<HTMLDivElement>(null)
   const evRSRef     = useRef<HTMLDivElement>(null)
+  const estIntlRef  = useRef<HTMLDivElement>(null)
 
   const [estacionesRF, setEstacionesRF]           = useState<EstacionItem[] | null>(null)
   const [estacionesRS, setEstacionesRS]           = useState<EstacionItem[] | null>(null)
   const [ultimoEvDetalle, setUltimoEvDetalle]     = useState<UltimoEvDetalle | null>(null)
   const [ultimoEvRSDetalle, setUltimoEvRSDetalle] = useState<UltimoEvRSDetalle | null>(null)
+  const [estacionesIntl, setEstacionesIntl]       = useState<{ indicativo: string; nombre: string | null; pais: string; total: number; ultima: string | null }[] | null>(null)
   const [loadingEstRF, setLoadingEstRF]           = useState(false)
   const [loadingEstRS, setLoadingEstRS]           = useState(false)
   const [loadingEv, setLoadingEv]                 = useState(false)
+  const [loadingEstIntl, setLoadingEstIntl]       = useState(false)
   const [loadingEvRS, setLoadingEvRS]             = useState(false)
 
   const handleCardClick = async (label: string) => {
@@ -251,6 +254,16 @@ export default function PublicFMREPage() {
       setLoadingEvRS(false)
     }
     setTimeout(() => evRSRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
+  }
+
+  const handleEstIntl = async () => {
+    if (!estacionesIntl) {
+      setLoadingEstIntl(true)
+      const { data } = await axios.get('/api/public/estaciones-internacionales')
+      setEstacionesIntl(data)
+      setLoadingEstIntl(false)
+    }
+    setTimeout(() => estIntlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
   }
 
   const handleBuscar = async () => {
@@ -887,14 +900,21 @@ export default function PublicFMREPage() {
             {/* Países extranjeros */}
             {stats && stats.rf.paises.length > 0 && (
               <Col xs={24}>
-                <Card title={<span><GlobalOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Estaciones internacionales participantes</span>}
-                      size="small" className="card-shadow">
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <Card
+                  title={<span><GlobalOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Estaciones internacionales participantes</span>}
+                  size="small" className="card-shadow" hoverable
+                  onClick={handleEstIntl}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
                     {stats.rf.paises.map(p => (
                       <Tag key={p.pais} color="geekblue" style={{ fontSize: 13, padding: '4px 10px' }}>
                         {p.pais} · <strong>{p.indicativos}</strong> estaciones
                       </Tag>
                     ))}
+                  </div>
+                  <div style={{ color: FMRE_BLUE, fontSize: 12 }}>
+                    👆 Clic para ver el listado completo de estaciones internacionales
                   </div>
                 </Card>
               </Col>
@@ -1043,6 +1063,33 @@ export default function PublicFMREPage() {
             )}
           </Row>
         </div>
+
+        {/* ── TABLA ESTACIONES INTERNACIONALES ── */}
+        {(estacionesIntl || loadingEstIntl) && (
+          <div ref={estIntlRef} style={{ marginBottom: 40, scrollMarginTop: 24 }}>
+            <Divider style={{ borderColor: '#d0d7e3' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 4, height: 28, background: FMRE_BLUE, borderRadius: 2 }} />
+              <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>Estaciones internacionales</Title>
+            </div>
+            {loadingEstIntl ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (
+              <Table
+                dataSource={estacionesIntl ?? []}
+                rowKey="indicativo"
+                size="small"
+                pagination={{ pageSize: 50, showSizeChanger: false }}
+                columns={[
+                  { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => <Text type="secondary">{i + 1}</Text> },
+                  { title: 'País', dataIndex: 'pais', width: 140, render: (v: string) => <Tag color="geekblue">{v}</Tag> },
+                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: FMRE_BLUE }}>{v}</strong> },
+                  { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? '—' },
+                  { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const, render: (v: number) => <Tag color="blue">{v.toLocaleString()}</Tag> },
+                  { title: 'Última actividad', dataIndex: 'ultima', width: 130, render: (v: string | null) => v ?? '—' },
+                ]}
+              />
+            )}
+          </div>
+        )}
 
         {/* ── TABLA ESTACIONES RF ── */}
         {(estacionesRF || loadingEstRF) && (
@@ -1195,24 +1242,15 @@ export default function PublicFMREPage() {
       </div>
 
       {/* ── FOOTER ── */}
-      <footer style={{ background: FMRE_DARK, padding: '24px 32px', marginTop: 16 }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <img src="/LogoFMRE.png" alt="FMRE" style={{ height: 36, opacity: 0.9 }} />
-            <div>
-              <div style={{ color: 'white', fontWeight: 800, fontSize: 14 }}>Federación Mexicana de Radioexperimentadores, A.C.</div>
-              <div style={{ color: '#8ab4e0', fontSize: 11, marginTop: 2 }}>Datos actualizados en tiempo real</div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-            <div style={{ color: FMRE_GOLD, fontWeight: 700, fontSize: 12 }}>73 de XE — Good DX</div>
-            <a href="https://rcg.org.mx" target="_blank" rel="noopener noreferrer"
-              style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-              <span style={{ color: '#8ab4e0', fontSize: 11 }}>Página diseñada por miembros del</span>
-              <img src="/rcg_small.png" alt="Radio Club Guadiana" style={{ height: 20, width: 'auto', opacity: 0.9 }} />
-              <span style={{ color: 'white', fontSize: 11, fontWeight: 600 }}>Radio Club Guadiana A.C.</span>
-            </a>
-          </div>
+      <footer style={{ background: FMRE_DARK, padding: '20px 32px', marginTop: 16 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          <div style={{ color: FMRE_GOLD, fontWeight: 700, fontSize: 12 }}>73 de XE — Good DX</div>
+          <a href="https://rcg.org.mx" target="_blank" rel="noopener noreferrer"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+            <span style={{ color: '#8ab4e0', fontSize: 11 }}>Página diseñada por miembros del</span>
+            <img src="/rcg_small.png" alt="Radio Club Guadiana" style={{ height: 20, width: 'auto', opacity: 0.9 }} />
+            <span style={{ color: 'white', fontSize: 11, fontWeight: 600 }}>Radio Club Guadiana A.C.</span>
+          </a>
         </div>
       </footer>
 

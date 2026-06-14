@@ -288,6 +288,27 @@ def ultimo_evento_rs_participantes(db: Session = Depends(get_db)):
     return {"evento": ultimo[0], "fecha": str(ultimo[1]), "participantes": participantes}
 
 
+@router.get("/estaciones-internacionales")
+def estaciones_internacionales(db: Session = Depends(get_db)):
+    boletin = db.execute(text(
+        "SELECT id FROM eventos WHERE tipo ILIKE '%dominical%' LIMIT 1"
+    )).first()
+    ev_id = boletin[0] if boletin else -1
+    rows = db.execute(text("""
+        SELECT r.indicativo,
+               COALESCE(MAX(r.operador), MAX(re.nombre_completo)) as nombre,
+               MAX(r.pais) as pais,
+               COUNT(*) as total,
+               TO_CHAR(MAX(r.fecha_reporte), 'YYYY-MM-DD') as ultima
+        FROM reportes r
+        LEFT JOIN radioexperimentadores re ON UPPER(re.indicativo) = UPPER(r.indicativo)
+        WHERE r.evento_id = :ev_id
+          AND r.pais IS NOT NULL AND r.pais != '' AND r.pais != 'México'
+        GROUP BY r.indicativo ORDER BY pais, total DESC
+    """), {"ev_id": ev_id}).fetchall()
+    return [{"indicativo": r[0], "nombre": r[1], "pais": r[2], "total": int(r[3]), "ultima": r[4]} for r in rows]
+
+
 @router.get("/buscar")
 def buscar_indicativo(
     indicativo: str = Query(..., min_length=2, max_length=20),
