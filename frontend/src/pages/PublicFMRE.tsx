@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Row, Col, Card, Tag, Typography, Divider, Spin, Input, Alert, Table } from 'antd'
+import { Row, Col, Card, Tag, Typography, Divider, Spin, Input, Alert, Table, Popover } from 'antd'
 import {
   WifiOutlined, GlobalOutlined, TeamOutlined, RiseOutlined,
   StarOutlined, RadarChartOutlined, SearchOutlined, UserOutlined,
@@ -94,7 +94,7 @@ type Stats = {
 }
 
 type EstacionItem = { indicativo: string; nombre: string | null; total: number; ultima: string | null }
-type UltimoEvDetalle = { evento: string | null; fecha: string | null; participantes: { indicativo: string; nombre: string | null; total: number }[] }
+type UltimoEvDetalle = { evento: string | null; fecha: string | null; participantes: { indicativo: string; nombre: string | null; total: number; sistemas: Record<string, number> }[] }
 
 type BusquedaResult = {
   indicativo: string
@@ -758,7 +758,25 @@ export default function PublicFMREPage() {
                   )},
                   { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: FMRE_BLUE }}>{v}</strong> },
                   { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? '—' },
-                  { title: 'QSOs', dataIndex: 'total', width: 80, align: 'right' as const, render: (v: number) => <Tag color="gold">{v.toLocaleString()}</Tag> },
+                  { title: 'QSOs', dataIndex: 'total', width: 90, align: 'right' as const,
+                    render: (v: number, r: { sistemas: Record<string, number> }) => (
+                      <Popover
+                        trigger="click"
+                        title="Desglose por sistema"
+                        content={
+                          <div style={{ minWidth: 140 }}>
+                            {Object.entries(r.sistemas).map(([s, n]) => (
+                              <div key={s} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '2px 0' }}>
+                                <Tag color={SISTEMA_COLORS[s] ?? '#666'} style={{ margin: 0 }}>{s}</Tag>
+                                <strong>{n}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        }
+                      >
+                        <Tag color="gold" style={{ cursor: 'pointer', fontWeight: 700 }}>{v.toLocaleString()} ▾</Tag>
+                      </Popover>
+                    )},
                 ]}
               />
             )}
