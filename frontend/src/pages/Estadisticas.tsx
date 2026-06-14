@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Row, Col, Typography, Spin, Tabs, Table, Tag, Tooltip, Empty, Progress } from 'antd'
+import { Card, Row, Col, Typography, Spin, Tabs, Table, Tag, Tooltip, Empty, Progress, Select } from 'antd'
 import DateRangeBar from '@/components/common/DateRangeBar'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
@@ -42,6 +42,7 @@ export default function EstadisticasPage() {
   const [rstZona, setRstZona]           = useState<any[]>([])
   const [sistZona, setSistZona]         = useState<any[]>([])
   const [tendEv, setTendEv]             = useState<any[]>([])
+  const [eventosFiltro, setEventosFiltro] = useState<string[]>([])
   const [cobertura, setCobertura]       = useState<CoberturaEstado[]>([])
 
   // Fetch oldest record date on mount to set default range
@@ -247,6 +248,20 @@ export default function EstadisticasPage() {
     })),
   }
 
+  const evTiposFiltrados = eventosFiltro.length > 0 ? eventosFiltro : evTipos
+  const evLineOptionFiltrado = {
+    tooltip: { trigger: 'axis' },
+    legend: { data: evTiposFiltrados, bottom: 0 },
+    grid: { left: 8, right: 8, top: 10, bottom: 40, containLabel: true },
+    xAxis: { type: 'category', data: evMeses.map((m: string) => dayjs(m).format('MMM YY')) },
+    yAxis: { type: 'value' },
+    series: evTiposFiltrados.map((t: string, i: number) => ({
+      name: t, type: 'line', smooth: true,
+      data: evMeses.map(m => tendEv.find((r: any) => r.mes === m && r.tipo === t)?.total ?? 0),
+      itemStyle: { color: CHART_COLORS[evTipos.indexOf(t) % CHART_COLORS.length] },
+    })),
+  }
+
   // ── Cobertura charts ──────────────────────────────────────────────────────────
 
   const zonasCobertura = Object.keys(ZONA_COLORS)
@@ -324,10 +339,34 @@ export default function EstadisticasPage() {
             key: 'tradicional', label: 'Reportes',
             children: (
               <Row gutter={[16, 16]}>
-                <Col xs={24}>
+                <Col xs={24} lg={12}>
                   <Card title="Tendencia mensual de reportes" className="card-shadow">
                     {tendencia.length > 0
-                      ? <ReactECharts option={lineOption} style={{ height: 240 }} notMerge />
+                      ? <ReactECharts option={lineOption} style={{ height: 260 }} notMerge />
+                      : <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} />
+                    }
+                  </Card>
+                </Col>
+                <Col xs={24} lg={12}>
+                  <Card
+                    title="Tendencia mensual por evento"
+                    className="card-shadow"
+                    extra={
+                      <Select
+                        mode="multiple"
+                        allowClear
+                        placeholder="Todos los eventos"
+                        style={{ minWidth: 180 }}
+                        size="small"
+                        value={eventosFiltro}
+                        onChange={setEventosFiltro}
+                        options={evTipos.map(t => ({ value: t, label: t }))}
+                        maxTagCount="responsive"
+                      />
+                    }
+                  >
+                    {tendEv.length > 0
+                      ? <ReactECharts option={evLineOptionFiltrado} style={{ height: 260 }} notMerge />
                       : <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} />
                     }
                   </Card>
