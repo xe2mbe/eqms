@@ -1256,7 +1256,10 @@ export default function PublicFMREPage() {
       {/* ── FOOTER ── */}
       <footer style={{ background: FMRE_DARK, padding: '20px 32px', marginTop: 16 }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-          <div style={{ color: FMRE_GOLD, fontWeight: 700, fontSize: 12 }}>73 de XE — Good DX</div>
+          <a href="https://fmre.org.mx" target="_blank" rel="noopener noreferrer"
+            style={{ color: FMRE_GOLD, fontWeight: 700, fontSize: 12, textDecoration: 'none' }}>
+            🌐 fmre.org.mx
+          </a>
           {visitaInfo && (
             <div style={{ color: '#8ab4e0', fontSize: 11 }}>
               🌐 Visita #{visitaInfo.total.toLocaleString()} · {visitaInfo.ip} · {visitaInfo.pais}
