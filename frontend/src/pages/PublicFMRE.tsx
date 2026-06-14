@@ -148,7 +148,7 @@ type Stats = {
     total: number; indicativos: number
     por_estado: { estado: string; total: number }[]
     por_sistema: { sistema: string; nombre: string; total: number }[]
-    tendencia: { mes: string; total: number }[]
+    tendencia: { mes: string; sistema: string; total: number }[]
     top_indicativos: { indicativo: string; nombre: string | null; total: number }[]
     paises: { pais: string; indicativos: number }[]
   }
@@ -280,26 +280,33 @@ export default function PublicFMREPage() {
     axios.get('/api/public/stats').then(r => setStats(r.data))
   }, [])
 
-  const tendenciaOption = !stats ? {} : {
-    tooltip: { trigger: 'axis', formatter: (p: any) => `${p[0].axisValue}<br/>${p[0].value} reportes` },
-    grid: { left: 40, right: 16, top: 16, bottom: 32 },
-    xAxis: {
-      type: 'category',
-      data: stats.rf.tendencia.map(t => dayjs(t.mes).format('MMM YY')),
-      axisLabel: { color: '#666', fontSize: 11 },
-    },
-    yAxis: { type: 'value', axisLabel: { color: '#666', fontSize: 11 } },
-    series: [{
-      type: 'bar', data: stats.rf.tendencia.map(t => t.total),
-      itemStyle: { color: FMRE_BLUE, borderRadius: [4, 4, 0, 0] },
-    }],
-  }
+  const tendenciaOption = !stats ? {} : (() => {
+    const meses = [...new Set(stats.rf.tendencia.map(t => t.mes))].sort()
+    const sistemas = [...new Set(stats.rf.tendencia.map(t => t.sistema))].sort()
+    return {
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { data: sistemas, bottom: 0, textStyle: { fontSize: 10 }, itemWidth: 12, itemHeight: 8 },
+      grid: { left: 40, right: 16, top: 8, bottom: 60 },
+      xAxis: {
+        type: 'category',
+        data: meses.map(m => dayjs(m).format('MMM YY')),
+        axisLabel: { color: '#666', fontSize: 11 },
+      },
+      yAxis: { type: 'value', axisLabel: { color: '#666', fontSize: 11 } },
+      series: sistemas.map(sis => ({
+        name: sis,
+        type: 'bar',
+        stack: 'total',
+        data: meses.map(mes => stats.rf.tendencia.find(t => t.mes === mes && t.sistema === sis)?.total ?? 0),
+        itemStyle: { color: SISTEMA_COLORS[sis] ?? '#999' },
+      })),
+    }
+  })()
 
   const sistemaOption = !stats ? {} : {
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    legend: { orient: 'vertical', right: 8, top: 'center', textStyle: { fontSize: 11 } },
     series: [{
-      type: 'pie', radius: ['45%', '75%'], center: ['38%', '50%'],
+      type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'],
       data: stats.rf.por_sistema.map(s => ({
         name: s.sistema, value: s.total,
         itemStyle: { color: SISTEMA_COLORS[s.sistema] ?? FMRE_BLUE },
@@ -717,7 +724,42 @@ export default function PublicFMREPage() {
             <Col xs={24} lg={10}>
               <Card title={<span><WifiOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Distribución por sistema</span>}
                     size="small" className="card-shadow">
-                {isLoading ? <Spin /> : <ReactECharts option={sistemaOption} style={{ height: 220 }} />}
+                {isLoading ? <Spin /> : (() => {
+                  const total = stats!.rf.por_sistema.reduce((s, r) => s + r.total, 0)
+                  return (
+                    <Row align="middle">
+                      <Col span={12}>
+                        <ReactECharts option={sistemaOption} style={{ height: 220 }} />
+                      </Col>
+                      <Col span={12} style={{ paddingLeft: 8 }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr>
+                              <th style={{ textAlign: 'left', fontSize: 11, color: '#aaa', paddingBottom: 6, fontWeight: 500 }}>Sistema</th>
+                              <th style={{ textAlign: 'right', fontSize: 11, color: '#aaa', paddingBottom: 6, fontWeight: 500 }}>Reportes</th>
+                              <th style={{ textAlign: 'right', fontSize: 11, color: '#aaa', paddingBottom: 6, fontWeight: 500 }}>%</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {stats!.rf.por_sistema.map(s => (
+                              <tr key={s.sistema} style={{ borderTop: '1px solid #f0f0f0' }}>
+                                <td style={{ padding: '4px 0' }}>
+                                  <Tag color={SISTEMA_COLORS[s.sistema] ?? '#666'} style={{ fontSize: 11, margin: 0 }}>{s.sistema}</Tag>
+                                </td>
+                                <td style={{ textAlign: 'right', fontSize: 12, fontWeight: 700, paddingRight: 6 }}>
+                                  {s.total.toLocaleString()}
+                                </td>
+                                <td style={{ textAlign: 'right', fontSize: 12, color: '#888' }}>
+                                  {((s.total / total) * 100).toFixed(1)}%
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </Col>
+                    </Row>
+                  )
+                })()}
               </Card>
             </Col>
 

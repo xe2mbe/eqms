@@ -42,12 +42,14 @@ def public_stats(db: Session = Depends(get_db)):
     """), {"ev_id": ev_id}).fetchall()
 
     tendencia = db.execute(text("""
-        SELECT TO_CHAR(DATE_TRUNC('month', fecha_reporte), 'YYYY-MM') as mes,
+        SELECT TO_CHAR(DATE_TRUNC('month', r.fecha_reporte), 'YYYY-MM') as mes,
+               COALESCE(s.codigo, 'N/D') as sistema,
                COUNT(*) as total
-        FROM reportes
-        WHERE evento_id = :ev_id
-          AND fecha_reporte >= NOW() - INTERVAL '12 months'
-        GROUP BY mes ORDER BY mes
+        FROM reportes r
+        LEFT JOIN sistemas s ON s.id = r.sistema_id
+        WHERE r.evento_id = :ev_id
+          AND r.fecha_reporte >= NOW() - INTERVAL '12 months'
+        GROUP BY mes, s.codigo ORDER BY mes, s.codigo
     """), {"ev_id": ev_id}).fetchall()
 
     top_rf = db.execute(text("""
@@ -123,7 +125,7 @@ def public_stats(db: Session = Depends(get_db)):
             "indicativos": int(rf_indicativos),
             "por_estado": [{"estado": r[0], "total": int(r[1])} for r in por_estado],
             "por_sistema": [{"sistema": r[0], "nombre": r[1], "total": int(r[2])} for r in por_sistema],
-            "tendencia": [{"mes": r[0], "total": int(r[1])} for r in tendencia],
+            "tendencia": [{"mes": r[0], "sistema": r[1], "total": int(r[2])} for r in tendencia],
             "top_indicativos": [{"indicativo": r[0], "nombre": r[1], "total": int(r[2])} for r in top_rf],
             "paises": [{"pais": r[0], "indicativos": int(r[1])} for r in paises],
         },
