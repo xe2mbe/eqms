@@ -249,15 +249,14 @@ export default function PublicFMREPage() {
 
         <div style={{ maxWidth: 900, margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div style={{ color: FMRE_GOLD, fontWeight: 700, letterSpacing: 3, fontSize: 12, marginBottom: 8 }}>
-            ▶ CQ CQ DE XE — ESTACIÓN EN EL AIRE
+            ▶ CQ CQ DE XE1LM — ESTACIÓN OFICIAL DE LA FMRE
           </div>
           <Title level={1} style={{ color: 'white', margin: 0, fontSize: 'clamp(24px, 4vw, 42px)', lineHeight: 1.2 }}>
-            Red Nacional de Radioaficionados
+            Estadísticas Boletín Dominical
           </Title>
           <Paragraph style={{ color: '#8ab4e0', fontSize: 16, marginTop: 12, marginBottom: 32, maxWidth: 600 }}>
-            Monitoreo en tiempo real de la actividad radioaficionada en México.
-            Boletines dominicales, retransmisiones y presencia en redes sociales
-            de la comunidad XE unida por las ondas hertzianas.
+            Estadísticas en tiempo real de la actividad del Boletín Dominical,
+            medio oficial de divulgación de la máxima autoridad de radioafición en México.
           </Paragraph>
 
           {isLoading ? <Spin size="large" /> : (
