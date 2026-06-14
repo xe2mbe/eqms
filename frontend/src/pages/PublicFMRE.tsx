@@ -1150,7 +1150,7 @@ export default function PublicFMREPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
               <div style={{ width: 4, height: 28, background: FMRE_GOLD, borderRadius: 2 }} />
               <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>
-                {ultimoEvDetalle?.evento ?? 'Último evento RF'} — {ultimoEvDetalle?.fecha ?? ''}
+                RF · {ultimoEvDetalle?.evento ?? 'Último evento'} — {ultimoEvDetalle?.fecha ?? ''}
               </Title>
             </div>
             {loadingEv ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (
@@ -1198,7 +1198,7 @@ export default function PublicFMREPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
               <div style={{ width: 4, height: 28, background: '#0891b2', borderRadius: 2 }} />
               <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>
-                {ultimoEvRSDetalle?.evento ?? 'Último evento RS'} — {ultimoEvRSDetalle?.fecha ?? ''}
+                RS · {ultimoEvRSDetalle?.evento ?? 'Último evento'} — {ultimoEvRSDetalle?.fecha ?? ''}
               </Title>
             </div>
             {loadingEvRS ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (
