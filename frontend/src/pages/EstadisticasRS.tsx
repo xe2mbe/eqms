@@ -45,6 +45,7 @@ export default function EstadisticasRSPage() {
   const [resumen, setResumen]             = useState<ResumenRow[]>([])
   const [metricaTend, setMetricaTend]     = useState<MetricaTend[]>([])
   const [coberturaRS, setCoberturaRS]     = useState<CoberturaRS[]>([])
+  const [rankingOpsRS, setRankingOpsRS]   = useState<{ usuario_id: number; nombre: string; total: number; posicion: number }[]>([])
   const [platFilter, setPlatFilter]       = useState<string | undefined>()
   const [loadingMetricas, setLoadingMetricas] = useState(false)
 
@@ -62,12 +63,13 @@ export default function EstadisticasRSPage() {
       estadisticasApi.rsNuevosMensuales(),
       estadisticasApi.rsResumen(p),
       estadisticasApi.rsCoberturaEstados(p),
+      estadisticasApi.rsOperadoresPeriodo(p),
     ])
     const ok = <T,>(i: number): T[] =>
       results[i].status === 'fulfilled' ? (results[i] as PromiseFulfilledResult<any>).value.data : []
     setTendencia(ok(0)); setPorEstadoPlat(ok(1)); setTopOps(ok(2))
     setZonaAct(ok(3));   setNuevos(ok(4));        setResumen(ok(5))
-    setCoberturaRS(ok(6))
+    setCoberturaRS(ok(6)); setRankingOpsRS(ok(7))
     setLoading(false)
   }
 
@@ -367,6 +369,39 @@ export default function EstadisticasRSPage() {
                           style={{ height: Math.max(300, estadosList.slice(0,12).length * 28 + 80) }} notMerge />
                       : <Empty description="Sin datos de estados en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 40 }} />
                     }
+                  </Card>
+                </Col>
+                <Col xs={24}>
+                  <Card title="📋 Capturas por operador" className="card-shadow">
+                    <Table
+                      dataSource={rankingOpsRS}
+                      rowKey="usuario_id"
+                      size="small"
+                      pagination={false}
+                      scroll={{ y: 320 }}
+                      locale={{ emptyText: <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+                      columns={[
+                        { title: '#', dataIndex: 'posicion', width: 48,
+                          render: (v: number) => <span style={{ color: v <= 3 ? '#fa8c16' : '#8c8c8c', fontWeight: 700 }}>{v}</span> },
+                        { title: 'Operador', dataIndex: 'nombre', ellipsis: true,
+                          render: (v: string) => <strong>{v}</strong> },
+                        { title: 'QSOs', dataIndex: 'total', width: 80, align: 'right' as const,
+                          render: (v: number) => <span style={{ fontWeight: 700, color: '#1A569E' }}>{v.toLocaleString()}</span> },
+                        { title: 'Participación', key: 'pct', width: 140,
+                          render: (_: unknown, r: { total: number }) => {
+                            const max = rankingOpsRS[0]?.total || 1
+                            const pct = Math.round((r.total / max) * 100)
+                            return (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div style={{ flex: 1, background: '#f0f0f0', borderRadius: 4, height: 8 }}>
+                                  <div style={{ width: `${pct}%`, background: '#1A569E', borderRadius: 4, height: 8 }} />
+                                </div>
+                                <span style={{ fontSize: 11, color: '#8c8c8c', minWidth: 28 }}>{pct}%</span>
+                              </div>
+                            )
+                          }},
+                      ]}
+                    />
                   </Card>
                 </Col>
               </Row>

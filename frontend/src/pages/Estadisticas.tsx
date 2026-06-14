@@ -35,6 +35,7 @@ export default function EstadisticasPage() {
   // Advanced stats
   const [horario, setHorario]           = useState<{ hora: number; total: number }[]>([])
   const [topOps, setTopOps]             = useState<any[]>([])
+  const [rankingOps, setRankingOps]     = useState<{ usuario_id: number; nombre: string; total: number; posicion: number }[]>([])
   const [zonaAct, setZonaAct]           = useState<any[]>([])
   const [nuevos, setNuevos]             = useState<{ mes: string; nuevos: number }[]>([])
   const [retencion, setRetencion]       = useState<{ mes: string; activos: number; retenidos: number; tasa: number }[]>([])
@@ -70,6 +71,7 @@ export default function EstadisticasPage() {
       client.get('/estadisticas/sistemas-por-zona', { params: p }),
       client.get('/estadisticas/tendencia-eventos', { params: p }),
       estadisticasApi.coberturaEstados(p),
+      estadisticasApi.operadoresPeriodo(p),
     ])
     const ok = (i: number) =>
       results[i].status === 'fulfilled' ? (results[i] as PromiseFulfilledResult<any>).value.data : []
@@ -77,6 +79,7 @@ export default function EstadisticasPage() {
     setHorario(ok(3));   setTopOps(ok(4));     setZonaAct(ok(5))
     setNuevos(ok(6));    setRetencion(ok(7));  setRstZona(ok(8))
     setSistZona(ok(9));  setTendEv(ok(10));    setCobertura(ok(11))
+    setRankingOps(ok(12))
     setLoading(false)
   }
 
@@ -343,6 +346,39 @@ export default function EstadisticasPage() {
                       ? <ReactECharts option={radarSistemas} style={{ height: 320 }} notMerge />
                       : <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 60 }} />
                     }
+                  </Card>
+                </Col>
+                <Col xs={24}>
+                  <Card title="📋 Capturas por operador" className="card-shadow">
+                    <Table
+                      dataSource={rankingOps}
+                      rowKey="usuario_id"
+                      size="small"
+                      pagination={false}
+                      scroll={{ y: 320 }}
+                      locale={{ emptyText: <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+                      columns={[
+                        { title: '#', dataIndex: 'posicion', width: 48,
+                          render: (v: number) => <span style={{ color: v <= 3 ? '#fa8c16' : '#8c8c8c', fontWeight: 700 }}>{v}</span> },
+                        { title: 'Operador', dataIndex: 'nombre', ellipsis: true,
+                          render: (v: string) => <strong>{v}</strong> },
+                        { title: 'QSOs', dataIndex: 'total', width: 80, align: 'right' as const,
+                          render: (v: number) => <span style={{ fontWeight: 700, color: '#1A569E' }}>{v.toLocaleString()}</span> },
+                        { title: 'Participación', key: 'pct', width: 140,
+                          render: (_: unknown, r: { total: number }) => {
+                            const max = rankingOps[0]?.total || 1
+                            const pct = Math.round((r.total / max) * 100)
+                            return (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div style={{ flex: 1, background: '#f0f0f0', borderRadius: 4, height: 8 }}>
+                                  <div style={{ width: `${pct}%`, background: '#1A569E', borderRadius: 4, height: 8 }} />
+                                </div>
+                                <span style={{ fontSize: 11, color: '#8c8c8c', minWidth: 28 }}>{pct}%</span>
+                              </div>
+                            )
+                          }},
+                      ]}
+                    />
                   </Card>
                 </Col>
               </Row>

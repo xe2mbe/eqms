@@ -749,6 +749,72 @@ def rs_ranking_operadores(
     ]
 
 
+@router.get("/operadores-periodo")
+def operadores_periodo(
+    fecha_inicio: Optional[datetime] = None,
+    fecha_fin: Optional[datetime] = None,
+    evento_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """Ranking de operadores por QSOs capturados en el período, filtro de evento opcional."""
+    q = (
+        db.query(
+            models.Usuario.id,
+            func.coalesce(models.Usuario.indicativo, models.Usuario.full_name).label("nombre"),
+            func.count().label("total"),
+        )
+        .join(models.Reporte, models.Reporte.capturado_por == models.Usuario.id)
+    )
+    if fecha_inicio:
+        q = q.filter(models.Reporte.fecha_reporte >= fecha_inicio)
+    if fecha_fin:
+        q = q.filter(models.Reporte.fecha_reporte <= _fin(fecha_fin))
+    if evento_id:
+        q = q.filter(models.Reporte.evento_id == evento_id)
+    rows = (
+        q.group_by(models.Usuario.id, models.Usuario.indicativo, models.Usuario.full_name)
+        .order_by(func.count().desc())
+        .all()
+    )
+    return [
+        {"usuario_id": r.id, "nombre": r.nombre, "total": r.total, "posicion": i + 1}
+        for i, r in enumerate(rows)
+    ]
+
+
+@router.get("/rs/operadores-periodo")
+def rs_operadores_periodo(
+    fecha_inicio: Optional[datetime] = None,
+    fecha_fin: Optional[datetime] = None,
+    plataforma_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """Ranking de operadores RS por QSOs capturados en el período, filtro de plataforma opcional."""
+    q = (
+        db.query(
+            models.Usuario.id,
+            func.coalesce(models.Usuario.indicativo, models.Usuario.full_name).label("nombre"),
+            func.count().label("total"),
+        )
+        .join(models.ReporteRS, models.ReporteRS.capturado_por == models.Usuario.id)
+    )
+    if fecha_inicio:
+        q = q.filter(models.ReporteRS.fecha_reporte >= fecha_inicio)
+    if fecha_fin:
+        q = q.filter(models.ReporteRS.fecha_reporte <= _fin(fecha_fin))
+    if plataforma_id:
+        q = q.filter(models.ReporteRS.plataforma_id == plataforma_id)
+    rows = (
+        q.group_by(models.Usuario.id, models.Usuario.indicativo, models.Usuario.full_name)
+        .order_by(func.count().desc())
+        .all()
+    )
+    return [
+        {"usuario_id": r.id, "nombre": r.nombre, "total": r.total, "posicion": i + 1}
+        for i, r in enumerate(rows)
+    ]
+
+
 @router.get("/mi-ranking-evento")
 def mi_ranking_evento(
     evento_id: int,

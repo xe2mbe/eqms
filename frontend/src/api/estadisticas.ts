@@ -85,6 +85,16 @@ export const estadisticasApi = {
       '/estadisticas/ranking-evento', { params: { evento_id } }
     ),
 
+  operadoresPeriodo: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number }) =>
+    client.get<{ usuario_id: number; nombre: string; total: number; posicion: number }[]>(
+      '/estadisticas/operadores-periodo', { params }
+    ),
+
+  rsOperadoresPeriodo: (params?: { fecha_inicio?: string; fecha_fin?: string; plataforma_id?: number }) =>
+    client.get<{ usuario_id: number; nombre: string; total: number; posicion: number }[]>(
+      '/estadisticas/rs/operadores-periodo', { params }
+    ),
+
   miRankingEvento: (evento_id: number) =>
     client.get<{ fecha: string; total: number; posicion: number }[]>(
       '/estadisticas/mi-ranking-evento', { params: { evento_id } }
