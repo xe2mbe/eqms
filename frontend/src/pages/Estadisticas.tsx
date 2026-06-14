@@ -366,8 +366,8 @@ export default function EstadisticasPage() {
                           render: (v: number) => <span style={{ fontWeight: 700, color: '#1A569E' }}>{v.toLocaleString()}</span> },
                         { title: 'Participación', key: 'pct', width: 140,
                           render: (_: unknown, r: { total: number }) => {
-                            const max = rankingOps[0]?.total || 1
-                            const pct = Math.round((r.total / max) * 100)
+                            const totalGeneral = rankingOps.reduce((s, o) => s + o.total, 0) || 1
+                            const pct = Math.round((r.total / totalGeneral) * 100)
                             return (
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <div style={{ flex: 1, background: '#f0f0f0', borderRadius: 4, height: 8 }}>
