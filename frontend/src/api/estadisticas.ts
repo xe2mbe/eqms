@@ -85,6 +85,16 @@ export const estadisticasApi = {
       '/estadisticas/ranking-evento', { params: { evento_id } }
     ),
 
+  miRankingEvento: (evento_id: number) =>
+    client.get<{ fecha: string; total: number; posicion: number }[]>(
+      '/estadisticas/mi-ranking-evento', { params: { evento_id } }
+    ),
+
+  rsMiRankingEvento: (params: { evento_id: number; plataforma_id?: number }) =>
+    client.get<{ fecha: string; total: number; posicion: number }[]>(
+      '/estadisticas/rs/mi-ranking-evento', { params }
+    ),
+
   rsRankingEvento: (params: { evento_id: number; plataforma_id?: number }) =>
     client.get<{ fecha: string; total_reportes: number; total_estaciones: number; posicion: number }[]>(
       '/estadisticas/rs/ranking-evento', { params }

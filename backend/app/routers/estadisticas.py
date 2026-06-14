@@ -6,6 +6,7 @@ from datetime import datetime
 
 from app.database import get_db
 from app import models, schemas
+from app.auth import get_current_user
 
 router = APIRouter()
 
@@ -744,6 +745,65 @@ def rs_ranking_operadores(
     )
     return [
         {"usuario_id": r.id, "nombre": r.nombre, "total": r.total, "posicion": i + 1}
+        for i, r in enumerate(rows)
+    ]
+
+
+@router.get("/mi-ranking-evento")
+def mi_ranking_evento(
+    evento_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Ranking personal: mejores fechas del operador actual en este evento."""
+    from sqlalchemy import cast, Date
+    rows = (
+        db.query(
+            cast(models.Reporte.fecha_reporte, Date).label("fecha"),
+            func.count().label("total"),
+        )
+        .filter(
+            models.Reporte.evento_id == evento_id,
+            models.Reporte.capturado_por == current_user.id,
+        )
+        .group_by(cast(models.Reporte.fecha_reporte, Date))
+        .order_by(func.count().desc())
+        .all()
+    )
+    return [
+        {"fecha": str(r.fecha), "total": r.total, "posicion": i + 1}
+        for i, r in enumerate(rows)
+    ]
+
+
+@router.get("/rs/mi-ranking-evento")
+def rs_mi_ranking_evento(
+    evento_id: int,
+    plataforma_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Ranking personal RS: mejores fechas del operador actual en este evento."""
+    from sqlalchemy import cast, Date
+    q = (
+        db.query(
+            cast(models.ReporteRS.fecha_reporte, Date).label("fecha"),
+            func.count().label("total"),
+        )
+        .filter(
+            models.ReporteRS.evento_id == evento_id,
+            models.ReporteRS.capturado_por == current_user.id,
+        )
+    )
+    if plataforma_id:
+        q = q.filter(models.ReporteRS.plataforma_id == plataforma_id)
+    rows = (
+        q.group_by(cast(models.ReporteRS.fecha_reporte, Date))
+        .order_by(func.count().desc())
+        .all()
+    )
+    return [
+        {"fecha": str(r.fecha), "total": r.total, "posicion": i + 1}
         for i, r in enumerate(rows)
     ]
 

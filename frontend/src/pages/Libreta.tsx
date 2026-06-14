@@ -166,7 +166,9 @@ export default function LibretaPage() {
 
   // Ranking del evento y estadísticas de sesión
   type RankingEntry = { fecha: string; total_reportes: number; total_estaciones: number; posicion: number }
+  type MiRankingEntry = { fecha: string; total: number; posicion: number }
   const [rankingEvento, setRankingEvento] = useState<RankingEntry[]>([])
+  const [miRankingPersonal, setMiRankingPersonal] = useState<MiRankingEntry[]>([])
   const prevPosicionRef = useRef<number | null>(null)
 
   // Tabla resumen de reportes guardados
@@ -272,7 +274,7 @@ export default function LibretaPage() {
     try {
       const fecha = dayjs(cfg.fecha)
       const eventoId = eventos.find(e => e.tipo === cfg.tipo_evento)?.id
-      const [reportesRes, rankingRes] = await Promise.all([
+      const [reportesRes, rankingRes, miRankingRes] = await Promise.all([
         reportesApi.list({
           fecha_inicio: fecha.startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
           fecha_fin: fecha.endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
@@ -280,9 +282,11 @@ export default function LibretaPage() {
           page_size: 200,
         }),
         eventoId ? estadisticasApi.rankingEvento(eventoId) : Promise.resolve({ data: [] as any }),
+        eventoId ? estadisticasApi.miRankingEvento(eventoId) : Promise.resolve({ data: [] as any }),
       ])
       setResumen(reportesRes.data.items)
       setRankingEvento(rankingRes.data)
+      setMiRankingPersonal(miRankingRes.data)
     } catch { /* silencioso */ } finally {
       setLoadingResumen(false)
     }
@@ -316,19 +320,6 @@ export default function LibretaPage() {
     return { totalQSOs, estacionesUnicas, posicion, totalSesiones, esRecordQSOs, esRecordEstaciones }
   }, [resumen, rankingEvento, fechaActual])
 
-  // Ranking de operadores calculado desde los reportes ya en memoria (sesión actual)
-  const rankingOpSesion = useMemo(() => {
-    const counts: Record<number, { usuario_id: number; nombre: string; total: number }> = {}
-    for (const r of resumen) {
-      if (!r.capturado_por) continue
-      if (!counts[r.capturado_por])
-        counts[r.capturado_por] = { usuario_id: r.capturado_por, nombre: r.capturado_por_nombre || `Op#${r.capturado_por}`, total: 0 }
-      counts[r.capturado_por].total++
-    }
-    return Object.values(counts)
-      .sort((a, b) => b.total - a.total)
-      .map((e, i) => ({ ...e, posicion: i + 1 }))
-  }, [resumen])
 
   useEffect(() => {
     const { posicion, totalQSOs, estacionesUnicas } = statsActuales
@@ -1461,14 +1452,12 @@ export default function LibretaPage() {
                   </div>
                 </Col>
               )}
-              {/* Tarjeta 4: ranking del operador actual (sesión actual) */}
-              {rankingOpSesion.length > 0 && (() => {
-                const miRanking = rankingOpSesion.find(r => r.usuario_id === user?.id)
-                const totalOps = rankingOpSesion.length + (miRanking ? 0 : 1)
-                const posicion = miRanking?.posicion ?? totalOps
-                const total = miRanking?.total ?? 0
-                const esPrimero = posicion === 1
-                const esTop3 = posicion <= 3
+              {/* Tarjeta 4: récord personal del operador en este evento */}
+              {miRankingPersonal.length > 0 && (() => {
+                const hoy = miRankingPersonal.find(r => r.fecha === fechaActual)
+                if (!hoy || hoy.total === 0) return null
+                const esPrimero = hoy.posicion === 1
+                const esTop3 = hoy.posicion <= 3
                 return (
                   <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
                     <div style={{
@@ -1484,13 +1473,13 @@ export default function LibretaPage() {
                       transition: 'all 0.4s ease', height: '100%',
                     }}>
                       <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
-                        📻 Tu ranking de capturas
+                        🏅 Mi récord personal
                       </div>
                       <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1.1 }}>
-                        {posicion === 1 ? '🥇' : posicion === 2 ? '🥈' : posicion === 3 ? '🥉' : `#${posicion}`}
+                        {hoy.posicion === 1 ? '🥇' : hoy.posicion === 2 ? '🥈' : hoy.posicion === 3 ? '🥉' : `#${hoy.posicion}`}
                       </div>
                       <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, fontWeight: 600 }}>
-                        {`de ${totalOps} ops · ${total} QSOs hoy`}
+                        {`de ${miRankingPersonal.length} ses. · ${hoy.total} QSOs hoy`}
                       </div>
                     </div>
                   </Col>

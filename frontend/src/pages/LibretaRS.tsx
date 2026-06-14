@@ -128,7 +128,9 @@ export default function LibretaRSPage() {
 
   // ── Ranking RS y estadísticas ──
   type RankingEntry = { fecha: string; total_reportes: number; total_estaciones: number; posicion: number }
+  type MiRankingEntry = { fecha: string; total: number; posicion: number }
   const [rankingRS, setRankingRS] = useState<RankingEntry[]>([])
+  const [miRankingRS, setMiRankingRS] = useState<MiRankingEntry[]>([])
   const prevPosicionRSRef = useRef<number | null>(null)
 
   // ── Reportes guardados ──
@@ -227,7 +229,7 @@ export default function LibretaRSPage() {
     setLoadingReportes(true)
     try {
       const eventoId = eventos.find(e => e.tipo === sesionEvento)?.id
-      const [reportesRes, rankingRes] = await Promise.all([
+      const [reportesRes, rankingRes, miRankingRes] = await Promise.all([
         libretaRSApi.listReportes({
           page: p, page_size: 50,
           plataforma_id: platSeleccionada.id,
@@ -237,10 +239,14 @@ export default function LibretaRSPage() {
         eventoId
           ? estadisticasApi.rsRankingEvento({ evento_id: eventoId, plataforma_id: platSeleccionada.id })
           : Promise.resolve({ data: [] as any }),
+        eventoId
+          ? estadisticasApi.rsMiRankingEvento({ evento_id: eventoId, plataforma_id: platSeleccionada.id })
+          : Promise.resolve({ data: [] as any }),
       ])
       setReportes(reportesRes.data.items)
       setTotalReportes(reportesRes.data.total)
       setRankingRS(rankingRes.data)
+      setMiRankingRS(miRankingRes.data)
     } finally { setLoadingReportes(false) }
   }, [pageReportes, platSeleccionada, sesionFecha, sesionEvento, eventos])
 
@@ -530,19 +536,6 @@ export default function LibretaRSPage() {
       posicion, totalSesiones, esRecordQSOs, esRecordEstaciones,
     }
   }, [rankingRS, fechaActualRS, totalReportes])
-
-  // Ranking de operadores de la sesión actual, calculado desde reportes en memoria
-  const rankingOpSesionRS = useMemo(() => {
-    const counts: Record<string, { nombre: string; total: number }> = {}
-    for (const r of reportes) {
-      const nombre = r.capturado_por_nombre || '—'
-      if (!counts[nombre]) counts[nombre] = { nombre, total: 0 }
-      counts[nombre].total++
-    }
-    return Object.values(counts)
-      .sort((a, b) => b.total - a.total)
-      .map((e, i) => ({ ...e, posicion: i + 1 }))
-  }, [reportes])
 
   useEffect(() => {
     const { posicion, totalQSOs, estacionesUnicas } = statsRS
@@ -1049,15 +1042,12 @@ export default function LibretaRSPage() {
                   </div>
                 </Col>
               )}
-              {/* Tarjeta 4: ranking del operador actual (sesión actual) */}
-              {rankingOpSesionRS.length > 0 && (() => {
-                const miNombre = user?.indicativo || user?.full_name
-                const miRanking = miNombre ? rankingOpSesionRS.find(r => r.nombre === miNombre) : undefined
-                const totalOps = rankingOpSesionRS.length + (miRanking ? 0 : 1)
-                const posicion = miRanking?.posicion ?? totalOps
-                const total = miRanking?.total ?? 0
-                const esPrimero = posicion === 1
-                const esTop3 = posicion <= 3
+              {/* Tarjeta 4: récord personal del operador en este evento */}
+              {miRankingRS.length > 0 && (() => {
+                const hoy = miRankingRS.find(r => r.fecha === fechaActualRS)
+                if (!hoy || hoy.total === 0) return null
+                const esPrimero = hoy.posicion === 1
+                const esTop3 = hoy.posicion <= 3
                 return (
                   <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
                     <div style={{
@@ -1073,13 +1063,13 @@ export default function LibretaRSPage() {
                       transition: 'all 0.4s ease', height: '100%',
                     }}>
                       <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
-                        📻 Tu ranking de capturas
+                        🏅 Mi récord personal
                       </div>
                       <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1.1 }}>
-                        {posicion === 1 ? '🥇' : posicion === 2 ? '🥈' : posicion === 3 ? '🥉' : `#${posicion}`}
+                        {hoy.posicion === 1 ? '🥇' : hoy.posicion === 2 ? '🥈' : hoy.posicion === 3 ? '🥉' : `#${hoy.posicion}`}
                       </div>
                       <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, fontWeight: 600 }}>
-                        {`de ${totalOps} ops · ${total} QSOs hoy`}
+                        {`de ${miRankingRS.length} ses. · ${hoy.total} QSOs hoy`}
                       </div>
                     </div>
                   </Col>
