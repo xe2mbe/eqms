@@ -401,6 +401,20 @@ export default function EstadisticasRSPage() {
                             )
                           }},
                       ]}
+                      summary={() => {
+                        const total = rankingOpsRS.reduce((s, o) => s + o.total, 0)
+                        return (
+                          <Table.Summary.Row>
+                            <Table.Summary.Cell index={0} colSpan={2}>
+                              <strong>Total</strong>
+                            </Table.Summary.Cell>
+                            <Table.Summary.Cell index={1} align="right">
+                              <strong style={{ color: '#1A569E' }}>{total.toLocaleString()}</strong>
+                            </Table.Summary.Cell>
+                            <Table.Summary.Cell index={2} />
+                          </Table.Summary.Row>
+                        )
+                      }}
                     />
                   </Card>
                 </Col>
