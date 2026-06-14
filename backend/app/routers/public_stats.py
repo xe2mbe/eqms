@@ -51,9 +51,11 @@ def public_stats(db: Session = Depends(get_db)):
     """), {"ev_id": ev_id}).fetchall()
 
     top_rf = db.execute(text("""
-        SELECT r.indicativo, MAX(re.nombre_completo) as nombre, COUNT(*) as total
+        SELECT r.indicativo,
+               COALESCE(MAX(r.operador), MAX(re.nombre_completo)) as nombre,
+               COUNT(*) as total
         FROM reportes r
-        LEFT JOIN radioexperimentadores re ON re.indicativo = r.indicativo
+        LEFT JOIN radioexperimentadores re ON UPPER(re.indicativo) = UPPER(r.indicativo)
         WHERE r.evento_id = :ev_id AND UPPER(r.indicativo) NOT LIKE '%SWL%'
         GROUP BY r.indicativo ORDER BY total DESC LIMIT 10
     """), {"ev_id": ev_id}).fetchall()
@@ -65,9 +67,11 @@ def public_stats(db: Session = Depends(get_db)):
     """)).fetchall()
 
     top_rs = db.execute(text("""
-        SELECT r.indicativo, MAX(re.nombre_completo) as nombre, COUNT(*) as total
+        SELECT r.indicativo,
+               COALESCE(MAX(r.operador), MAX(re.nombre_completo)) as nombre,
+               COUNT(*) as total
         FROM reportes_rs r
-        LEFT JOIN radioexperimentadores re ON re.indicativo = r.indicativo
+        LEFT JOIN radioexperimentadores re ON UPPER(re.indicativo) = UPPER(r.indicativo)
         GROUP BY r.indicativo ORDER BY total DESC LIMIT 10
     """)).fetchall()
 
@@ -119,10 +123,12 @@ def estaciones_rf(db: Session = Depends(get_db)):
     )).first()
     ev_id = boletin[0] if boletin else -1
     rows = db.execute(text("""
-        SELECT r.indicativo, MAX(re.nombre_completo) as nombre, COUNT(*) as total,
+        SELECT r.indicativo,
+               COALESCE(MAX(r.operador), MAX(re.nombre_completo)) as nombre,
+               COUNT(*) as total,
                TO_CHAR(MAX(r.fecha_reporte), 'YYYY-MM-DD') as ultima
         FROM reportes r
-        LEFT JOIN radioexperimentadores re ON re.indicativo = r.indicativo
+        LEFT JOIN radioexperimentadores re ON UPPER(re.indicativo) = UPPER(r.indicativo)
         WHERE r.evento_id = :ev_id AND UPPER(r.indicativo) NOT LIKE '%SWL%'
         GROUP BY r.indicativo ORDER BY total DESC
     """), {"ev_id": ev_id}).fetchall()
@@ -132,10 +138,12 @@ def estaciones_rf(db: Session = Depends(get_db)):
 @router.get("/estaciones-rs")
 def estaciones_rs(db: Session = Depends(get_db)):
     rows = db.execute(text("""
-        SELECT r.indicativo, MAX(re.nombre_completo) as nombre, COUNT(*) as total,
+        SELECT r.indicativo,
+               COALESCE(MAX(r.operador), MAX(re.nombre_completo)) as nombre,
+               COUNT(*) as total,
                TO_CHAR(MAX(r.fecha_reporte), 'YYYY-MM-DD') as ultima
         FROM reportes_rs r
-        LEFT JOIN radioexperimentadores re ON re.indicativo = r.indicativo
+        LEFT JOIN radioexperimentadores re ON UPPER(re.indicativo) = UPPER(r.indicativo)
         GROUP BY r.indicativo ORDER BY total DESC
     """)).fetchall()
     return [{"indicativo": r[0], "nombre": r[1], "total": int(r[2]), "ultima": r[3]} for r in rows]
@@ -153,7 +161,7 @@ def ultimo_evento_participantes(db: Session = Depends(get_db)):
         return {"evento": None, "fecha": None, "participantes": []}
     rows = db.execute(text("""
         SELECT r.indicativo,
-               COALESCE(MAX(re.nombre_completo), MAX(u.full_name)) as nombre,
+               COALESCE(MAX(r.operador), MAX(re.nombre_completo), MAX(u.full_name)) as nombre,
                COALESCE(s.codigo, 'N/D') as sistema,
                COUNT(*) as total,
                MAX(r.estado) as estado
