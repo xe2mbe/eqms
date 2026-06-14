@@ -93,6 +93,9 @@ type Stats = {
   ultimo_evento: { tipo: string; ultima: string; participantes: number } | null
 }
 
+type EstacionItem = { indicativo: string; nombre: string | null; total: number; ultima: string | null }
+type UltimoEvDetalle = { evento: string | null; fecha: string | null; participantes: { indicativo: string; nombre: string | null; total: number }[] }
+
 type BusquedaResult = {
   indicativo: string
   operador: { nombre: string | null; municipio: string | null; estado: string | null; licencia: string | null } | null
@@ -119,6 +122,52 @@ export default function PublicFMREPage() {
   const [resultado, setResultado] = useState<BusquedaResult | null>(null)
   const [busqError, setBusqError] = useState<string | null>(null)
   const busquedaRef = useRef<HTMLDivElement>(null)
+  const rfRef       = useRef<HTMLDivElement>(null)
+  const rsRef       = useRef<HTMLDivElement>(null)
+  const estRFRef    = useRef<HTMLDivElement>(null)
+  const estRSRef    = useRef<HTMLDivElement>(null)
+  const evRef       = useRef<HTMLDivElement>(null)
+
+  const [estacionesRF, setEstacionesRF]       = useState<EstacionItem[] | null>(null)
+  const [estacionesRS, setEstacionesRS]       = useState<EstacionItem[] | null>(null)
+  const [ultimoEvDetalle, setUltimoEvDetalle] = useState<UltimoEvDetalle | null>(null)
+  const [loadingEstRF, setLoadingEstRF]       = useState(false)
+  const [loadingEstRS, setLoadingEstRS]       = useState(false)
+  const [loadingEv, setLoadingEv]             = useState(false)
+
+  const handleCardClick = async (label: string) => {
+    if (label === 'Reportes RF') {
+      rfRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else if (label === 'Reportes RS') {
+      rsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else if (label === 'Estaciones RF') {
+      if (!estacionesRF) {
+        setLoadingEstRF(true)
+        const { data } = await axios.get('/api/public/estaciones-rf')
+        setEstacionesRF(data)
+        setLoadingEstRF(false)
+      }
+      setTimeout(() => estRFRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
+    } else {
+      if (!estacionesRS) {
+        setLoadingEstRS(true)
+        const { data } = await axios.get('/api/public/estaciones-rs')
+        setEstacionesRS(data)
+        setLoadingEstRS(false)
+      }
+      setTimeout(() => estRSRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
+    }
+  }
+
+  const handleUltimoEvento = async () => {
+    if (!ultimoEvDetalle) {
+      setLoadingEv(true)
+      const { data } = await axios.get('/api/public/ultimo-evento-participantes')
+      setUltimoEvDetalle(data)
+      setLoadingEv(false)
+    }
+    setTimeout(() => evRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
+  }
 
   const handleBuscar = async () => {
     if (!busqueda.trim()) return
@@ -267,10 +316,16 @@ export default function PublicFMREPage() {
                 { icon: <RadarChartOutlined />, label: 'Estaciones RS', value: stats!.rs.indicativos, color: '#ff7a45' },
               ].map((item, i) => (
                 <Col key={i} xs={12} sm={6}>
-                  <div style={{
-                    background: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: '16px 20px',
-                    borderTop: `3px solid ${item.color}`,
-                  }}>
+                  <div
+                    onClick={() => handleCardClick(item.label)}
+                    style={{
+                      background: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: '16px 20px',
+                      borderTop: `3px solid ${item.color}`, cursor: 'pointer',
+                      transition: 'background 0.2s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+                  >
                     <div style={{ color: item.color, fontSize: 22, marginBottom: 4 }}>{item.icon}</div>
                     <div style={{ color: 'white', fontSize: 28, fontWeight: 800, lineHeight: 1 }}>
                       <AnimatedCount target={item.value} />
@@ -286,7 +341,10 @@ export default function PublicFMREPage() {
 
       {/* ── ULTIMO EVENTO ── */}
       {stats?.ultimo_evento && (
-        <div style={{ background: FMRE_GOLD, padding: '10px 32px', textAlign: 'center' }}>
+        <div
+          onClick={handleUltimoEvento}
+          style={{ background: FMRE_GOLD, padding: '10px 32px', textAlign: 'center', cursor: 'pointer' }}
+        >
           <Text style={{ fontWeight: 700, color: FMRE_DARK }}>
             <StarOutlined style={{ marginRight: 8 }} />
             Último evento registrado: <strong>{stats.ultimo_evento.tipo}</strong> —{' '}
@@ -300,7 +358,7 @@ export default function PublicFMREPage() {
       <section style={{ background: 'white', borderBottom: `3px solid ${FMRE_BLUE}`, padding: '40px 32px' }}>
         <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>📡</div>
-          <Title level={3} style={{ color: FMRE_DARK, margin: 0 }}>¿Estás en el aire?</Title>
+          <Title level={3} style={{ color: FMRE_DARK, margin: 0 }}>¿Tomaron mi reporte?</Title>
           <Paragraph style={{ color: '#666', marginTop: 8, marginBottom: 24 }}>
             Consulta los reportes de cualquier estación radioaficionada registrados en el sistema.
             Ingresa un indicativo y ve su historial de actividad en RF y redes sociales.
@@ -444,7 +502,7 @@ export default function PublicFMREPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 16px' }}>
 
         {/* ── SECCIÓN RF ── */}
-        <div style={{ marginBottom: 40 }}>
+        <div ref={rfRef} style={{ marginBottom: 40 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
             <div style={{ width: 4, height: 28, background: FMRE_BLUE, borderRadius: 2 }} />
             <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>
@@ -535,7 +593,7 @@ export default function PublicFMREPage() {
         <Divider style={{ borderColor: '#d0d7e3' }} />
 
         {/* ── SECCIÓN RS ── */}
-        <div style={{ marginBottom: 40 }}>
+        <div ref={rsRef} style={{ marginBottom: 40 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
             <div style={{ width: 4, height: 28, background: '#722ed1', borderRadius: 2 }} />
             <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>
@@ -588,6 +646,87 @@ export default function PublicFMREPage() {
             </Col>
           </Row>
         </div>
+
+        {/* ── TABLA ESTACIONES RF ── */}
+        {(estacionesRF || loadingEstRF) && (
+          <div ref={estRFRef} style={{ marginBottom: 40, scrollMarginTop: 24 }}>
+            <Divider style={{ borderColor: '#d0d7e3' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 4, height: 28, background: FMRE_BLUE, borderRadius: 2 }} />
+              <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>Estaciones activas — RF</Title>
+            </div>
+            {loadingEstRF ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (
+              <Table
+                dataSource={estacionesRF ?? []}
+                rowKey="indicativo"
+                size="small"
+                pagination={{ pageSize: 50, showSizeChanger: false }}
+                columns={[
+                  { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => <Text type="secondary">{i + 1}</Text> },
+                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: FMRE_BLUE }}>{v}</strong> },
+                  { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? '—' },
+                  { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const, render: (v: number) => <Tag color="blue">{v.toLocaleString()}</Tag> },
+                  { title: 'Última actividad', dataIndex: 'ultima', width: 130, render: (v: string | null) => v ?? '—' },
+                ]}
+              />
+            )}
+          </div>
+        )}
+
+        {/* ── TABLA ESTACIONES RS ── */}
+        {(estacionesRS || loadingEstRS) && (
+          <div ref={estRSRef} style={{ marginBottom: 40, scrollMarginTop: 24 }}>
+            <Divider style={{ borderColor: '#d0d7e3' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 4, height: 28, background: '#722ed1', borderRadius: 2 }} />
+              <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>Estaciones activas — Redes Sociales</Title>
+            </div>
+            {loadingEstRS ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (
+              <Table
+                dataSource={estacionesRS ?? []}
+                rowKey="indicativo"
+                size="small"
+                pagination={{ pageSize: 50, showSizeChanger: false }}
+                columns={[
+                  { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => <Text type="secondary">{i + 1}</Text> },
+                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: '#722ed1' }}>{v}</strong> },
+                  { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? '—' },
+                  { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const, render: (v: number) => <Tag color="purple">{v.toLocaleString()}</Tag> },
+                  { title: 'Última actividad', dataIndex: 'ultima', width: 130, render: (v: string | null) => v ?? '—' },
+                ]}
+              />
+            )}
+          </div>
+        )}
+
+        {/* ── ÚLTIMO EVENTO DETALLE ── */}
+        {(ultimoEvDetalle || loadingEv) && (
+          <div ref={evRef} style={{ marginBottom: 40, scrollMarginTop: 24 }}>
+            <Divider style={{ borderColor: '#d0d7e3' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 4, height: 28, background: FMRE_GOLD, borderRadius: 2 }} />
+              <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>
+                {ultimoEvDetalle?.evento ?? 'Último evento'} — {ultimoEvDetalle?.fecha ?? ''}
+              </Title>
+            </div>
+            {loadingEv ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (
+              <Table
+                dataSource={ultimoEvDetalle?.participantes ?? []}
+                rowKey="indicativo"
+                size="small"
+                pagination={{ pageSize: 50, showSizeChanger: false }}
+                columns={[
+                  { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => (
+                    <span style={{ fontWeight: 700, color: i < 3 ? FMRE_GOLD : '#8c8c8c' }}>{i + 1}</span>
+                  )},
+                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: FMRE_BLUE }}>{v}</strong> },
+                  { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? '—' },
+                  { title: 'QSOs', dataIndex: 'total', width: 80, align: 'right' as const, render: (v: number) => <Tag color="gold">{v.toLocaleString()}</Tag> },
+                ]}
+              />
+            )}
+          </div>
+        )}
 
       </div>
 

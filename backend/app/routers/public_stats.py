@@ -96,6 +96,55 @@ def public_stats(db: Session = Depends(get_db)):
     }
 
 
+@router.get("/estaciones-rf")
+def estaciones_rf(db: Session = Depends(get_db)):
+    rows = db.execute(text("""
+        SELECT r.indicativo, MAX(re.nombre_completo) as nombre, COUNT(*) as total,
+               TO_CHAR(MAX(r.fecha_reporte), 'YYYY-MM-DD') as ultima
+        FROM reportes r
+        LEFT JOIN radioexperimentadores re ON re.indicativo = r.indicativo
+        GROUP BY r.indicativo ORDER BY total DESC LIMIT 200
+    """)).fetchall()
+    return [{"indicativo": r[0], "nombre": r[1], "total": int(r[2]), "ultima": r[3]} for r in rows]
+
+
+@router.get("/estaciones-rs")
+def estaciones_rs(db: Session = Depends(get_db)):
+    rows = db.execute(text("""
+        SELECT r.indicativo, MAX(re.nombre_completo) as nombre, COUNT(*) as total,
+               TO_CHAR(MAX(r.fecha_reporte), 'YYYY-MM-DD') as ultima
+        FROM reportes_rs r
+        LEFT JOIN radioexperimentadores re ON re.indicativo = r.indicativo
+        GROUP BY r.indicativo ORDER BY total DESC LIMIT 200
+    """)).fetchall()
+    return [{"indicativo": r[0], "nombre": r[1], "total": int(r[2]), "ultima": r[3]} for r in rows]
+
+
+@router.get("/ultimo-evento-participantes")
+def ultimo_evento_participantes(db: Session = Depends(get_db)):
+    ultimo = db.execute(text("""
+        SELECT e.tipo, DATE_TRUNC('day', MAX(r.fecha_reporte))::date AS fecha
+        FROM reportes r JOIN eventos e ON e.id = r.evento_id
+        WHERE r.fecha_reporte >= NOW() - INTERVAL '30 days'
+        GROUP BY e.tipo ORDER BY fecha DESC LIMIT 1
+    """)).first()
+    if not ultimo:
+        return {"evento": None, "fecha": None, "participantes": []}
+    rows = db.execute(text("""
+        SELECT r.indicativo, MAX(re.nombre_completo) as nombre, COUNT(*) as total
+        FROM reportes r
+        JOIN eventos e ON e.id = r.evento_id
+        LEFT JOIN radioexperimentadores re ON re.indicativo = r.indicativo
+        WHERE e.tipo = :tipo AND DATE_TRUNC('day', r.fecha_reporte) = :fecha
+        GROUP BY r.indicativo ORDER BY total DESC
+    """), {"tipo": ultimo[0], "fecha": str(ultimo[1])}).fetchall()
+    return {
+        "evento": ultimo[0],
+        "fecha": str(ultimo[1]),
+        "participantes": [{"indicativo": r[0], "nombre": r[1], "total": int(r[2])} for r in rows],
+    }
+
+
 @router.get("/buscar")
 def buscar_indicativo(
     indicativo: str = Query(..., min_length=2, max_length=20),
