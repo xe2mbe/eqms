@@ -1462,11 +1462,13 @@ export default function LibretaPage() {
                 </Col>
               )}
               {/* Tarjeta 4: ranking del operador actual (sesión actual) */}
-              {(() => {
+              {rankingOpSesion.length > 0 && (() => {
                 const miRanking = rankingOpSesion.find(r => r.usuario_id === user?.id)
-                if (!miRanking) return null
-                const esPrimero = miRanking.posicion === 1
-                const esTop3 = miRanking.posicion <= 3
+                const totalOps = rankingOpSesion.length + (miRanking ? 0 : 1)
+                const posicion = miRanking?.posicion ?? totalOps
+                const total = miRanking?.total ?? 0
+                const esPrimero = posicion === 1
+                const esTop3 = posicion <= 3
                 return (
                   <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
                     <div style={{
@@ -1485,10 +1487,10 @@ export default function LibretaPage() {
                         📻 Tu ranking de capturas
                       </div>
                       <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1.1 }}>
-                        {miRanking.posicion === 1 ? '🥇' : miRanking.posicion === 2 ? '🥈' : miRanking.posicion === 3 ? '🥉' : `#${miRanking.posicion}`}
+                        {posicion === 1 ? '🥇' : posicion === 2 ? '🥈' : posicion === 3 ? '🥉' : `#${posicion}`}
                       </div>
                       <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, fontWeight: 600 }}>
-                        {`de ${rankingOpSesion.length} ops · ${miRanking.total} QSOs hoy`}
+                        {`de ${totalOps} ops · ${total} QSOs hoy`}
                       </div>
                     </div>
                   </Col>
