@@ -89,4 +89,14 @@ export const estadisticasApi = {
     client.get<{ fecha: string; total_reportes: number; total_estaciones: number; posicion: number }[]>(
       '/estadisticas/rs/ranking-evento', { params }
     ),
+
+  rankingOperadores: (evento_id: number) =>
+    client.get<{ usuario_id: number; nombre: string; total: number; posicion: number }[]>(
+      '/estadisticas/ranking-operadores', { params: { evento_id } }
+    ),
+
+  rsRankingOperadores: (evento_id: number) =>
+    client.get<{ usuario_id: number; nombre: string; total: number; posicion: number }[]>(
+      '/estadisticas/rs/ranking-operadores', { params: { evento_id } }
+    ),
 }

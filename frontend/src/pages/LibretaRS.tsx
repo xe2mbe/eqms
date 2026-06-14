@@ -128,7 +128,9 @@ export default function LibretaRSPage() {
 
   // ── Ranking RS y estadísticas ──
   type RankingEntry = { fecha: string; total_reportes: number; total_estaciones: number; posicion: number }
+  type RankingOpEntry = { usuario_id: number; nombre: string; total: number; posicion: number }
   const [rankingRS, setRankingRS] = useState<RankingEntry[]>([])
+  const [rankingOpRS, setRankingOpRS] = useState<RankingOpEntry[]>([])
   const prevPosicionRSRef = useRef<number | null>(null)
 
   // ── Reportes guardados ──
@@ -227,7 +229,7 @@ export default function LibretaRSPage() {
     setLoadingReportes(true)
     try {
       const eventoId = eventos.find(e => e.tipo === sesionEvento)?.id
-      const [reportesRes, rankingRes] = await Promise.all([
+      const [reportesRes, rankingRes, rankingOpRes] = await Promise.all([
         libretaRSApi.listReportes({
           page: p, page_size: 50,
           plataforma_id: platSeleccionada.id,
@@ -237,10 +239,14 @@ export default function LibretaRSPage() {
         eventoId
           ? estadisticasApi.rsRankingEvento({ evento_id: eventoId, plataforma_id: platSeleccionada.id })
           : Promise.resolve({ data: [] as any }),
+        eventoId
+          ? estadisticasApi.rsRankingOperadores(eventoId)
+          : Promise.resolve({ data: [] as any }),
       ])
       setReportes(reportesRes.data.items)
       setTotalReportes(reportesRes.data.total)
       setRankingRS(rankingRes.data)
+      setRankingOpRS(rankingOpRes.data)
     } finally { setLoadingReportes(false) }
   }, [pageReportes, platSeleccionada, sesionFecha, sesionEvento, eventos])
 
@@ -1036,6 +1042,39 @@ export default function LibretaRSPage() {
                   </div>
                 </Col>
               )}
+              {/* Tarjeta 4: ranking del operador actual */}
+              {(() => {
+                const miRanking = rankingOpRS.find(r => r.usuario_id === user?.id)
+                if (!miRanking) return null
+                const esPrimero = miRanking.posicion === 1
+                const esTop3 = miRanking.posicion <= 3
+                return (
+                  <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
+                    <div style={{
+                      background: esPrimero
+                        ? 'linear-gradient(135deg, #ff7a45 0%, #d4380d 100%)'
+                        : esTop3
+                          ? 'linear-gradient(135deg, #fa8c16 0%, #d46b08 100%)'
+                          : 'linear-gradient(135deg, #531dab 0%, #391085 100%)',
+                      borderRadius: 10, padding: '14px 18px', color: '#fff',
+                      boxShadow: esPrimero
+                        ? '0 4px 16px rgba(212,56,13,0.45)'
+                        : '0 4px 12px rgba(83,29,171,0.3)',
+                      transition: 'all 0.4s ease', height: '100%',
+                    }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
+                        📻 Tu ranking de capturas
+                      </div>
+                      <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1.1 }}>
+                        {miRanking.posicion === 1 ? '🥇' : miRanking.posicion === 2 ? '🥈' : miRanking.posicion === 3 ? '🥉' : `#${miRanking.posicion}`}
+                      </div>
+                      <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, fontWeight: 600 }}>
+                        {`de ${rankingOpRS.length} ops · ${miRanking.total} QSOs totales`}
+                      </div>
+                    </div>
+                  </Col>
+                )
+              })()}
             </Row>
           )}
 

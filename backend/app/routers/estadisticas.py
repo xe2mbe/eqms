@@ -700,6 +700,54 @@ def ranking_evento(
     ]
 
 
+@router.get("/ranking-operadores")
+def ranking_operadores(
+    evento_id: int,
+    db: Session = Depends(get_db),
+):
+    """Ranking de operadores por QSOs capturados en un evento (histórico)."""
+    rows = (
+        db.query(
+            models.Usuario.id,
+            func.coalesce(models.Usuario.indicativo, models.Usuario.full_name).label("nombre"),
+            func.count().label("total"),
+        )
+        .join(models.Reporte, models.Reporte.capturado_por == models.Usuario.id)
+        .filter(models.Reporte.evento_id == evento_id)
+        .group_by(models.Usuario.id, models.Usuario.indicativo, models.Usuario.full_name)
+        .order_by(func.count().desc())
+        .all()
+    )
+    return [
+        {"usuario_id": r.id, "nombre": r.nombre, "total": r.total, "posicion": i + 1}
+        for i, r in enumerate(rows)
+    ]
+
+
+@router.get("/rs/ranking-operadores")
+def rs_ranking_operadores(
+    evento_id: int,
+    db: Session = Depends(get_db),
+):
+    """Ranking de operadores por QSOs RS capturados en un evento (histórico)."""
+    rows = (
+        db.query(
+            models.Usuario.id,
+            func.coalesce(models.Usuario.indicativo, models.Usuario.full_name).label("nombre"),
+            func.count().label("total"),
+        )
+        .join(models.ReporteRS, models.ReporteRS.capturado_por == models.Usuario.id)
+        .filter(models.ReporteRS.evento_id == evento_id)
+        .group_by(models.Usuario.id, models.Usuario.indicativo, models.Usuario.full_name)
+        .order_by(func.count().desc())
+        .all()
+    )
+    return [
+        {"usuario_id": r.id, "nombre": r.nombre, "total": r.total, "posicion": i + 1}
+        for i, r in enumerate(rows)
+    ]
+
+
 @router.get("/rs/ranking-evento")
 def rs_ranking_evento(
     evento_id: int,
