@@ -10,40 +10,53 @@ router = APIRouter()
 def public_stats(db: Session = Depends(get_db)):
     """Estadísticas públicas del sistema — sin autenticación."""
 
-    rf_total = db.execute(text("SELECT COUNT(*) FROM reportes")).scalar() or 0
-    rf_indicativos = db.execute(text("SELECT COUNT(DISTINCT indicativo) FROM reportes")).scalar() or 0
+    # Obtener el ID del Boletín Dominical
+    boletin = db.execute(text(
+        "SELECT id FROM eventos WHERE tipo ILIKE '%boletin%dominical%' LIMIT 1"
+    )).first()
+    ev_id = boletin[0] if boletin else -1
+
+    rf_total = db.execute(text(
+        "SELECT COUNT(*) FROM reportes WHERE evento_id = :ev_id"
+    ), {"ev_id": ev_id}).scalar() or 0
+
+    rf_indicativos = db.execute(text(
+        "SELECT COUNT(DISTINCT indicativo) FROM reportes WHERE evento_id = :ev_id"
+    ), {"ev_id": ev_id}).scalar() or 0
 
     rs_total = db.execute(text("SELECT COUNT(*) FROM reportes_rs")).scalar() or 0
     rs_indicativos = db.execute(text("SELECT COUNT(DISTINCT indicativo) FROM reportes_rs")).scalar() or 0
 
     por_estado = db.execute(text("""
         SELECT estado, COUNT(*) as total FROM reportes
-        WHERE estado IS NOT NULL AND estado != '' AND estado != 'Extranjero'
+        WHERE evento_id = :ev_id
+          AND estado IS NOT NULL AND estado != '' AND estado != 'Extranjero'
         GROUP BY estado ORDER BY total DESC
-    """)).fetchall()
+    """), {"ev_id": ev_id}).fetchall()
 
     por_sistema = db.execute(text("""
         SELECT s.codigo, s.nombre, COUNT(*) as total
         FROM reportes r JOIN sistemas s ON s.id = r.sistema_id
-        WHERE r.sistema_id IS NOT NULL
+        WHERE r.evento_id = :ev_id AND r.sistema_id IS NOT NULL
         GROUP BY s.codigo, s.nombre ORDER BY total DESC
-    """)).fetchall()
+    """), {"ev_id": ev_id}).fetchall()
 
     tendencia = db.execute(text("""
         SELECT TO_CHAR(DATE_TRUNC('month', fecha_reporte), 'YYYY-MM') as mes,
                COUNT(*) as total
         FROM reportes
-        WHERE fecha_reporte >= NOW() - INTERVAL '12 months'
+        WHERE evento_id = :ev_id
+          AND fecha_reporte >= NOW() - INTERVAL '12 months'
         GROUP BY mes ORDER BY mes
-    """)).fetchall()
+    """), {"ev_id": ev_id}).fetchall()
 
     top_rf = db.execute(text("""
         SELECT r.indicativo, MAX(re.nombre_completo) as nombre, COUNT(*) as total
         FROM reportes r
         LEFT JOIN radioexperimentadores re ON re.indicativo = r.indicativo
-        WHERE UPPER(r.indicativo) NOT LIKE '%SWL%'
+        WHERE r.evento_id = :ev_id AND UPPER(r.indicativo) NOT LIKE '%SWL%'
         GROUP BY r.indicativo ORDER BY total DESC LIMIT 10
-    """)).fetchall()
+    """), {"ev_id": ev_id}).fetchall()
 
     por_plataforma = db.execute(text("""
         SELECT p.nombre, COUNT(*) as total
@@ -62,16 +75,18 @@ def public_stats(db: Session = Depends(get_db)):
         SELECT e.tipo, DATE_TRUNC('day', MAX(r.fecha_reporte)) as ultima,
                COUNT(DISTINCT r.indicativo) as participantes
         FROM reportes r JOIN eventos e ON e.id = r.evento_id
-        WHERE r.fecha_reporte >= NOW() - INTERVAL '30 days'
+        WHERE r.evento_id = :ev_id
+          AND r.fecha_reporte >= NOW() - INTERVAL '30 days'
         GROUP BY e.tipo ORDER BY ultima DESC LIMIT 1
-    """)).first()
+    """), {"ev_id": ev_id}).first()
 
     paises = db.execute(text("""
         SELECT pais, COUNT(DISTINCT indicativo) as indicativos
         FROM reportes
-        WHERE pais IS NOT NULL AND pais != '' AND pais != 'México'
+        WHERE evento_id = :ev_id
+          AND pais IS NOT NULL AND pais != '' AND pais != 'México'
         GROUP BY pais ORDER BY indicativos DESC LIMIT 8
-    """)).fetchall()
+    """), {"ev_id": ev_id}).fetchall()
 
     return {
         "rf": {
@@ -99,13 +114,18 @@ def public_stats(db: Session = Depends(get_db)):
 
 @router.get("/estaciones-rf")
 def estaciones_rf(db: Session = Depends(get_db)):
+    boletin = db.execute(text(
+        "SELECT id FROM eventos WHERE tipo ILIKE '%boletin%dominical%' LIMIT 1"
+    )).first()
+    ev_id = boletin[0] if boletin else -1
     rows = db.execute(text("""
         SELECT r.indicativo, MAX(re.nombre_completo) as nombre, COUNT(*) as total,
                TO_CHAR(MAX(r.fecha_reporte), 'YYYY-MM-DD') as ultima
         FROM reportes r
         LEFT JOIN radioexperimentadores re ON re.indicativo = r.indicativo
+        WHERE r.evento_id = :ev_id AND UPPER(r.indicativo) NOT LIKE '%SWL%'
         GROUP BY r.indicativo ORDER BY total DESC
-    """)).fetchall()
+    """), {"ev_id": ev_id}).fetchall()
     return [{"indicativo": r[0], "nombre": r[1], "total": int(r[2]), "ultima": r[3]} for r in rows]
 
 
