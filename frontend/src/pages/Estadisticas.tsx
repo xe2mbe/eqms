@@ -128,7 +128,7 @@ export default function EstadisticasPage() {
   }
 
   const sistPorEvData = sistPorEv.length > 0 ? sistPorEv
-    : porSistema.map(r => ({ tipo: 'General', sistema: r.sistema, total: r.total }))
+    : porSistema.map(r => ({ tipo: 'Sistema', sistema: r.sistema, total: r.total }))
   const sistEvTipos    = [...new Set(sistPorEvData.map(r => r.tipo))].sort()
   const sistEvSistemas = [...new Set(sistPorEvData.map(r => r.sistema))].sort()
   const sistEvFiltrados = sistEvFiltro.length > 0 ? sistEvFiltro : sistEvTipos
