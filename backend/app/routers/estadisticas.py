@@ -661,13 +661,13 @@ def tendencia_eventos(
     """Tendencia mensual de reportes por tipo de evento."""
     rows = db.execute(text("""
         SELECT DATE_TRUNC('month', r.fecha_reporte) AS mes,
-               e.tipo, COUNT(*) AS total
+               e.tipo_evento, COUNT(*) AS total
         FROM reportes r
         JOIN eventos e ON e.id = r.evento_id
         WHERE r.evento_id IS NOT NULL
           AND (:fi IS NULL OR r.fecha_reporte >= :fi)
           AND (:ff IS NULL OR r.fecha_reporte <= :ff)
-        GROUP BY mes, e.tipo ORDER BY mes, total DESC
+        GROUP BY mes, e.tipo_evento ORDER BY mes, total DESC
     """), {"fi": fecha_inicio, "ff": fecha_fin}).fetchall()
     return [{"mes": str(r[0]), "tipo": r[1], "total": r[2]} for r in rows]
 
