@@ -317,23 +317,6 @@ export default function PublicFMREPage() {
     }],
   }
 
-  const plataformaOption = !stats ? {} : {
-    tooltip: { trigger: 'axis' },
-    grid: { left: 160, right: 16, top: 8, bottom: 8 },
-    xAxis: { type: 'value', axisLabel: { color: '#666', fontSize: 11 } },
-    yAxis: {
-      type: 'category', axisLabel: { color: '#333', fontSize: 12 },
-      data: [...stats.rs.por_plataforma].reverse().map(p => p.plataforma),
-    },
-    series: [{
-      type: 'bar', barMaxWidth: 32,
-      data: [...stats.rs.por_plataforma].reverse().map(p => ({
-        value: p.total,
-        itemStyle: { color: PLAT_COLORS[p.plataforma] ?? FMRE_BLUE, borderRadius: [0, 4, 4, 0] },
-      })),
-    }],
-  }
-
   const tendenciaRSOption = !stats ? {} : (() => {
     const meses = [...new Set(stats.rs.tendencia.map(t => t.mes))].sort()
     const plataformas = [...new Set(stats.rs.tendencia.map(t => t.plataforma))].sort()
