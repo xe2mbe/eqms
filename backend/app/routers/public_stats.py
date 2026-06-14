@@ -1,9 +1,52 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.database import get_db
+import urllib.request
+import json as _json
 
 router = APIRouter()
+
+_visitas_ready = False
+
+
+@router.post("/visita")
+def registrar_visita(request: Request, db: Session = Depends(get_db)):
+    global _visitas_ready
+    if not _visitas_ready:
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS visitas (
+                id SERIAL PRIMARY KEY,
+                ip VARCHAR(45),
+                pais VARCHAR(100),
+                timestamp TIMESTAMPTZ DEFAULT NOW()
+            )
+        """))
+        db.commit()
+        _visitas_ready = True
+
+    # Detectar IP real detrás de proxy
+    ip = (request.headers.get("X-Forwarded-For") or
+          request.headers.get("X-Real-IP") or
+          (request.client.host if request.client else ""))
+    ip = ip.split(",")[0].strip()
+
+    # Consultar país vía ip-api.com (libre, sin key)
+    pais = "Desconocido"
+    try:
+        with urllib.request.urlopen(
+            f"http://ip-api.com/json/{ip}?fields=country&lang=es", timeout=3
+        ) as resp:
+            data = _json.loads(resp.read())
+            pais = data.get("country") or "Desconocido"
+    except Exception:
+        pass
+
+    db.execute(text("INSERT INTO visitas (ip, pais) VALUES (:ip, :pais)"), {"ip": ip, "pais": pais})
+    db.commit()
+
+    total = db.execute(text("SELECT COUNT(*) FROM visitas")).scalar()
+    return {"ip": ip, "pais": pais, "total": int(total)}
 
 
 @router.get("/stats")
