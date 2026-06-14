@@ -21,7 +21,7 @@ const FMRE_GOLD   = '#D4A017'
 
 const SISTEMA_COLORS: Record<string, string> = {
   HF: '#1A569E', ASL: '#52c41a', IRLP: '#fa8c16',
-  DMR: '#722ed1', FUSION: '#eb2f96', DSTAR: '#13c2c2',
+  DMR: '#7c3aed', FUSION: '#eb2f96', DSTAR: '#13c2c2',
   P25: '#f5222d', M17: '#fadb14', ECHOLINK: '#a0d911',
 }
 
@@ -346,7 +346,7 @@ export default function PublicFMREPage() {
       type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'],
       data: stats.rs.por_plataforma.map(p => ({
         name: p.plataforma, value: p.total,
-        itemStyle: { color: PLAT_COLORS[p.plataforma] ?? '#722ed1' },
+        itemStyle: { color: PLAT_COLORS[p.plataforma] ?? '#0891b2' },
       })),
       label: { show: false },
     }],
@@ -359,7 +359,7 @@ export default function PublicFMREPage() {
     },
     visualMap: {
       min: 0, max: Math.max(...stats.rs.por_estado.map(e => e.total), 1),
-      inRange: { color: ['#f5e8ff', '#722ed1'] },
+      inRange: { color: ['#e0f7fa', '#0891b2'] },
       text: ['Alto', 'Bajo'], textStyle: { color: '#666', fontSize: 11 },
       calculable: true, orient: 'horizontal', left: 'center', bottom: 8,
     },
@@ -490,7 +490,7 @@ export default function PublicFMREPage() {
       {stats?.ultimo_evento_rs && (
         <div
           onClick={handleUltimoEventoRS}
-          style={{ background: '#722ed1', padding: '10px 32px', textAlign: 'center', cursor: 'pointer' }}
+          style={{ background: '#0891b2', padding: '10px 32px', textAlign: 'center', cursor: 'pointer' }}
           onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(0.88)')}
           onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
         >
@@ -653,7 +653,7 @@ export default function PublicFMREPage() {
                         <div style={{ fontSize: 11, color: '#666' }}>Reportes RF</div>
                       </div>
                       <div style={{ textAlign: 'center', background: '#f9f0ff', borderRadius: 8, padding: '8px 16px' }}>
-                        <div style={{ fontSize: 24, fontWeight: 800, color: '#722ed1' }}>{resultado.rs.total.toLocaleString()}</div>
+                        <div style={{ fontSize: 24, fontWeight: 800, color: '#0891b2' }}>{resultado.rs.total.toLocaleString()}</div>
                         <div style={{ fontSize: 11, color: '#666' }}>Reportes RS</div>
                       </div>
                     </div>
@@ -704,7 +704,7 @@ export default function PublicFMREPage() {
                   {/* RS */}
                   {resultado.rs.total > 0 && (
                     <Col xs={24} lg={12}>
-                      <Card title={<span style={{ color: '#722ed1' }}>📱 Actividad en Redes Sociales</span>}
+                      <Card title={<span style={{ color: '#0891b2' }}>📱 Actividad en Redes Sociales</span>}
                             size="small" style={{ height: '100%' }}>
                         <div style={{ marginBottom: 12, fontSize: 12, color: '#888' }}>
                           Primera actividad: <strong>{resultado.rs.primera}</strong>
@@ -712,7 +712,7 @@ export default function PublicFMREPage() {
                         </div>
                         <div style={{ marginBottom: 12 }}>
                           {resultado.rs.por_plataforma.map(p => (
-                            <Tag key={p.plataforma} color={PLAT_COLORS[p.plataforma] ?? '#722ed1'} style={{ marginBottom: 4 }}>
+                            <Tag key={p.plataforma} color={PLAT_COLORS[p.plataforma] ?? '#0891b2'} style={{ marginBottom: 4 }}>
                               {p.plataforma} · {p.total}
                             </Tag>
                           ))}
@@ -725,7 +725,7 @@ export default function PublicFMREPage() {
                           columns={[
                             { title: 'Fecha', dataIndex: 'fecha', width: 90, render: v => v ?? '—' },
                             { title: 'Plataforma', dataIndex: 'plataforma', render: v => v
-                              ? <Tag color={PLAT_COLORS[v] ?? '#722ed1'} style={{ fontSize: 11 }}>{v}</Tag> : '—' },
+                              ? <Tag color={PLAT_COLORS[v] ?? '#0891b2'} style={{ fontSize: 11 }}>{v}</Tag> : '—' },
                             { title: 'Estado', dataIndex: 'estado', render: v => v ?? '—' },
                           ]}
                         />
@@ -907,11 +907,11 @@ export default function PublicFMREPage() {
         {/* ── SECCIÓN RS ── */}
         <div ref={rsRef} style={{ marginBottom: 40 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-            <div style={{ width: 4, height: 28, background: '#722ed1', borderRadius: 2 }} />
+            <div style={{ width: 4, height: 28, background: '#0891b2', borderRadius: 2 }} />
             <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>
               Actividad en Redes Sociales (RS)
             </Title>
-            <Tag color="purple" style={{ fontWeight: 700 }}>Facebook · Zello · y más</Tag>
+            <Tag color="cyan" style={{ fontWeight: 700 }}>Facebook · Zello · y más</Tag>
           </div>
           <Paragraph style={{ color: '#666', marginBottom: 24, maxWidth: 700 }}>
             Seguimiento de la participación de radioaficionados en plataformas digitales
@@ -921,7 +921,7 @@ export default function PublicFMREPage() {
           <Row gutter={[16, 16]}>
             {/* Tendencia mensual RS */}
             <Col xs={24} lg={14}>
-              <Card title={<span><RiseOutlined style={{ color: '#722ed1', marginRight: 8 }} />Actividad mensual por plataforma (últimos 12 meses)</span>}
+              <Card title={<span><RiseOutlined style={{ color: '#0891b2', marginRight: 8 }} />Actividad mensual por plataforma (últimos 12 meses)</span>}
                     size="small" className="card-shadow">
                 {isLoading ? <Spin /> : <ReactECharts option={tendenciaRSOption} style={{ height: 220 }} />}
               </Card>
@@ -929,7 +929,7 @@ export default function PublicFMREPage() {
 
             {/* Distribución por plataforma pie + tabla */}
             <Col xs={24} lg={10}>
-              <Card title={<span><GlobalOutlined style={{ color: '#722ed1', marginRight: 8 }} />Distribución por plataforma</span>}
+              <Card title={<span><GlobalOutlined style={{ color: '#0891b2', marginRight: 8 }} />Distribución por plataforma</span>}
                     size="small" className="card-shadow">
                 {isLoading ? <Spin /> : (() => {
                   const total = stats!.rs.por_plataforma.reduce((s, r) => s + r.total, 0)
@@ -951,7 +951,7 @@ export default function PublicFMREPage() {
                             {stats!.rs.por_plataforma.map(p => (
                               <tr key={p.plataforma} style={{ borderTop: '1px solid #f0f0f0' }}>
                                 <td style={{ padding: '3px 0', fontSize: 11, color: '#333', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: PLAT_COLORS[p.plataforma] ?? '#722ed1', marginRight: 5, flexShrink: 0 }} />
+                                  <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: PLAT_COLORS[p.plataforma] ?? '#0891b2', marginRight: 5, flexShrink: 0 }} />
                                   {p.plataforma}
                                 </td>
                                 <td style={{ textAlign: 'right', fontSize: 12, fontWeight: 700, paddingRight: 6 }}>
@@ -973,7 +973,7 @@ export default function PublicFMREPage() {
 
             {/* Mapa RS */}
             <Col xs={24} lg={14} style={{ display: 'flex', flexDirection: 'column' }}>
-              <Card title={<span><GlobalOutlined style={{ color: '#722ed1', marginRight: 8 }} />Cobertura por estado</span>}
+              <Card title={<span><GlobalOutlined style={{ color: '#0891b2', marginRight: 8 }} />Cobertura por estado</span>}
                     size="small" className="card-shadow" style={{ flex: 1 }}>
                 {isLoading || !mapReady
                   ? <div style={{ height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
@@ -983,7 +983,7 @@ export default function PublicFMREPage() {
 
             {/* Top 10 RS */}
             <Col xs={24} lg={10} style={{ display: 'flex', flexDirection: 'column' }}>
-              <Card title={<span><StarOutlined style={{ color: '#722ed1', marginRight: 8 }} />Top 10 estaciones más activas en RS</span>}
+              <Card title={<span><StarOutlined style={{ color: '#0891b2', marginRight: 8 }} />Top 10 estaciones más activas en RS</span>}
                     size="small" className="card-shadow" style={{ flex: 1 }}>
                 {isLoading ? <Spin /> : (
                   <div>
@@ -993,15 +993,15 @@ export default function PublicFMREPage() {
                         padding: '6px 0', borderBottom: i < 9 ? '1px solid #f0f0f0' : undefined,
                       }}>
                         <span style={{
-                          width: 24, height: 24, borderRadius: '50%', background: i < 3 ? '#722ed1' : '#f5f0ff',
+                          width: 24, height: 24, borderRadius: '50%', background: i < 3 ? '#0891b2' : '#e0f7fa',
                           color: i < 3 ? 'white' : '#666', fontWeight: 700, fontSize: 12,
                           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                         }}>{i + 1}</span>
-                        <span style={{ fontWeight: 700, color: '#722ed1', minWidth: 70 }}>{op.indicativo}</span>
+                        <span style={{ fontWeight: 700, color: '#0891b2', minWidth: 70 }}>{op.indicativo}</span>
                         <span style={{ color: '#666', fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {op.nombre ?? '—'}
                         </span>
-                        <Tag color="purple" style={{ fontWeight: 700, minWidth: 48, textAlign: 'center' }}>
+                        <Tag color="cyan" style={{ fontWeight: 700, minWidth: 48, textAlign: 'center' }}>
                           {op.total.toLocaleString()}
                         </Tag>
                       </div>
@@ -1014,7 +1014,7 @@ export default function PublicFMREPage() {
             {/* Participación por estado RS */}
             {stats && stats.rs.por_estado.length > 0 && (
               <Col xs={24}>
-                <Card title={<span><RadarChartOutlined style={{ color: '#722ed1', marginRight: 8 }} />Participación por Estado</span>}
+                <Card title={<span><RadarChartOutlined style={{ color: '#0891b2', marginRight: 8 }} />Participación por Estado</span>}
                       size="small" className="card-shadow">
                   {isLoading ? <Spin /> : (
                     <ReactECharts
@@ -1075,7 +1075,7 @@ export default function PublicFMREPage() {
           <div ref={estRSRef} style={{ marginBottom: 40, scrollMarginTop: 24 }}>
             <Divider style={{ borderColor: '#d0d7e3' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{ width: 4, height: 28, background: '#722ed1', borderRadius: 2 }} />
+              <div style={{ width: 4, height: 28, background: '#0891b2', borderRadius: 2 }} />
               <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>Estaciones activas — Redes Sociales</Title>
             </div>
             {loadingEstRS ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (
@@ -1086,9 +1086,9 @@ export default function PublicFMREPage() {
                 pagination={{ pageSize: 50, showSizeChanger: false }}
                 columns={[
                   { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => <Text type="secondary">{i + 1}</Text> },
-                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: '#722ed1' }}>{v}</strong> },
+                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: '#0891b2' }}>{v}</strong> },
                   { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? '—' },
-                  { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const, render: (v: number) => <Tag color="purple">{v.toLocaleString()}</Tag> },
+                  { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const, render: (v: number) => <Tag color="cyan">{v.toLocaleString()}</Tag> },
                   { title: 'Última actividad', dataIndex: 'ultima', width: 130, render: (v: string | null) => v ?? '—' },
                 ]}
               />
@@ -1149,7 +1149,7 @@ export default function PublicFMREPage() {
           <div ref={evRSRef} style={{ marginBottom: 40, scrollMarginTop: 24 }}>
             <Divider style={{ borderColor: '#d0d7e3' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{ width: 4, height: 28, background: '#722ed1', borderRadius: 2 }} />
+              <div style={{ width: 4, height: 28, background: '#0891b2', borderRadius: 2 }} />
               <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>
                 {ultimoEvRSDetalle?.evento ?? 'Último evento RS'} — {ultimoEvRSDetalle?.fecha ?? ''}
               </Title>
@@ -1162,9 +1162,9 @@ export default function PublicFMREPage() {
                 pagination={{ pageSize: 50, showSizeChanger: false }}
                 columns={[
                   { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => (
-                    <span style={{ fontWeight: 700, color: i < 3 ? '#722ed1' : '#8c8c8c' }}>{i + 1}</span>
+                    <span style={{ fontWeight: 700, color: i < 3 ? '#0891b2' : '#8c8c8c' }}>{i + 1}</span>
                   )},
-                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: '#722ed1' }}>{v}</strong> },
+                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: '#0891b2' }}>{v}</strong> },
                   { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? <span style={{ color: '#bbb', fontStyle: 'italic' }}>Sin registro</span> },
                   { title: 'Estado', dataIndex: 'estado', width: 120, ellipsis: true, render: (v: string | null) => v ?? '—' },
                   { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const,
@@ -1176,14 +1176,14 @@ export default function PublicFMREPage() {
                           <div style={{ minWidth: 160 }}>
                             {Object.entries(r.plataformas).map(([p, n]) => (
                               <div key={p} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '2px 0' }}>
-                                <Tag color={PLAT_COLORS[p] ?? '#722ed1'} style={{ margin: 0 }}>{p}</Tag>
+                                <Tag color={PLAT_COLORS[p] ?? '#0891b2'} style={{ margin: 0 }}>{p}</Tag>
                                 <strong>{n}</strong>
                               </div>
                             ))}
                           </div>
                         }
                       >
-                        <Tag color="purple" style={{ cursor: 'pointer', fontWeight: 700 }}>{v.toLocaleString()} ▾</Tag>
+                        <Tag color="cyan" style={{ cursor: 'pointer', fontWeight: 700 }}>{v.toLocaleString()} ▾</Tag>
                       </Popover>
                     )},
                 ]}
