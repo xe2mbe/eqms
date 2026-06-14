@@ -128,9 +128,7 @@ export default function LibretaRSPage() {
 
   // ── Ranking RS y estadísticas ──
   type RankingEntry = { fecha: string; total_reportes: number; total_estaciones: number; posicion: number }
-  type RankingOpEntry = { usuario_id: number; nombre: string; total: number; posicion: number }
   const [rankingRS, setRankingRS] = useState<RankingEntry[]>([])
-  const [rankingOpRS, setRankingOpRS] = useState<RankingOpEntry[]>([])
   const prevPosicionRSRef = useRef<number | null>(null)
 
   // ── Reportes guardados ──
@@ -229,7 +227,7 @@ export default function LibretaRSPage() {
     setLoadingReportes(true)
     try {
       const eventoId = eventos.find(e => e.tipo === sesionEvento)?.id
-      const [reportesRes, rankingRes, rankingOpRes] = await Promise.all([
+      const [reportesRes, rankingRes] = await Promise.all([
         libretaRSApi.listReportes({
           page: p, page_size: 50,
           plataforma_id: platSeleccionada.id,
@@ -239,14 +237,10 @@ export default function LibretaRSPage() {
         eventoId
           ? estadisticasApi.rsRankingEvento({ evento_id: eventoId, plataforma_id: platSeleccionada.id })
           : Promise.resolve({ data: [] as any }),
-        eventoId
-          ? estadisticasApi.rsRankingOperadores(eventoId)
-          : Promise.resolve({ data: [] as any }),
       ])
       setReportes(reportesRes.data.items)
       setTotalReportes(reportesRes.data.total)
       setRankingRS(rankingRes.data)
-      setRankingOpRS(rankingOpRes.data)
     } finally { setLoadingReportes(false) }
   }, [pageReportes, platSeleccionada, sesionFecha, sesionEvento, eventos])
 
@@ -536,6 +530,19 @@ export default function LibretaRSPage() {
       posicion, totalSesiones, esRecordQSOs, esRecordEstaciones,
     }
   }, [rankingRS, fechaActualRS, totalReportes])
+
+  // Ranking de operadores de la sesión actual, calculado desde reportes en memoria
+  const rankingOpSesionRS = useMemo(() => {
+    const counts: Record<string, { nombre: string; total: number }> = {}
+    for (const r of reportes) {
+      const nombre = r.capturado_por_nombre || '—'
+      if (!counts[nombre]) counts[nombre] = { nombre, total: 0 }
+      counts[nombre].total++
+    }
+    return Object.values(counts)
+      .sort((a, b) => b.total - a.total)
+      .map((e, i) => ({ ...e, posicion: i + 1 }))
+  }, [reportes])
 
   useEffect(() => {
     const { posicion, totalQSOs, estacionesUnicas } = statsRS
@@ -1042,9 +1049,10 @@ export default function LibretaRSPage() {
                   </div>
                 </Col>
               )}
-              {/* Tarjeta 4: ranking del operador actual */}
+              {/* Tarjeta 4: ranking del operador actual (sesión actual) */}
               {(() => {
-                const miRanking = rankingOpRS.find(r => r.usuario_id === user?.id)
+                const miNombre = user?.indicativo || user?.full_name
+                const miRanking = miNombre ? rankingOpSesionRS.find(r => r.nombre === miNombre) : undefined
                 if (!miRanking) return null
                 const esPrimero = miRanking.posicion === 1
                 const esTop3 = miRanking.posicion <= 3
@@ -1069,7 +1077,7 @@ export default function LibretaRSPage() {
                         {miRanking.posicion === 1 ? '🥇' : miRanking.posicion === 2 ? '🥈' : miRanking.posicion === 3 ? '🥉' : `#${miRanking.posicion}`}
                       </div>
                       <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, fontWeight: 600 }}>
-                        {`de ${rankingOpRS.length} ops · ${miRanking.total} QSOs totales`}
+                        {`de ${rankingOpSesionRS.length} ops · ${miRanking.total} QSOs hoy`}
                       </div>
                     </div>
                   </Col>

@@ -166,9 +166,7 @@ export default function LibretaPage() {
 
   // Ranking del evento y estadísticas de sesión
   type RankingEntry = { fecha: string; total_reportes: number; total_estaciones: number; posicion: number }
-  type RankingOpEntry = { usuario_id: number; nombre: string; total: number; posicion: number }
   const [rankingEvento, setRankingEvento] = useState<RankingEntry[]>([])
-  const [rankingOperadores, setRankingOperadores] = useState<RankingOpEntry[]>([])
   const prevPosicionRef = useRef<number | null>(null)
 
   // Tabla resumen de reportes guardados
@@ -274,7 +272,7 @@ export default function LibretaPage() {
     try {
       const fecha = dayjs(cfg.fecha)
       const eventoId = eventos.find(e => e.tipo === cfg.tipo_evento)?.id
-      const [reportesRes, rankingRes, rankingOpRes] = await Promise.all([
+      const [reportesRes, rankingRes] = await Promise.all([
         reportesApi.list({
           fecha_inicio: fecha.startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
           fecha_fin: fecha.endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
@@ -282,11 +280,9 @@ export default function LibretaPage() {
           page_size: 200,
         }),
         eventoId ? estadisticasApi.rankingEvento(eventoId) : Promise.resolve({ data: [] as any }),
-        eventoId ? estadisticasApi.rankingOperadores(eventoId) : Promise.resolve({ data: [] as any }),
       ])
       setResumen(reportesRes.data.items)
       setRankingEvento(rankingRes.data)
-      setRankingOperadores(rankingOpRes.data)
     } catch { /* silencioso */ } finally {
       setLoadingResumen(false)
     }
@@ -319,6 +315,20 @@ export default function LibretaPage() {
     const esRecordEstaciones = estacionesUnicas > 0 && (hoy?.total_estaciones ?? 0) >= maxEstaciones
     return { totalQSOs, estacionesUnicas, posicion, totalSesiones, esRecordQSOs, esRecordEstaciones }
   }, [resumen, rankingEvento, fechaActual])
+
+  // Ranking de operadores calculado desde los reportes ya en memoria (sesión actual)
+  const rankingOpSesion = useMemo(() => {
+    const counts: Record<number, { usuario_id: number; nombre: string; total: number }> = {}
+    for (const r of resumen) {
+      if (!r.capturado_por) continue
+      if (!counts[r.capturado_por])
+        counts[r.capturado_por] = { usuario_id: r.capturado_por, nombre: r.capturado_por_nombre || `Op#${r.capturado_por}`, total: 0 }
+      counts[r.capturado_por].total++
+    }
+    return Object.values(counts)
+      .sort((a, b) => b.total - a.total)
+      .map((e, i) => ({ ...e, posicion: i + 1 }))
+  }, [resumen])
 
   useEffect(() => {
     const { posicion, totalQSOs, estacionesUnicas } = statsActuales
@@ -1451,9 +1461,9 @@ export default function LibretaPage() {
                   </div>
                 </Col>
               )}
-              {/* Tarjeta 4: ranking del operador actual */}
+              {/* Tarjeta 4: ranking del operador actual (sesión actual) */}
               {(() => {
-                const miRanking = rankingOperadores.find(r => r.usuario_id === user?.id)
+                const miRanking = rankingOpSesion.find(r => r.usuario_id === user?.id)
                 if (!miRanking) return null
                 const esPrimero = miRanking.posicion === 1
                 const esTop3 = miRanking.posicion <= 3
@@ -1478,7 +1488,7 @@ export default function LibretaPage() {
                         {miRanking.posicion === 1 ? '🥇' : miRanking.posicion === 2 ? '🥈' : miRanking.posicion === 3 ? '🥉' : `#${miRanking.posicion}`}
                       </div>
                       <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, fontWeight: 600 }}>
-                        {`de ${rankingOperadores.length} ops · ${miRanking.total} QSOs totales`}
+                        {`de ${rankingOpSesion.length} ops · ${miRanking.total} QSOs hoy`}
                       </div>
                     </div>
                   </Col>
