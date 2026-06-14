@@ -982,7 +982,7 @@ export default function LibretaRSPage() {
 
           {/* ── Estadísticas de sesión RS ── */}
           {(statsRS.totalQSOs > 0 || statsRS.posicion !== null) && (
-            <Row gutter={[12, 12]} style={{ marginBottom: 12, alignItems: 'stretch' }}>
+            <Row gutter={[6, 6]} style={{ marginBottom: 12, alignItems: 'stretch' }}>
               <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
                 <div style={{
                   background: statsRS.esRecordQSOs
@@ -1067,6 +1067,7 @@ export default function LibretaRSPage() {
                 if (!hoy || hoy.total === 0) return null
                 const esPrimero = hoy.posicion === 1
                 const esTop3 = hoy.posicion <= 3
+                const mejor = miRankingRS[0]
                 return (
                   <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
                     <div style={{
@@ -1090,6 +1091,11 @@ export default function LibretaRSPage() {
                       <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, fontWeight: 600 }}>
                         {`de ${miRankingRS.length} ses. · ${hoy.total} QSOs hoy`}
                       </div>
+                      {!esPrimero && (
+                        <div style={{ fontSize: 11, marginTop: 2, opacity: 0.75, fontWeight: 500 }}>
+                          {`Récord: ${dayjs(mejor.fecha).format('DD/MM/YY')} · ${mejor.total} QSOs`}
+                        </div>
+                      )}
                     </div>
                   </Col>
                 )

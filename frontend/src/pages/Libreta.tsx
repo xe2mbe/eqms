@@ -1390,7 +1390,7 @@ export default function LibretaPage() {
         >
           {/* ── Estadísticas de sesión ── */}
           {(statsActuales.totalQSOs > 0 || statsActuales.posicion !== null) && (
-            <Row gutter={[12, 12]} style={{ marginBottom: 16, alignItems: 'stretch' }}>
+            <Row gutter={[6, 6]} style={{ marginBottom: 16, alignItems: 'stretch' }}>
               <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
                 <div style={{
                   background: statsActuales.esRecordQSOs
@@ -1475,6 +1475,7 @@ export default function LibretaPage() {
                 if (!hoy || hoy.total === 0) return null
                 const esPrimero = hoy.posicion === 1
                 const esTop3 = hoy.posicion <= 3
+                const mejor = miRankingPersonal[0]
                 return (
                   <Col xs={12} sm={8} md={6} style={{ display: 'flex' }}>
                     <div style={{
@@ -1498,6 +1499,11 @@ export default function LibretaPage() {
                       <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, fontWeight: 600 }}>
                         {`de ${miRankingPersonal.length} ses. · ${hoy.total} QSOs hoy`}
                       </div>
+                      {!esPrimero && (
+                        <div style={{ fontSize: 11, marginTop: 2, opacity: 0.75, fontWeight: 500 }}>
+                          {`Récord: ${dayjs(mejor.fecha).format('DD/MM/YY')} · ${mejor.total} QSOs`}
+                        </div>
+                      )}
                     </div>
                   </Col>
                 )
