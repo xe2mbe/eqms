@@ -255,7 +255,7 @@ export default function EstadisticasPage() {
     grid: { left: 8, right: 8, top: 10, bottom: 40, containLabel: true },
     xAxis: { type: 'category', data: evMeses.map((m: string) => dayjs(m).format('MMM YY')) },
     yAxis: { type: 'value' },
-    series: evTiposFiltrados.map((t: string, i: number) => ({
+    series: evTiposFiltrados.map((t: string) => ({
       name: t, type: 'line', smooth: true,
       data: evMeses.map(m => tendEv.find((r: any) => r.mes === m && r.tipo === t)?.total ?? 0),
       itemStyle: { color: CHART_COLORS[evTipos.indexOf(t) % CHART_COLORS.length] },
