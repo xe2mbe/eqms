@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import {
   Card, Form, Select, AutoComplete, DatePicker, Button, Table,
-  Typography, Space, Divider, Input, message, Tooltip,
+  Typography, Space, Divider, Input, message, Tooltip, notification,
   Row, Col, Badge, Popconfirm, Checkbox, Modal, Alert, Spin, Collapse, Tag, Switch,
 } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { reportesApi } from '@/api/reportes'
+import { estadisticasApi } from '@/api/estadisticas'
 import { catalogosApi } from '@/api/catalogos'
 import { operadoresApi, type Operador } from '@/api/operadores'
 import { libretaApi, type CheckIndicativoResult } from '@/api/libreta'
@@ -163,6 +164,11 @@ export default function LibretaPage() {
     estado_default?: string; ciudad_default?: string; zona_swl_default?: string
   } | null>(null)
 
+  // Ranking del evento y estadísticas de sesión
+  type RankingEntry = { fecha: string; total_reportes: number; total_estaciones: number; posicion: number }
+  const [rankingEvento, setRankingEvento] = useState<RankingEntry[]>([])
+  const prevPosicionRef = useRef<number | null>(null)
+
   // Tabla resumen de reportes guardados
   const [resumen, setResumen] = useState<Reporte[]>([])
   const [loadingResumen, setLoadingResumen] = useState(false)
@@ -265,13 +271,18 @@ export default function LibretaPage() {
     setLoadingResumen(true)
     try {
       const fecha = dayjs(cfg.fecha)
-      const { data } = await reportesApi.list({
-        fecha_inicio: fecha.startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
-        fecha_fin: fecha.endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
-        evento_id: eventos.find(e => e.tipo === cfg.tipo_evento)?.id,
-        page_size: 200,
-      })
-      setResumen(data.items)
+      const eventoId = eventos.find(e => e.tipo === cfg.tipo_evento)?.id
+      const [reportesRes, rankingRes] = await Promise.all([
+        reportesApi.list({
+          fecha_inicio: fecha.startOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+          fecha_fin: fecha.endOf('day').format('YYYY-MM-DDTHH:mm:ss'),
+          evento_id: eventoId,
+          page_size: 200,
+        }),
+        eventoId ? estadisticasApi.rankingEvento(eventoId) : Promise.resolve({ data: [] as any }),
+      ])
+      setResumen(reportesRes.data.items)
+      setRankingEvento(rankingRes.data)
     } catch { /* silencioso */ } finally {
       setLoadingResumen(false)
     }
@@ -288,6 +299,36 @@ export default function LibretaPage() {
     }
     return () => { if (resumenIntervalRef.current) clearInterval(resumenIntervalRef.current) }
   }, [sesionConfig, fetchResumen])
+
+  // ── Estadísticas de sesión y ranking ────────────────────────────────────
+  const fechaActual = sesionConfig ? dayjs(sesionConfig.fecha).format('YYYY-MM-DD') : null
+
+  const statsActuales = useMemo(() => {
+    const totalQSOs = resumen.length
+    const estacionesUnicas = new Set(resumen.map(r => r.indicativo)).size
+    if (rankingEvento.length === 0) return { totalQSOs, estacionesUnicas, posicion: null as number | null, totalSesiones: 0, esRecordQSOs: false, esRecordEstaciones: false }
+    const hoy = rankingEvento.find(r => r.fecha === fechaActual)
+    const posicion = hoy?.posicion ?? null
+    const totalSesiones = rankingEvento.length
+    const maxEstaciones = Math.max(...rankingEvento.map(r => r.total_estaciones))
+    const esRecordQSOs = posicion === 1
+    const esRecordEstaciones = estacionesUnicas > 0 && (hoy?.total_estaciones ?? 0) >= maxEstaciones
+    return { totalQSOs, estacionesUnicas, posicion, totalSesiones, esRecordQSOs, esRecordEstaciones }
+  }, [resumen, rankingEvento, fechaActual])
+
+  useEffect(() => {
+    const { posicion, totalQSOs, estacionesUnicas } = statsActuales
+    if (posicion === null || totalQSOs === 0) return
+    if (posicion === 1 && prevPosicionRef.current !== 1 && rankingEvento.length > 1) {
+      notification.success({
+        message: '🏆 ¡Récord del evento!',
+        description: `Con ${totalQSOs} QSOs y ${estacionesUnicas} estaciones únicas, esta sesión es la mejor en la historia del evento. ¡Anúncialo en el aire!`,
+        duration: 10,
+        placement: 'top',
+      })
+    }
+    prevPosicionRef.current = posicion
+  }, [statsActuales, rankingEvento.length])
 
   // ── Acciones tabla resumen ───────────────────────────────────────────────
   const handleDeleteResumenSelected = async () => {
@@ -1325,6 +1366,90 @@ export default function LibretaPage() {
           }
           styles={{ header: { fontWeight: 700 } }}
         >
+          {/* ── Estadísticas de sesión ── */}
+          {(statsActuales.totalQSOs > 0 || statsActuales.posicion !== null) && (
+            <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+              <Col xs={12} sm={8} md={6}>
+                <div style={{
+                  background: statsActuales.esRecordQSOs
+                    ? 'linear-gradient(135deg, #faad14 0%, #fa8c16 100%)'
+                    : 'linear-gradient(135deg, #1A569E 0%, #1677ff 100%)',
+                  borderRadius: 10, padding: '14px 18px', color: '#fff',
+                  boxShadow: statsActuales.esRecordQSOs
+                    ? '0 4px 16px rgba(250,173,20,0.55)'
+                    : '0 4px 12px rgba(22,119,255,0.3)',
+                  transition: 'all 0.4s ease',
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
+                    {statsActuales.esRecordQSOs ? '🏆 Récord QSOs' : '📡 QSOs guardados'}
+                  </div>
+                  <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1.1 }}>
+                    {statsActuales.totalQSOs}
+                  </div>
+                  {statsActuales.esRecordQSOs && rankingEvento.length > 1 && (
+                    <div style={{ fontSize: 11, marginTop: 4, opacity: 0.95, fontWeight: 700, letterSpacing: 0.3 }}>
+                      ¡Mejor sesión del evento!
+                    </div>
+                  )}
+                </div>
+              </Col>
+              <Col xs={12} sm={8} md={6}>
+                <div style={{
+                  background: statsActuales.esRecordEstaciones
+                    ? 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)'
+                    : 'linear-gradient(135deg, #13c2c2 0%, #08979c 100%)',
+                  borderRadius: 10, padding: '14px 18px', color: '#fff',
+                  boxShadow: statsActuales.esRecordEstaciones
+                    ? '0 4px 16px rgba(82,196,26,0.45)'
+                    : '0 4px 12px rgba(19,194,194,0.3)',
+                  transition: 'all 0.4s ease',
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
+                    {statsActuales.esRecordEstaciones ? '🏆 Récord Estaciones' : '👥 Estaciones únicas'}
+                  </div>
+                  <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1.1 }}>
+                    {statsActuales.estacionesUnicas}
+                  </div>
+                  {statsActuales.esRecordEstaciones && rankingEvento.length > 1 && (
+                    <div style={{ fontSize: 11, marginTop: 4, opacity: 0.95, fontWeight: 700, letterSpacing: 0.3 }}>
+                      ¡Más estaciones del evento!
+                    </div>
+                  )}
+                </div>
+              </Col>
+              {statsActuales.posicion !== null && (
+                <Col xs={24} sm={8} md={6}>
+                  <div style={{
+                    background: statsActuales.posicion === 1
+                      ? 'linear-gradient(135deg, #faad14 0%, #d48806 100%)'
+                      : statsActuales.posicion <= 3
+                        ? 'linear-gradient(135deg, #722ed1 0%, #531dab 100%)'
+                        : 'linear-gradient(135deg, #595959 0%, #434343 100%)',
+                    borderRadius: 10, padding: '14px 18px', color: '#fff',
+                    boxShadow: statsActuales.posicion === 1
+                      ? '0 4px 16px rgba(250,173,20,0.55)'
+                      : '0 4px 12px rgba(0,0,0,0.2)',
+                    transition: 'all 0.4s ease',
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
+                      📊 Posición del evento
+                    </div>
+                    <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1.1 }}>
+                      {statsActuales.posicion === 1 ? '🥇' : statsActuales.posicion === 2 ? '🥈' : statsActuales.posicion === 3 ? '🥉' : `#${statsActuales.posicion}`}
+                    </div>
+                    <div style={{ fontSize: 11, marginTop: 4, opacity: 0.85, fontWeight: 600 }}>
+                      {rankingEvento.length === 1
+                        ? 'Primera sesión del evento'
+                        : statsActuales.posicion === 1
+                          ? `de ${statsActuales.totalSesiones} sesiones — ¡la mejor!`
+                          : `de ${statsActuales.totalSesiones} sesiones`}
+                    </div>
+                  </div>
+                </Col>
+              )}
+            </Row>
+          )}
+
           {resumenSelectedKeys.length > 0 && (
             <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ color: '#1A569E', fontWeight: 600 }}>{resumenSelectedKeys.length} seleccionado(s)</span>

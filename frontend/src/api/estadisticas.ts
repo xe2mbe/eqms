@@ -79,4 +79,14 @@ export const estadisticasApi = {
     client.get<{ abreviatura: string; nombre: string; zona: string; total: number; indicativos: number }[]>(
       '/estadisticas/rs/cobertura-estados', { params }
     ),
+
+  rankingEvento: (evento_id: number) =>
+    client.get<{ fecha: string; total_reportes: number; total_estaciones: number; posicion: number }[]>(
+      '/estadisticas/ranking-evento', { params: { evento_id } }
+    ),
+
+  rsRankingEvento: (params: { evento_id: number; plataforma_id?: number }) =>
+    client.get<{ fecha: string; total_reportes: number; total_estaciones: number; posicion: number }[]>(
+      '/estadisticas/rs/ranking-evento', { params }
+    ),
 }

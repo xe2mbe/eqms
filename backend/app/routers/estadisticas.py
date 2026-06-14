@@ -669,3 +669,63 @@ def tendencia_eventos(
         GROUP BY mes, e.tipo ORDER BY mes, total DESC
     """), {"fi": fecha_inicio, "ff": fecha_fin}).fetchall()
     return [{"mes": str(r[0]), "tipo": r[1], "total": r[2]} for r in rows]
+
+
+@router.get("/ranking-evento")
+def ranking_evento(
+    evento_id: int,
+    db: Session = Depends(get_db),
+):
+    """Ranking histórico de sesiones por evento: fecha, QSOs totales y estaciones únicas."""
+    from sqlalchemy import cast, Date
+    rows = (
+        db.query(
+            cast(models.Reporte.fecha_reporte, Date).label("fecha"),
+            func.count().label("total_reportes"),
+            func.count(func.distinct(models.Reporte.indicativo)).label("total_estaciones"),
+        )
+        .filter(models.Reporte.evento_id == evento_id)
+        .group_by(cast(models.Reporte.fecha_reporte, Date))
+        .order_by(func.count().desc(), func.count(func.distinct(models.Reporte.indicativo)).desc())
+        .all()
+    )
+    return [
+        {
+            "fecha": str(r.fecha),
+            "total_reportes": r.total_reportes,
+            "total_estaciones": r.total_estaciones,
+            "posicion": i + 1,
+        }
+        for i, r in enumerate(rows)
+    ]
+
+
+@router.get("/rs/ranking-evento")
+def rs_ranking_evento(
+    evento_id: int,
+    plataforma_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """Ranking histórico de sesiones RS por evento (y opcionalmente plataforma)."""
+    from sqlalchemy import cast, Date
+    q = db.query(
+        cast(models.ReporteRS.fecha_reporte, Date).label("fecha"),
+        func.count().label("total_reportes"),
+        func.count(func.distinct(models.ReporteRS.indicativo)).label("total_estaciones"),
+    ).filter(models.ReporteRS.evento_id == evento_id)
+    if plataforma_id:
+        q = q.filter(models.ReporteRS.plataforma_id == plataforma_id)
+    rows = (
+        q.group_by(cast(models.ReporteRS.fecha_reporte, Date))
+        .order_by(func.count().desc(), func.count(func.distinct(models.ReporteRS.indicativo)).desc())
+        .all()
+    )
+    return [
+        {
+            "fecha": str(r.fecha),
+            "total_reportes": r.total_reportes,
+            "total_estaciones": r.total_estaciones,
+            "posicion": i + 1,
+        }
+        for i, r in enumerate(rows)
+    ]
