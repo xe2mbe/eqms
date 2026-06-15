@@ -758,7 +758,7 @@ export default function PublicFMREPage() {
                           size="small"
                           dataSource={resultado.rf.ultimos}
                           rowKey={(_r, i) => String(i)}
-                          pagination={false}
+                          pagination={{ pageSize: 10, showSizeChanger: false, showTotal: t => `${t} registros` }}
                           columns={[
                             { title: 'Fecha', dataIndex: 'fecha', width: 90, render: v => v ?? '—' },
                             { title: 'Evento', dataIndex: 'evento', render: v => v ?? '—' },
@@ -791,7 +791,7 @@ export default function PublicFMREPage() {
                           size="small"
                           dataSource={resultado.rs.ultimos}
                           rowKey={(_r, i) => String(i)}
-                          pagination={false}
+                          pagination={{ pageSize: 10, showSizeChanger: false, showTotal: t => `${t} registros` }}
                           columns={[
                             { title: 'Fecha', dataIndex: 'fecha', width: 90, render: v => v ?? '—' },
                             { title: 'Plataforma', dataIndex: 'plataforma', render: v => v

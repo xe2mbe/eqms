@@ -80,9 +80,11 @@ def public_stats(db: Session = Depends(get_db)):
     """), {"ev_id": ev_id}).fetchall()
 
     por_sistema = db.execute(text("""
-        SELECT s.codigo, s.nombre, COUNT(*) as total
-        FROM reportes r JOIN sistemas s ON s.id = r.sistema_id
-        WHERE r.evento_id = :ev_id AND r.sistema_id IS NOT NULL
+        SELECT COALESCE(s.codigo, 'N/D') as sistema,
+               COALESCE(s.nombre, 'Sin sistema') as nombre,
+               COUNT(*) as total
+        FROM reportes r LEFT JOIN sistemas s ON s.id = r.sistema_id
+        WHERE r.evento_id = :ev_id
         GROUP BY s.codigo, s.nombre ORDER BY total DESC
     """), {"ev_id": ev_id}).fetchall()
 
@@ -399,7 +401,7 @@ def buscar_indicativo(
         GROUP BY s.codigo ORDER BY total DESC
     """), {"ind": ind, "ev_id": ev_id}).fetchall()
 
-    # Últimos 10 registros RF
+    # Todos los registros RF
     rf_ultimos = db.execute(text("""
         SELECT r.fecha_reporte, e.tipo as evento, s.codigo as sistema,
                z.nombre as zona, r.ciudad, r.estado, r.senal
@@ -408,7 +410,7 @@ def buscar_indicativo(
         LEFT JOIN sistemas s ON s.id = r.sistema_id
         LEFT JOIN zonas z ON z.id = r.zona_id
         WHERE UPPER(r.indicativo) = :ind AND r.evento_id = :ev_id
-        ORDER BY r.fecha_reporte DESC LIMIT 10
+        ORDER BY r.fecha_reporte DESC
     """), {"ind": ind, "ev_id": ev_id}).fetchall()
 
     # Resumen RS — solo Boletín Dominical
@@ -427,12 +429,12 @@ def buscar_indicativo(
         GROUP BY p.nombre ORDER BY total DESC
     """), {"ind": ind, "ev_id": ev_id}).fetchall()
 
-    # Últimos 10 registros RS
+    # Todos los registros RS
     rs_ultimos = db.execute(text("""
         SELECT r.fecha_reporte, p.nombre as plataforma, r.ciudad, r.estado, r.senal
         FROM reportes_rs r JOIN plataformas_rs p ON p.id = r.plataforma_id
         WHERE UPPER(r.indicativo) = :ind AND r.evento_id = :ev_id
-        ORDER BY r.fecha_reporte DESC LIMIT 10
+        ORDER BY r.fecha_reporte DESC
     """), {"ind": ind, "ev_id": ev_id}).fetchall()
 
     if (rf_resumen[0] or 0) == 0 and (rs_resumen[0] or 0) == 0:
