@@ -827,14 +827,13 @@ export default function PublicFMREPage() {
 
           <Row gutter={[16, 16]}>
             {/* Tendencia mensual */}
-            <Col xs={24} lg={14} style={{ display: 'flex', flexDirection: 'column' }}>
+            <Col xs={24} lg={14}>
               <Card title={<span><RiseOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Actividad mensual (últimos 12 meses)</span>}
                     size="small" className="card-shadow"
-                    style={{ flex: 1 }}
-                    bodyStyle={{ display: 'flex', flexDirection: 'column', padding: 12 }}>
+                    bodyStyle={{ padding: 12 }}>
                 {isLoading
-                  ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
-                  : <ReactECharts option={tendenciaOption} style={{ flex: 1, minHeight: 180 }} />}
+                  ? <div style={{ height: 340, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
+                  : <ReactECharts option={tendenciaOption} style={{ height: 340 }} />}
               </Card>
             </Col>
 
@@ -1026,16 +1025,13 @@ export default function PublicFMREPage() {
 
           <Row gutter={[16, 16]}>
             {/* Tendencia mensual RS */}
-            <Col xs={24} lg={14} style={{ display: 'flex', flexDirection: 'column' }}>
+            <Col xs={24} lg={14}>
               <Card title={<span><RiseOutlined style={{ color: '#0891b2', marginRight: 8 }} />Actividad mensual por plataforma (últimos 12 meses)</span>}
                     size="small" className="card-shadow"
-                    style={{ flex: 1 }}
-                    bodyStyle={{ display: 'flex', flexDirection: 'column', padding: 12 }}>
+                    bodyStyle={{ padding: 12 }}>
                 {isLoading
-                  ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
-                  : <div style={{ flex: 1, position: 'relative', minHeight: 180 }}>
-                      <ReactECharts option={tendenciaRSOption} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
-                    </div>}
+                  ? <div style={{ height: 340, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
+                  : <ReactECharts option={tendenciaRSOption} style={{ height: 340 }} />}
               </Card>
             </Col>
 
