@@ -276,10 +276,41 @@ export default function PublicFMREPage() {
       setTimeout(() => busquedaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
     } catch (e: any) {
       setBusqError(e?.response?.data?.detail ?? `No se encontraron registros para ${busqueda.trim().toUpperCase()}`)
+      setTimeout(() => busquedaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
     } finally {
       setBuscando(false)
     }
   }
+
+  const buscarIndicativo = async (ind: string) => {
+    setBusqueda(ind)
+    setBuscando(true)
+    setBusqError(null)
+    setResultado(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    try {
+      const { data } = await axios.get(`/api/public/buscar?indicativo=${ind.toUpperCase()}`)
+      setResultado(data)
+      setTimeout(() => busquedaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300)
+    } catch (e: any) {
+      setBusqError(e?.response?.data?.detail ?? `No se encontraron registros para ${ind.toUpperCase()}`)
+      setTimeout(() => busquedaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300)
+    } finally {
+      setBuscando(false)
+    }
+  }
+
+  const callSign = (v: string, color = FMRE_BLUE) => (
+    <strong
+      style={{ color, cursor: 'pointer', textDecoration: 'none' }}
+      onClick={() => buscarIndicativo(v)}
+      onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+      onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+      title={`Ver historial de ${v}`}
+    >
+      {v}
+    </strong>
+  )
 
   useEffect(() => {
     // Cargar el mapa de México
@@ -888,7 +919,7 @@ export default function PublicFMREPage() {
                             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                           }}>{i + 1}</span>
                         )}
-                        <span style={{ fontWeight: 700, color: FMRE_BLUE, minWidth: 70 }}>{op.indicativo}</span>
+                        <span style={{ minWidth: 70 }}>{callSign(op.indicativo)}</span>
                         <span style={{ color: '#666', fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {op.nombre ?? '—'}
                         </span>
@@ -1059,7 +1090,7 @@ export default function PublicFMREPage() {
                             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                           }}>{i + 1}</span>
                         )}
-                        <span style={{ fontWeight: 700, color: '#0891b2', minWidth: 70 }}>{op.indicativo}</span>
+                        <span style={{ minWidth: 70 }}>{callSign(op.indicativo, '#0891b2')}</span>
                         <span style={{ color: '#666', fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {op.nombre ?? '—'}
                         </span>
@@ -1123,7 +1154,7 @@ export default function PublicFMREPage() {
                 columns={[
                   { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => <Text type="secondary">{i + 1}</Text> },
                   { title: 'País', dataIndex: 'pais', width: 140, render: (v: string) => <Tag color="geekblue">{v}</Tag> },
-                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: FMRE_BLUE }}>{v}</strong> },
+                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => callSign(v) },
                   { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? '—' },
                   { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const, render: (v: number) => <Tag color="blue">{v.toLocaleString()}</Tag> },
                   { title: 'Última actividad', dataIndex: 'ultima', width: 130, render: (v: string | null) => v ?? '—' },
@@ -1149,7 +1180,7 @@ export default function PublicFMREPage() {
                 pagination={{ pageSize: 50, showSizeChanger: false }}
                 columns={[
                   { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => <Text type="secondary">{i + 1}</Text> },
-                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: FMRE_BLUE }}>{v}</strong> },
+                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => callSign(v) },
                   { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? '—' },
                   { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const, render: (v: number) => <Tag color="blue">{v.toLocaleString()}</Tag> },
                   { title: 'Última actividad', dataIndex: 'ultima', width: 130, render: (v: string | null) => v ?? '—' },
@@ -1175,7 +1206,7 @@ export default function PublicFMREPage() {
                 pagination={{ pageSize: 50, showSizeChanger: false }}
                 columns={[
                   { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => <Text type="secondary">{i + 1}</Text> },
-                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: '#0891b2' }}>{v}</strong> },
+                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => callSign(v, '#0891b2') },
                   { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? '—' },
                   { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const, render: (v: number) => <Tag color="cyan">{v.toLocaleString()}</Tag> },
                   { title: 'Última actividad', dataIndex: 'ultima', width: 130, render: (v: string | null) => v ?? '—' },
@@ -1276,7 +1307,7 @@ export default function PublicFMREPage() {
                       { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => (
                         <span style={{ fontWeight: 700, color: i < 3 ? FMRE_GOLD : '#8c8c8c' }}>{i + 1}</span>
                       )},
-                      { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: FMRE_BLUE }}>{v}</strong> },
+                      { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => callSign(v) },
                       { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? <span style={{ color: '#bbb', fontStyle: 'italic' }}>Sin registro</span> },
                       { title: 'Estado', dataIndex: 'estado', width: 120, ellipsis: true, render: (v: string | null) => v ?? '—' },
                       { title: 'QSOs', dataIndex: 'total', width: 90, align: 'right' as const,
@@ -1391,7 +1422,7 @@ export default function PublicFMREPage() {
                       { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => (
                         <span style={{ fontWeight: 700, color: i < 3 ? '#0891b2' : '#8c8c8c' }}>{i + 1}</span>
                       )},
-                      { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: '#0891b2' }}>{v}</strong> },
+                      { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => callSign(v, '#0891b2') },
                       { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? <span style={{ color: '#bbb', fontStyle: 'italic' }}>Sin registro</span> },
                       { title: 'Estado', dataIndex: 'estado', width: 120, ellipsis: true, render: (v: string | null) => v ?? '—' },
                       { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const,
