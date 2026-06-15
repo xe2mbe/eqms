@@ -625,15 +625,18 @@ export default function PublicFMREPage() {
                 <div style={{ color: SISTEMA_COLORS.IRLP, fontWeight: 800, fontSize: 16, marginBottom: 14 }}>
                   🔗 Sistemas VoIP / RoIP
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <a href="http://xe1dvi.crabdance.com/Auto_Refresh_0077Con.html" target="_blank" rel="noopener noreferrer"
+                  style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
                   <div style={{ width: 38, height: 38, borderRadius: 7, background: '#C62828', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ color: 'white', fontSize: 9, fontWeight: 'bold' }}>IRLP</span>
                   </div>
                   <div>
                     <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>IRLP</div>
-                    <div style={{ color: '#8ab4e0', fontSize: 13 }}>Reflector <strong style={{ color: 'white' }}>0077</strong></div>
+                    <div style={{ color: '#8ab4e0', fontSize: 13 }}>Reflector <strong style={{ color: 'white' }}>0077</strong> ↗</div>
                   </div>
-                </div>
+                </a>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 38, height: 38, borderRadius: 7, background: '#1B5E20', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ color: 'white', fontSize: 7, fontWeight: 'bold', lineHeight: 1.3 }}>AllStar</span>
