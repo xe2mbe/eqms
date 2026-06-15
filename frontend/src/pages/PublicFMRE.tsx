@@ -438,53 +438,61 @@ export default function PublicFMREPage() {
     }],
   }
 
-  const mapaRSOption = !stats || !mapReady ? {} : {
-    tooltip: {
-      trigger: 'item',
-      formatter: (p: any) => p.value ? `<b>${p.name}</b><br/>${p.value.toLocaleString()} reportes` : p.name,
-    },
-    visualMap: {
-      min: 0, max: Math.max(...stats.rs.por_estado.map(e => e.total), 1),
-      inRange: { color: ['#e0f7fa', '#0891b2'] },
-      text: ['Alto', 'Bajo'], textStyle: { color: '#666', fontSize: 11 },
-      calculable: true, orient: 'horizontal', left: 'center', bottom: 8,
-    },
-    series: [{
-      type: 'map', map: 'Mexico', roam: false,
-      emphasis: { label: { show: true }, itemStyle: { areaColor: FMRE_GOLD } },
-      data: stats.rs.por_estado.map(e => ({ name: e.estado, value: e.total })),
-      nameMap: {
-        'Baja California': 'Baja California',
-        'Baja California Sur': 'Baja California Sur',
-        'Ciudad de México': 'Ciudad De México',
-        'Estado De México': 'México',
+  const mapaRSOption = !stats || !mapReady ? {} : (() => {
+    const total = stats.rs.por_estado.reduce((s, e) => s + e.total, 0)
+    return {
+      tooltip: {
+        trigger: 'item',
+        formatter: (p: any) => p.value
+          ? `<b>${p.name}</b><br/>${p.value.toLocaleString()} reportes<br/><span style="color:#888">${(p.value / total * 100).toFixed(1)}% del total</span>`
+          : p.name,
       },
-    }],
-  }
+      visualMap: {
+        min: 0, max: Math.max(...stats.rs.por_estado.map(e => e.total), 1),
+        inRange: { color: ['#e0f7fa', '#0891b2'] },
+        show: false,
+      },
+      series: [{
+        type: 'map', map: 'Mexico', roam: false,
+        emphasis: { label: { show: true }, itemStyle: { areaColor: FMRE_GOLD } },
+        data: stats.rs.por_estado.map(e => ({ name: e.estado, value: e.total })),
+        nameMap: {
+          'Baja California': 'Baja California',
+          'Baja California Sur': 'Baja California Sur',
+          'Ciudad de México': 'Ciudad De México',
+          'Estado De México': 'México',
+        },
+      }],
+    }
+  })()
 
-  const mapaOption = !stats || !mapReady ? {} : {
-    tooltip: {
-      trigger: 'item',
-      formatter: (p: any) => p.value ? `<b>${p.name}</b><br/>${p.value.toLocaleString()} reportes` : p.name,
-    },
-    visualMap: {
-      min: 0, max: Math.max(...stats.rf.por_estado.map(e => e.total), 1),
-      inRange: { color: [FMRE_LIGHT, FMRE_BLUE] },
-      text: ['Alto', 'Bajo'], textStyle: { color: '#666', fontSize: 11 },
-      calculable: true, orient: 'horizontal', left: 'center', bottom: 8,
-    },
-    series: [{
-      type: 'map', map: 'Mexico', roam: false,
-      emphasis: { label: { show: true }, itemStyle: { areaColor: FMRE_GOLD } },
-      data: stats.rf.por_estado.map(e => ({ name: e.estado, value: e.total })),
-      nameMap: {
-        'Baja California': 'Baja California',
-        'Baja California Sur': 'Baja California Sur',
-        'Ciudad de México': 'Ciudad De México',
-        'Estado De México': 'México',
+  const mapaOption = !stats || !mapReady ? {} : (() => {
+    const total = stats.rf.por_estado.reduce((s, e) => s + e.total, 0)
+    return {
+      tooltip: {
+        trigger: 'item',
+        formatter: (p: any) => p.value
+          ? `<b>${p.name}</b><br/>${p.value.toLocaleString()} reportes<br/><span style="color:#888">${(p.value / total * 100).toFixed(1)}% del total</span>`
+          : p.name,
       },
-    }],
-  }
+      visualMap: {
+        min: 0, max: Math.max(...stats.rf.por_estado.map(e => e.total), 1),
+        inRange: { color: [FMRE_LIGHT, FMRE_BLUE] },
+        show: false,
+      },
+      series: [{
+        type: 'map', map: 'Mexico', roam: false,
+        emphasis: { label: { show: true }, itemStyle: { areaColor: FMRE_GOLD } },
+        data: stats.rf.por_estado.map(e => ({ name: e.estado, value: e.total })),
+        nameMap: {
+          'Baja California': 'Baja California',
+          'Baja California Sur': 'Baja California Sur',
+          'Ciudad de México': 'Ciudad De México',
+          'Estado De México': 'México',
+        },
+      }],
+    }
+  })()
 
   const countryFlag = (code: string) => {
     if (!code || code.length !== 2) return '🌐'
@@ -1324,18 +1332,18 @@ export default function PublicFMREPage() {
                 return acc
               }, {} as Record<string, number>)
 
+              const totalEstadoEv = Object.values(porEstado).reduce((s, n) => s + n, 0)
               const eventoMapOption = !mapReady ? {} : {
                 tooltip: {
                   trigger: 'item',
                   formatter: (p: any) => p.value
-                    ? `<b>${p.name}</b><br/>${p.value} estación${p.value > 1 ? 'es' : ''}`
+                    ? `<b>${p.name}</b><br/>${p.value} estación${p.value > 1 ? 'es' : ''}<br/><span style="color:#888">${(p.value / totalEstadoEv * 100).toFixed(1)}% del total</span>`
                     : p.name,
                 },
                 visualMap: {
                   min: 0, max: maxEstado,
                   inRange: { color: ['#FFF9C4', FMRE_GOLD] },
-                  text: ['Más', 'Menos'], textStyle: { color: '#666', fontSize: 11 },
-                  calculable: true, orient: 'horizontal', left: 'center', bottom: 8,
+                  show: false,
                 },
                 series: [{
                   type: 'map', map: 'Mexico', roam: false,
@@ -1441,18 +1449,18 @@ export default function PublicFMREPage() {
                 return acc
               }, {} as Record<string, number>)
 
+              const totalEstadoEvRS = Object.values(porEstadoRS).reduce((s, n) => s + n, 0)
               const eventoRSMapOption = !mapReady ? {} : {
                 tooltip: {
                   trigger: 'item',
                   formatter: (p: any) => p.value
-                    ? `<b>${p.name}</b><br/>${p.value} estación${p.value > 1 ? 'es' : ''}`
+                    ? `<b>${p.name}</b><br/>${p.value} estación${p.value > 1 ? 'es' : ''}<br/><span style="color:#888">${(p.value / totalEstadoEvRS * 100).toFixed(1)}% del total</span>`
                     : p.name,
                 },
                 visualMap: {
                   min: 0, max: maxEstadoRS,
                   inRange: { color: ['#e0f7fa', '#0891b2'] },
-                  text: ['Más', 'Menos'], textStyle: { color: '#666', fontSize: 11 },
-                  calculable: true, orient: 'horizontal', left: 'center', bottom: 8,
+                  show: false,
                 },
                 series: [{
                   type: 'map', map: 'Mexico', roam: false,
