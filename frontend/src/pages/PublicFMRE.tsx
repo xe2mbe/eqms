@@ -361,13 +361,15 @@ export default function PublicFMREPage() {
           itemStyle: { color: SISTEMA_COLORS[sis] ?? '#999' },
         })),
         {
-          type: 'bar', stack: 'total', silent: true, tooltip: { show: false },
-          itemStyle: { color: 'rgba(0,0,0,0)', borderWidth: 0 },
-          emphasis: { itemStyle: { color: 'rgba(0,0,0,0)' } },
-          data: totales.map(t => ({
-            value: 0,
-            label: { show: t > 0, position: 'top', formatter: () => t.toLocaleString(), color: '#444', fontSize: 10, fontWeight: 700 },
-          })),
+          type: 'bar' as const, stack: 'total', silent: true,
+          itemStyle: { color: 'transparent' },
+          emphasis: { disabled: true },
+          label: {
+            show: true, position: 'top' as const,
+            formatter: (p: any) => totales[p.dataIndex] > 0 ? totales[p.dataIndex].toLocaleString() : '',
+            color: '#444', fontSize: 10, fontWeight: 700,
+          },
+          data: totales.map(() => 0),
         },
       ],
     }
@@ -410,13 +412,15 @@ export default function PublicFMREPage() {
           itemStyle: { color: PLAT_COLORS[plat] ?? '#999' },
         })),
         {
-          type: 'bar', stack: 'total', silent: true, tooltip: { show: false },
-          itemStyle: { color: 'rgba(0,0,0,0)', borderWidth: 0 },
-          emphasis: { itemStyle: { color: 'rgba(0,0,0,0)' } },
-          data: totalesRS.map(t => ({
-            value: 0,
-            label: { show: t > 0, position: 'top', formatter: () => t.toLocaleString(), color: '#444', fontSize: 10, fontWeight: 700 },
-          })),
+          type: 'bar' as const, stack: 'total', silent: true,
+          itemStyle: { color: 'transparent' },
+          emphasis: { disabled: true },
+          label: {
+            show: true, position: 'top' as const,
+            formatter: (p: any) => totalesRS[p.dataIndex] > 0 ? totalesRS[p.dataIndex].toLocaleString() : '',
+            color: '#444', fontSize: 10, fontWeight: 700,
+          },
+          data: totalesRS.map(() => 0),
         },
       ],
     }
