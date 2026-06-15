@@ -33,70 +33,6 @@ const PLAT_COLORS: Record<string, string> = {
 
 // ─── System logo SVGs ───────────────────────────────────────────────────────
 
-const IrlpLogo = ({ size = 40 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="7" fill="#C62828"/>
-    <text x="20" y="13" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold" fontFamily="Arial,sans-serif">IRLP</text>
-    <path d="M10 22 Q20 16 30 22" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
-    <path d="M6 27 Q20 19 34 27" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" opacity="0.55"/>
-    <circle cx="20" cy="33" r="2.5" fill="white"/>
-    <line x1="20" y1="30.5" x2="20" y2="24.5" stroke="white" strokeWidth="1.5"/>
-  </svg>
-)
-
-const AslLogo = ({ size = 40 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="7" fill="#1B5E20"/>
-    <text x="20" y="11" textAnchor="middle" fill="white" fontSize="6.5" fontWeight="bold" fontFamily="Arial,sans-serif">AllStar</text>
-    <text x="20" y="18" textAnchor="middle" fill="#A5D6A7" fontSize="5.5" fontFamily="Arial,sans-serif">Link</text>
-    {/* 6-arm asterisk */}
-    {[0, 60, 120].map((a, i) => {
-      const rad = (a * Math.PI) / 180
-      return (
-        <line key={i}
-          x1={20 + 9 * Math.cos(rad)} y1={27 + 9 * Math.sin(rad)}
-          x2={20 - 9 * Math.cos(rad)} y2={27 - 9 * Math.sin(rad)}
-          stroke="white" strokeWidth="2.5" strokeLinecap="round"
-        />
-      )
-    })}
-    <circle cx="20" cy="27" r="2.5" fill="#A5D6A7"/>
-  </svg>
-)
-
-const DmrLogo = ({ size = 40 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="7" fill="#0D47A1"/>
-    <text x="20" y="12" textAnchor="middle" fill="white" fontSize="9.5" fontWeight="bold" fontFamily="Arial,sans-serif">DMR</text>
-    {/* Diamond */}
-    <polygon points="20,16 31,25 20,34 9,25" fill="none" stroke="white" strokeWidth="2" strokeLinejoin="round"/>
-    <polygon points="20,20 27,25 20,30 13,25" fill="white" opacity="0.35"/>
-    <circle cx="20" cy="25" r="2" fill="white"/>
-  </svg>
-)
-
-const FusionLogo = ({ size = 40 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="7" fill="#E65100"/>
-    <text x="20" y="11" textAnchor="middle" fill="white" fontSize="7.5" fontWeight="bold" fontFamily="Arial,sans-serif">C4FM</text>
-    <text x="20" y="19" textAnchor="middle" fill="#FFCCBC" fontSize="5.5" fontFamily="Arial,sans-serif">FUSION</text>
-    {/* Double wave */}
-    <path d="M5 27 C10 22 15 32 20 27 C25 22 30 32 35 27" stroke="white" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
-    <path d="M5 33 C10 28 15 38 20 33 C25 28 30 38 35 33" stroke="white" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity="0.5"/>
-  </svg>
-)
-
-const DstarLogo = ({ size = 40 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-    <rect width="40" height="40" rx="7" fill="#006064"/>
-    <text x="20" y="12" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial,sans-serif">D-STAR</text>
-    {/* 5-point star */}
-    <polygon
-      points="20,15 22.4,21.9 29.8,21.9 23.9,26.1 26.3,33 20,28.8 13.7,33 16.1,26.1 10.2,21.9 17.6,21.9"
-      fill="white" opacity="0.92"
-    />
-  </svg>
-)
 
 // ─── SVG decorations ────────────────────────────────────────────────────────
 
@@ -661,19 +597,13 @@ export default function PublicFMREPage() {
                 <div style={{ color: SISTEMA_COLORS.IRLP, fontWeight: 800, fontSize: 16, marginBottom: 14 }}>
                   🔗 VoIP / Enlace
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                  <IrlpLogo size={38} />
-                  <div>
-                    <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>IRLP</div>
-                    <div style={{ color: '#8ab4e0', fontSize: 13 }}>Reflector <strong style={{ color: 'white' }}>0077</strong></div>
-                  </div>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>IRLP</div>
+                  <div style={{ color: '#8ab4e0', fontSize: 13 }}>Reflector <strong style={{ color: 'white' }}>0077</strong></div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <AslLogo size={38} />
-                  <div>
-                    <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>AllStar Link</div>
-                    <div style={{ color: '#8ab4e0', fontSize: 13 }}>Hub <strong style={{ color: 'white' }}>299081</strong></div>
-                  </div>
+                <div>
+                  <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>AllStar Link</div>
+                  <div style={{ color: '#8ab4e0', fontSize: 13 }}>Hub <strong style={{ color: 'white' }}>299081</strong></div>
                 </div>
               </div>
             </Col>
@@ -685,26 +615,17 @@ export default function PublicFMREPage() {
                   🔁 Crossconexiones activas
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
-                    <DmrLogo size={38} />
-                    <div>
-                      <div style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>TG 33450</div>
-                      <div style={{ color: '#8ab4e0', fontSize: 11 }}>BrandMeister</div>
-                    </div>
+                  <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
+                    <div style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>DMR · TG 33450</div>
+                    <div style={{ color: '#8ab4e0', fontSize: 11 }}>BrandMeister</div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
-                    <FusionLogo size={38} />
-                    <div>
-                      <div style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>C4FM / Fusion</div>
-                      <div style={{ color: '#8ab4e0', fontSize: 11 }}>vía Hub ASL</div>
-                    </div>
+                  <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
+                    <div style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>C4FM / Fusion</div>
+                    <div style={{ color: '#8ab4e0', fontSize: 11 }}>vía Hub ASL</div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
-                    <DstarLogo size={38} />
-                    <div>
-                      <div style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>D-Star</div>
-                      <div style={{ color: '#8ab4e0', fontSize: 11 }}>vía Hub ASL</div>
-                    </div>
+                  <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
+                    <div style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>D-Star</div>
+                    <div style={{ color: '#8ab4e0', fontSize: 11 }}>vía Hub ASL</div>
                   </div>
                 </div>
               </div>
