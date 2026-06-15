@@ -362,35 +362,42 @@ def buscar_indicativo(
     """Búsqueda pública de reportes por indicativo."""
     ind = indicativo.strip().upper()
 
+    # ID del Boletín Dominical
+    boletin = db.execute(text(
+        "SELECT id FROM eventos WHERE tipo ILIKE '%dominical%' LIMIT 1"
+    )).first()
+    ev_id = boletin[0] if boletin else -1
+
     # Datos del operador
     operador = db.execute(text("""
         SELECT nombre_completo, municipio, estado, tipo_licencia
         FROM radioexperimentadores WHERE UPPER(indicativo) = :ind LIMIT 1
     """), {"ind": ind}).first()
 
-    # Resumen RF
+    # Resumen RF — solo Boletín Dominical
     rf_resumen = db.execute(text("""
         SELECT COUNT(*) as total,
                MIN(fecha_reporte) as primera,
                MAX(fecha_reporte) as ultima
-        FROM reportes WHERE UPPER(indicativo) = :ind
-    """), {"ind": ind}).first()
+        FROM reportes WHERE UPPER(indicativo) = :ind AND evento_id = :ev_id
+    """), {"ind": ind, "ev_id": ev_id}).first()
 
-    # RF por evento
+    # RF por evento — siempre será Boletín Dominical, se omite agrupación
     rf_por_evento = db.execute(text("""
         SELECT e.tipo, COUNT(*) as total
         FROM reportes r LEFT JOIN eventos e ON e.id = r.evento_id
-        WHERE UPPER(r.indicativo) = :ind
+        WHERE UPPER(r.indicativo) = :ind AND r.evento_id = :ev_id
         GROUP BY e.tipo ORDER BY total DESC
-    """), {"ind": ind}).fetchall()
+    """), {"ind": ind, "ev_id": ev_id}).fetchall()
 
     # RF por sistema
     rf_por_sistema = db.execute(text("""
         SELECT s.codigo, COUNT(*) as total
         FROM reportes r LEFT JOIN sistemas s ON s.id = r.sistema_id
-        WHERE UPPER(r.indicativo) = :ind AND r.sistema_id IS NOT NULL
+        WHERE UPPER(r.indicativo) = :ind AND r.evento_id = :ev_id
+          AND r.sistema_id IS NOT NULL
         GROUP BY s.codigo ORDER BY total DESC
-    """), {"ind": ind}).fetchall()
+    """), {"ind": ind, "ev_id": ev_id}).fetchall()
 
     # Últimos 10 registros RF
     rf_ultimos = db.execute(text("""
@@ -400,33 +407,33 @@ def buscar_indicativo(
         LEFT JOIN eventos e ON e.id = r.evento_id
         LEFT JOIN sistemas s ON s.id = r.sistema_id
         LEFT JOIN zonas z ON z.id = r.zona_id
-        WHERE UPPER(r.indicativo) = :ind
+        WHERE UPPER(r.indicativo) = :ind AND r.evento_id = :ev_id
         ORDER BY r.fecha_reporte DESC LIMIT 10
-    """), {"ind": ind}).fetchall()
+    """), {"ind": ind, "ev_id": ev_id}).fetchall()
 
-    # Resumen RS
+    # Resumen RS — solo Boletín Dominical
     rs_resumen = db.execute(text("""
         SELECT COUNT(*) as total,
                MIN(fecha_reporte) as primera,
                MAX(fecha_reporte) as ultima
-        FROM reportes_rs WHERE UPPER(indicativo) = :ind
-    """), {"ind": ind}).first()
+        FROM reportes_rs WHERE UPPER(indicativo) = :ind AND evento_id = :ev_id
+    """), {"ind": ind, "ev_id": ev_id}).first()
 
     # RS por plataforma
     rs_por_plataforma = db.execute(text("""
         SELECT p.nombre, COUNT(*) as total
         FROM reportes_rs r JOIN plataformas_rs p ON p.id = r.plataforma_id
-        WHERE UPPER(r.indicativo) = :ind
+        WHERE UPPER(r.indicativo) = :ind AND r.evento_id = :ev_id
         GROUP BY p.nombre ORDER BY total DESC
-    """), {"ind": ind}).fetchall()
+    """), {"ind": ind, "ev_id": ev_id}).fetchall()
 
     # Últimos 10 registros RS
     rs_ultimos = db.execute(text("""
         SELECT r.fecha_reporte, p.nombre as plataforma, r.ciudad, r.estado, r.senal
         FROM reportes_rs r JOIN plataformas_rs p ON p.id = r.plataforma_id
-        WHERE UPPER(r.indicativo) = :ind
+        WHERE UPPER(r.indicativo) = :ind AND r.evento_id = :ev_id
         ORDER BY r.fecha_reporte DESC LIMIT 10
-    """), {"ind": ind}).fetchall()
+    """), {"ind": ind, "ev_id": ev_id}).fetchall()
 
     if (rf_resumen[0] or 0) == 0 and (rs_resumen[0] or 0) == 0:
         raise HTTPException(404, f"No se encontraron registros para {ind}")
