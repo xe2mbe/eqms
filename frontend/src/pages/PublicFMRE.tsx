@@ -454,12 +454,13 @@ export default function PublicFMREPage() {
 
       {/* ── HEADER ── */}
       <header style={{ background: FMRE_DARK, padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+        <a href="https://fmre.mx" target="_blank" rel="noopener noreferrer"
+          style={{ display: 'flex', alignItems: 'center', gap: 20, textDecoration: 'none' }}>
           <img src="/LogoFMRE.png" alt="FMRE" style={{ height: 72 }} />
           <div style={{ color: 'white', fontWeight: 500, fontSize: 'clamp(20px, 3vw, 40px)', lineHeight: 1.2, letterSpacing: 0.2, textAlign: 'center' }}>
             Federación Mexicana de Radioexperimentadores, A.C.
           </div>
-        </div>
+        </a>
       </header>
 
       {/* ── HERO ── */}
@@ -592,8 +593,16 @@ export default function PublicFMREPage() {
             </div>
             <p style={{ color: '#8ab4e0', fontSize: 14, margin: 0, paddingLeft: 32 }}>
               Se transmite cada domingo puntualmente a las 09:00 h (UTC−6) de forma simultánea
-              a través de los siguientes medios:
+              por HF, sistemas RoIP y redes sociales.
             </p>
+          </div>
+
+          {/* Sub-encabezado: Medios Tradicionales */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <span style={{ color: FMRE_GOLD, fontWeight: 800, fontSize: 12, letterSpacing: 2, whiteSpace: 'nowrap' }}>
+              📻 MEDIOS TRADICIONALES
+            </span>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.15)' }} />
           </div>
 
           <Row gutter={[16, 16]} style={{ alignItems: 'stretch' }}>
@@ -614,7 +623,7 @@ export default function PublicFMREPage() {
             <Col xs={24} sm={12} lg={6} style={{ display: 'flex' }}>
               <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 20px', borderLeft: `4px solid ${SISTEMA_COLORS.IRLP}`, flex: 1 }}>
                 <div style={{ color: SISTEMA_COLORS.IRLP, fontWeight: 800, fontSize: 16, marginBottom: 14 }}>
-                  🔗 VoIP / Enlace
+                  🔗 Sistemas VoIP / RoIP
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
                   <div style={{ width: 38, height: 38, borderRadius: 7, background: '#C62828', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -677,6 +686,62 @@ export default function PublicFMREPage() {
               </div>
             </Col>
           </Row>
+
+          {/* Sub-encabezado: Redes Sociales */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24, marginBottom: 16 }}>
+            <span style={{ color: '#FF6B00', fontWeight: 800, fontSize: 12, letterSpacing: 2, whiteSpace: 'nowrap' }}>
+              📱 REDES SOCIALES
+            </span>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.15)' }} />
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              {[
+                {
+                  plataforma: 'Facebook', detalle: 'Radioaficionados XE', color: '#1877F2',
+                  href: 'https://www.facebook.com/groups/xe.radio',
+                  logo: (
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="white">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                  ),
+                },
+                {
+                  plataforma: 'Zello', detalle: 'Canal ARJAC', color: '#FF6B00',
+                  href: null,
+                  logo: <img src="/zello.png" alt="Zello" style={{ width: 28, height: 28, objectFit: 'contain' }} />,
+                },
+              ].map(({ plataforma, detalle, color, href, logo }) => {
+                const inner = (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '10px 16px',
+                    borderLeft: `3px solid ${color}`,
+                    transition: 'background 0.2s',
+                    cursor: href ? 'pointer' : 'default',
+                  }}
+                  onMouseEnter={e => { if (href) (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.16)' }}
+                  onMouseLeave={e => { if (href) (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.08)' }}
+                  >
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 7,
+                      background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>
+                      {logo}
+                    </div>
+                    <div>
+                      <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>{plataforma}</div>
+                      <div style={{ color: '#8ab4e0', fontSize: 11 }}>{detalle}</div>
+                    </div>
+                  </div>
+                )
+                return href
+                  ? <a key={plataforma} href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>{inner}</a>
+                  : <div key={plataforma}>{inner}</div>
+              })}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1528,7 +1593,8 @@ export default function PublicFMREPage() {
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
           <a href="https://fmre.mx" target="_blank" rel="noopener noreferrer"
             style={{ color: FMRE_GOLD, fontWeight: 700, fontSize: 12, textDecoration: 'none' }}>
-            🌐 fmre.mx
+            <img src="/LogoFMRE.png" alt="FMRE" style={{ height: 20, width: 'auto', verticalAlign: 'middle', marginRight: 6, opacity: 0.9 }} />
+              fmre.mx
           </a>
           {visitaInfo && (
             <div style={{ color: '#8ab4e0', fontSize: 11 }}>
