@@ -100,26 +100,24 @@ const DstarLogo = ({ size = 40 }: { size?: number }) => (
 
 // ─── SVG decorations ────────────────────────────────────────────────────────
 
-const AntennaIcon = () => (
-  <svg width="48" height="64" viewBox="0 0 48 64" fill="none" style={{ opacity: 0.15 }}>
-    <line x1="24" y1="0" x2="24" y2="44" stroke="white" strokeWidth="3"/>
-    <line x1="24" y1="20" x2="4"  y2="44" stroke="white" strokeWidth="2"/>
-    <line x1="24" y1="20" x2="44" y2="44" stroke="white" strokeWidth="2"/>
-    <line x1="24" y1="32" x2="10" y2="44" stroke="white" strokeWidth="1.5"/>
-    <line x1="24" y1="32" x2="38" y2="44" stroke="white" strokeWidth="1.5"/>
-    <rect x="10" y="44" width="28" height="6" rx="2" fill="white"/>
-    <rect x="18" y="50" width="12" height="14" rx="2" fill="white"/>
+const RadioWavesBg = () => (
+  <svg width="420" height="420" viewBox="0 0 420 420" fill="none" style={{ opacity: 0.09 }}>
+    <defs>
+      <clipPath id="rwclip">
+        <rect width="420" height="420" />
+      </clipPath>
+    </defs>
+    <g clipPath="url(#rwclip)">
+      {[48, 88, 130, 172, 214, 256, 298, 340, 382].map((r, i) => (
+        <circle key={i} cx="420" cy="210" r={r} stroke="white" strokeWidth="1.6" fill="none" />
+      ))}
+      <circle cx="420" cy="210" r="8" fill="white" opacity="0.5" />
+      <circle cx="420" cy="210" r="3" fill="white" />
+    </g>
   </svg>
 )
 
-const WaveLines = () => (
-  <svg width="120" height="40" viewBox="0 0 120 40" fill="none" style={{ opacity: 0.12 }}>
-    {[0, 12, 24, 36].map((y, i) => (
-      <path key={i} d={`M0 ${20 + y - 24} Q30 ${y - 4} 60 ${20 + y - 24} Q90 ${40 + y - 24} 120 ${20 + y - 24}`}
-        stroke="white" strokeWidth="1.5" fill="none"/>
-    ))}
-  </svg>
-)
+const MORSE = '-.-. --.-   -.. .   -..- . .---- .-.. --'
 
 // ─── Contador animado ────────────────────────────────────────────────────────
 
@@ -451,9 +449,22 @@ export default function PublicFMREPage() {
         padding: '48px 32px', position: 'relative', overflow: 'hidden',
       }}>
         {/* decoraciones */}
-        <div style={{ position: 'absolute', top: 16, right: 80 }}><AntennaIcon /></div>
-        <div style={{ position: 'absolute', bottom: 8, left: 40 }}><WaveLines /></div>
-        <div style={{ position: 'absolute', top: 12, left: '45%', opacity: 0.06, fontSize: 120, fontWeight: 900, color: 'white', letterSpacing: -4 }}>CQ</div>
+        <div style={{ position: 'absolute', top: '50%', right: 0, transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+          <RadioWavesBg />
+        </div>
+        <div style={{ position: 'absolute', top: '50%', left: -60, transform: 'translateY(-50%) scaleX(-1)', pointerEvents: 'none', opacity: 0.5 }}>
+          <RadioWavesBg />
+        </div>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, overflow: 'hidden', pointerEvents: 'none', lineHeight: 1 }}>
+          <div style={{ color: 'white', opacity: 0.08, fontSize: 16, letterSpacing: 10, fontFamily: 'monospace', whiteSpace: 'nowrap', padding: '5px 0' }}>
+            {`${MORSE}          `.repeat(7)}
+          </div>
+        </div>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, overflow: 'hidden', pointerEvents: 'none', lineHeight: 1 }}>
+          <div style={{ color: 'white', opacity: 0.05, fontSize: 16, letterSpacing: 10, fontFamily: 'monospace', whiteSpace: 'nowrap', padding: '5px 0' }}>
+            {`${MORSE}          `.repeat(7)}
+          </div>
+        </div>
 
         <div style={{ maxWidth: 900, margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div style={{ color: FMRE_GOLD, fontWeight: 700, letterSpacing: 3, fontSize: 12, marginBottom: 8 }}>
