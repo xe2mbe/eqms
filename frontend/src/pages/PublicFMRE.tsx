@@ -1165,40 +1165,112 @@ export default function PublicFMREPage() {
                 RF · {ultimoEvDetalle?.evento ?? 'Último evento'} — {ultimoEvDetalle?.fecha ?? ''}
               </Title>
             </div>
-            {loadingEv ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (
-              <Table
-                dataSource={ultimoEvDetalle?.participantes ?? []}
-                rowKey="indicativo"
-                size="small"
-                pagination={{ pageSize: 50, showSizeChanger: false }}
-                columns={[
-                  { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => (
-                    <span style={{ fontWeight: 700, color: i < 3 ? FMRE_GOLD : '#8c8c8c' }}>{i + 1}</span>
-                  )},
-                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: FMRE_BLUE }}>{v}</strong> },
-                  { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? <span style={{ color: '#bbb', fontStyle: 'italic' }}>Sin registro</span> },
-                  { title: 'Estado', dataIndex: 'estado', width: 120, ellipsis: true, render: (v: string | null) => v ?? '—' },
-                  { title: 'QSOs', dataIndex: 'total', width: 90, align: 'right' as const,
-                    render: (v: number, r: { sistemas: Record<string, number> }) => (
-                      <Popover
-                        trigger="click"
-                        title="Desglose por sistema"
-                        content={
-                          <div style={{ minWidth: 140 }}>
-                            {Object.entries(r.sistemas).map(([s, n]) => (
-                              <div key={s} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '2px 0' }}>
-                                <Tag color={SISTEMA_COLORS[s] ?? '#666'} style={{ margin: 0 }}>{s}</Tag>
-                                <strong>{n}</strong>
+            {loadingEv ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (() => {
+              const participantes = ultimoEvDetalle?.participantes ?? []
+
+              // Agrupar por estado para el mapa
+              const porEstado = participantes.reduce((acc, p) => {
+                if (p.estado) acc[p.estado] = (acc[p.estado] ?? 0) + 1
+                return acc
+              }, {} as Record<string, number>)
+              const maxEstado = Math.max(...Object.values(porEstado), 1)
+
+              // Agrupar por sistema para el pie
+              const porSistema = participantes.reduce((acc, p) => {
+                Object.entries(p.sistemas).forEach(([s, n]) => { acc[s] = (acc[s] ?? 0) + n })
+                return acc
+              }, {} as Record<string, number>)
+
+              const eventoMapOption = !mapReady ? {} : {
+                tooltip: {
+                  trigger: 'item',
+                  formatter: (p: any) => p.value
+                    ? `<b>${p.name}</b><br/>${p.value} estación${p.value > 1 ? 'es' : ''}`
+                    : p.name,
+                },
+                visualMap: {
+                  min: 0, max: maxEstado,
+                  inRange: { color: ['#FFF9C4', FMRE_GOLD] },
+                  text: ['Más', 'Menos'], textStyle: { color: '#666', fontSize: 11 },
+                  calculable: true, orient: 'horizontal', left: 'center', bottom: 8,
+                },
+                series: [{
+                  type: 'map', map: 'Mexico', roam: false,
+                  emphasis: { label: { show: true }, itemStyle: { areaColor: FMRE_BLUE } },
+                  data: Object.entries(porEstado).map(([estado, count]) => ({ name: estado, value: count })),
+                  nameMap: {
+                    'Ciudad de México': 'Ciudad De México',
+                    'Estado De México': 'México',
+                  },
+                }],
+              }
+
+              return (
+                <>
+                  {/* Mapa + resumen sistemas */}
+                  <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+                    <Col xs={24} lg={14}>
+                      <Card size="small" title={<span><GlobalOutlined style={{ color: FMRE_GOLD, marginRight: 8 }} />Cobertura geográfica del evento</span>} className="card-shadow">
+                        {mapReady
+                          ? <ReactECharts option={eventoMapOption} style={{ height: 300 }} />
+                          : <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>}
+                      </Card>
+                    </Col>
+                    <Col xs={24} lg={10}>
+                      <Card size="small" title={<span><WifiOutlined style={{ color: FMRE_GOLD, marginRight: 8 }} />Reportes por sistema</span>} className="card-shadow" style={{ height: '100%' }}>
+                        <ReactECharts
+                          option={{
+                            tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+                            series: [{
+                              type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'],
+                              data: Object.entries(porSistema).map(([s, n]) => ({
+                                name: s, value: n,
+                                itemStyle: { color: SISTEMA_COLORS[s] ?? '#999' },
+                              })),
+                              label: { formatter: '{b}: {c}', fontSize: 11 },
+                            }],
+                          }}
+                          style={{ height: 300 }}
+                        />
+                      </Card>
+                    </Col>
+                  </Row>
+
+                  {/* Tabla de participantes */}
+                  <Table
+                    dataSource={participantes}
+                    rowKey="indicativo"
+                    size="small"
+                    pagination={{ pageSize: 50, showSizeChanger: false }}
+                    columns={[
+                      { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => (
+                        <span style={{ fontWeight: 700, color: i < 3 ? FMRE_GOLD : '#8c8c8c' }}>{i + 1}</span>
+                      )},
+                      { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: FMRE_BLUE }}>{v}</strong> },
+                      { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? <span style={{ color: '#bbb', fontStyle: 'italic' }}>Sin registro</span> },
+                      { title: 'Estado', dataIndex: 'estado', width: 120, ellipsis: true, render: (v: string | null) => v ?? '—' },
+                      { title: 'QSOs', dataIndex: 'total', width: 90, align: 'right' as const,
+                        render: (v: number, r: { sistemas: Record<string, number> }) => (
+                          <Popover trigger="click" title="Desglose por sistema"
+                            content={
+                              <div style={{ minWidth: 140 }}>
+                                {Object.entries(r.sistemas).map(([s, n]) => (
+                                  <div key={s} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '2px 0' }}>
+                                    <Tag color={SISTEMA_COLORS[s] ?? '#666'} style={{ margin: 0 }}>{s}</Tag>
+                                    <strong>{n}</strong>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                        }
-                      >
-                        <Tag color="gold" style={{ cursor: 'pointer', fontWeight: 700 }}>{v.toLocaleString()} ▾</Tag>
-                      </Popover>
-                    )},
-                ]}
-              />
+                            }
+                          >
+                            <Tag color="gold" style={{ cursor: 'pointer', fontWeight: 700 }}>{v.toLocaleString()} ▾</Tag>
+                          </Popover>
+                        )},
+                    ]}
+                  />
+                </>
+              )
+            })()}
             )}
           </div>
         )}
