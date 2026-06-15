@@ -879,17 +879,21 @@ export default function PublicFMREPage() {
 
           <Row gutter={[16, 16]}>
             {/* Tendencia mensual */}
-            <Col xs={24} lg={14}>
+            <Col xs={24} lg={14} style={{ display: 'flex', flexDirection: 'column' }}>
               <Card title={<span><RiseOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Actividad mensual (últimos 12 meses)</span>}
-                    size="small" className="card-shadow">
-                {isLoading ? <Spin /> : <ReactECharts option={tendenciaOption} style={{ height: 220 }} />}
+                    size="small" className="card-shadow"
+                    style={{ flex: 1 }}
+                    bodyStyle={{ display: 'flex', flexDirection: 'column', padding: 12 }}>
+                {isLoading
+                  ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
+                  : <ReactECharts option={tendenciaOption} style={{ flex: 1, minHeight: 180 }} />}
               </Card>
             </Col>
 
             {/* Por sistema */}
-            <Col xs={24} lg={10}>
+            <Col xs={24} lg={10} style={{ display: 'flex', flexDirection: 'column' }}>
               <Card title={<span><WifiOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Distribución por sistema</span>}
-                    size="small" className="card-shadow">
+                    size="small" className="card-shadow" style={{ flex: 1 }}>
                 {isLoading ? <Spin /> : (() => {
                   const total = stats!.rf.por_sistema.reduce((s, r) => s + r.total, 0)
                   return (
@@ -939,10 +943,12 @@ export default function PublicFMREPage() {
             {/* Mapa de México */}
             <Col xs={24} lg={14} style={{ display: 'flex', flexDirection: 'column' }}>
               <Card title={<span><GlobalOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Cobertura por estado</span>}
-                    size="small" className="card-shadow" style={{ flex: 1 }}>
+                    size="small" className="card-shadow"
+                    style={{ flex: 1 }}
+                    bodyStyle={{ display: 'flex', flexDirection: 'column', padding: 12 }}>
                 {isLoading || !mapReady
-                  ? <div style={{ height: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
-                  : <ReactECharts option={mapaOption} style={{ height: 500 }} />}
+                  ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
+                  : <ReactECharts option={mapaOption} style={{ flex: 1, minHeight: 300 }} />}
               </Card>
             </Col>
 
@@ -1072,17 +1078,21 @@ export default function PublicFMREPage() {
 
           <Row gutter={[16, 16]}>
             {/* Tendencia mensual RS */}
-            <Col xs={24} lg={14}>
+            <Col xs={24} lg={14} style={{ display: 'flex', flexDirection: 'column' }}>
               <Card title={<span><RiseOutlined style={{ color: '#0891b2', marginRight: 8 }} />Actividad mensual por plataforma (últimos 12 meses)</span>}
-                    size="small" className="card-shadow">
-                {isLoading ? <Spin /> : <ReactECharts option={tendenciaRSOption} style={{ height: 220 }} />}
+                    size="small" className="card-shadow"
+                    style={{ flex: 1 }}
+                    bodyStyle={{ display: 'flex', flexDirection: 'column', padding: 12 }}>
+                {isLoading
+                  ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
+                  : <ReactECharts option={tendenciaRSOption} style={{ flex: 1, minHeight: 180 }} />}
               </Card>
             </Col>
 
             {/* Distribución por plataforma pie + tabla */}
-            <Col xs={24} lg={10}>
+            <Col xs={24} lg={10} style={{ display: 'flex', flexDirection: 'column' }}>
               <Card title={<span><GlobalOutlined style={{ color: '#0891b2', marginRight: 8 }} />Distribución por plataforma</span>}
-                    size="small" className="card-shadow">
+                    size="small" className="card-shadow" style={{ flex: 1 }}>
                 {isLoading ? <Spin /> : (() => {
                   const total = stats!.rs.por_plataforma.reduce((s, r) => s + r.total, 0)
                   return (
@@ -1133,10 +1143,12 @@ export default function PublicFMREPage() {
             {/* Mapa RS */}
             <Col xs={24} lg={14} style={{ display: 'flex', flexDirection: 'column' }}>
               <Card title={<span><GlobalOutlined style={{ color: '#0891b2', marginRight: 8 }} />Cobertura por estado</span>}
-                    size="small" className="card-shadow" style={{ flex: 1 }}>
+                    size="small" className="card-shadow"
+                    style={{ flex: 1 }}
+                    bodyStyle={{ display: 'flex', flexDirection: 'column', padding: 12 }}>
                 {isLoading || !mapReady
-                  ? <div style={{ height: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
-                  : <ReactECharts option={mapaRSOption} style={{ height: 500 }} />}
+                  ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
+                  : <ReactECharts option={mapaRSOption} style={{ flex: 1, minHeight: 300 }} />}
               </Card>
             </Col>
 
