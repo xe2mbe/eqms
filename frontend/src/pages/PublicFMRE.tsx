@@ -687,7 +687,11 @@ export default function PublicFMREPage() {
             placeholder="Ej. XE2MBE, XE1LM, XE3AAA..."
             enterButton={<><SearchOutlined /> Buscar</>}
             value={busqueda}
-            onChange={e => setBusqueda(e.target.value.toUpperCase())}
+            onChange={e => {
+                const val = e.target.value.toUpperCase()
+                setBusqueda(val)
+                if (!val) { setResultado(null); setBusqError(null) }
+              }}
             onSearch={handleBuscar}
             loading={buscando}
             style={{ maxWidth: 480 }}
