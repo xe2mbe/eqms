@@ -597,13 +597,24 @@ export default function PublicFMREPage() {
                 <div style={{ color: SISTEMA_COLORS.IRLP, fontWeight: 800, fontSize: 16, marginBottom: 14 }}>
                   🔗 VoIP / Enlace
                 </div>
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>IRLP</div>
-                  <div style={{ color: '#8ab4e0', fontSize: 13 }}>Reflector <strong style={{ color: 'white' }}>0077</strong></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 7, background: '#C62828', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ color: 'white', fontSize: 9, fontWeight: 'bold' }}>IRLP</span>
+                  </div>
+                  <div>
+                    <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>IRLP</div>
+                    <div style={{ color: '#8ab4e0', fontSize: 13 }}>Reflector <strong style={{ color: 'white' }}>0077</strong></div>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>AllStar Link</div>
-                  <div style={{ color: '#8ab4e0', fontSize: 13 }}>Hub <strong style={{ color: 'white' }}>299081</strong></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 7, background: '#1B5E20', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ color: 'white', fontSize: 7, fontWeight: 'bold', lineHeight: 1.3 }}>AllStar</span>
+                    <span style={{ color: '#A5D6A7', fontSize: 6, lineHeight: 1.3 }}>Link</span>
+                  </div>
+                  <div>
+                    <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>AllStar Link</div>
+                    <div style={{ color: '#8ab4e0', fontSize: 13 }}>Hub <strong style={{ color: 'white' }}>299081</strong></div>
+                  </div>
                 </div>
               </div>
             </Col>
@@ -615,17 +626,33 @@ export default function PublicFMREPage() {
                   🔁 Crossconexiones activas
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                  <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
-                    <div style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>DMR · TG 33450</div>
-                    <div style={{ color: '#8ab4e0', fontSize: 11 }}>BrandMeister</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 7, background: '#0D47A1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ color: 'white', fontSize: 9.5, fontWeight: 'bold' }}>DMR</span>
+                    </div>
+                    <div>
+                      <div style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>TG 33450</div>
+                      <div style={{ color: '#8ab4e0', fontSize: 11 }}>BrandMeister</div>
+                    </div>
                   </div>
-                  <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
-                    <div style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>C4FM / Fusion</div>
-                    <div style={{ color: '#8ab4e0', fontSize: 11 }}>vía Hub ASL</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 7, background: '#E65100', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ color: 'white', fontSize: 7.5, fontWeight: 'bold', lineHeight: 1.3 }}>C4FM</span>
+                      <span style={{ color: '#FFCCBC', fontSize: 6, lineHeight: 1.3 }}>FUSION</span>
+                    </div>
+                    <div>
+                      <div style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>C4FM / Fusion</div>
+                      <div style={{ color: '#8ab4e0', fontSize: 11 }}>vía Hub ASL</div>
+                    </div>
                   </div>
-                  <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
-                    <div style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>D-Star</div>
-                    <div style={{ color: '#8ab4e0', fontSize: 11 }}>vía Hub ASL</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 14px' }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 7, background: '#006064', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ color: 'white', fontSize: 8, fontWeight: 'bold' }}>D-STAR</span>
+                    </div>
+                    <div>
+                      <div style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>D-Star</div>
+                      <div style={{ color: '#8ab4e0', fontSize: 11 }}>vía Hub ASL</div>
+                    </div>
                   </div>
                 </div>
               </div>
