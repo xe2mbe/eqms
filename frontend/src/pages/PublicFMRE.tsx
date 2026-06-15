@@ -436,10 +436,10 @@ export default function PublicFMREPage() {
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: '#f5f7fa', minHeight: '100vh' }}>
 
       {/* ── HEADER ── */}
-      <header style={{ background: 'white', padding: '16px 32px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: `4px solid ${FMRE_BLUE}` }}>
+      <header style={{ background: FMRE_DARK, padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <img src="/LogoFMRE.png" alt="FMRE" style={{ height: 72 }} />
-          <div style={{ color: '#111', fontWeight: 500, fontSize: 'clamp(20px, 3vw, 40px)', lineHeight: 1.2, letterSpacing: 0.2, textAlign: 'center' }}>
+          <div style={{ color: 'white', fontWeight: 500, fontSize: 'clamp(20px, 3vw, 40px)', lineHeight: 1.2, letterSpacing: 0.2, textAlign: 'center' }}>
             Federación Mexicana de Radioexperimentadores, A.C.
           </div>
         </div>
