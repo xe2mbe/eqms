@@ -981,30 +981,32 @@ export default function PublicFMREPage() {
               <Card title={<span><RadarChartOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Participación por Estado</span>}
                     size="small" className="card-shadow">
                 {isLoading ? <Spin /> : (
-                  <ReactECharts
-                    option={{
-                      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-                        formatter: (p: any) => `<b>${p[0].name}</b>: ${p[0].value.toLocaleString()} reportes` },
-                      grid: { left: 130, right: 48, top: 8, bottom: 8, containLabel: false },
-                      xAxis: { type: 'value', axisLabel: { color: '#888', fontSize: 11 } },
-                      yAxis: { type: 'category', axisLabel: { color: '#333', fontSize: 12 },
-                        data: stats!.rf.por_estado.slice(0, 25).map(e => e.estado).reverse() },
-                      series: [{
-                        type: 'bar', barMaxWidth: 22,
-                        data: stats!.rf.por_estado.slice(0, 25).map((e, i) => ({
-                          value: e.total,
-                          itemStyle: { color: `hsl(${215 - i * 6}, 70%, ${45 + i * 1.5}%)`, borderRadius: [0, 4, 4, 0] },
-                        })).reverse(),
-                        label: { show: true, position: 'right', fontSize: 11, color: '#555',
-                          formatter: (p: any) => p.value.toLocaleString() },
-                      }],
-                    }}
-                    style={{ height: Math.max(300, stats!.rf.por_estado.slice(0, 25).length * 28) }}
-                  />
-                  <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 16, fontSize: 12 }}>
-                    <span style={{ color: '#888' }}>{stats!.rf.por_estado.length} estados</span>
-                    <strong>Total: {stats!.rf.por_estado.reduce((s, e) => s + e.total, 0).toLocaleString()} registros</strong>
-                  </div>
+                  <>
+                    <ReactECharts
+                      option={{
+                        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+                          formatter: (p: any) => `<b>${p[0].name}</b>: ${p[0].value.toLocaleString()} reportes` },
+                        grid: { left: 130, right: 48, top: 8, bottom: 8, containLabel: false },
+                        xAxis: { type: 'value', axisLabel: { color: '#888', fontSize: 11 } },
+                        yAxis: { type: 'category', axisLabel: { color: '#333', fontSize: 12 },
+                          data: stats!.rf.por_estado.slice(0, 25).map(e => e.estado).reverse() },
+                        series: [{
+                          type: 'bar', barMaxWidth: 22,
+                          data: stats!.rf.por_estado.slice(0, 25).map((e, i) => ({
+                            value: e.total,
+                            itemStyle: { color: `hsl(${215 - i * 6}, 70%, ${45 + i * 1.5}%)`, borderRadius: [0, 4, 4, 0] },
+                          })).reverse(),
+                          label: { show: true, position: 'right', fontSize: 11, color: '#555',
+                            formatter: (p: any) => p.value.toLocaleString() },
+                        }],
+                      }}
+                      style={{ height: Math.max(300, stats!.rf.por_estado.slice(0, 25).length * 28) }}
+                    />
+                    <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 16, fontSize: 12 }}>
+                      <span style={{ color: '#888' }}>{stats!.rf.por_estado.length} estados</span>
+                      <strong>Total: {stats!.rf.por_estado.reduce((s, e) => s + e.total, 0).toLocaleString()} registros</strong>
+                    </div>
+                  </>
                 )}
               </Card>
             </Col>
@@ -1164,30 +1166,32 @@ export default function PublicFMREPage() {
                 <Card title={<span><RadarChartOutlined style={{ color: '#0891b2', marginRight: 8 }} />Participación por Estado</span>}
                       size="small" className="card-shadow">
                   {isLoading ? <Spin /> : (
-                    <ReactECharts
-                      option={{
-                        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-                          formatter: (p: any) => `<b>${p[0].name}</b>: ${p[0].value.toLocaleString()} reportes` },
-                        grid: { left: 130, right: 48, top: 8, bottom: 8, containLabel: false },
-                        xAxis: { type: 'value', axisLabel: { color: '#888', fontSize: 11 } },
-                        yAxis: { type: 'category', axisLabel: { color: '#333', fontSize: 12 },
-                          data: stats!.rs.por_estado.slice(0, 25).map(e => e.estado).reverse() },
-                        series: [{
-                          type: 'bar', barMaxWidth: 22,
-                          data: stats!.rs.por_estado.slice(0, 25).map((e, i) => ({
-                            value: e.total,
-                            itemStyle: { color: `hsl(${280 - i * 6}, 60%, ${45 + i * 1.5}%)`, borderRadius: [0, 4, 4, 0] },
-                          })).reverse(),
-                          label: { show: true, position: 'right', fontSize: 11, color: '#555',
-                            formatter: (p: any) => p.value.toLocaleString() },
-                        }],
-                      }}
-                      style={{ height: Math.max(300, stats!.rs.por_estado.slice(0, 25).length * 28) }}
-                    />
-                    <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 16, fontSize: 12 }}>
-                      <span style={{ color: '#888' }}>{stats!.rs.por_estado.length} estados</span>
-                      <strong>Total: {stats!.rs.por_estado.reduce((s, e) => s + e.total, 0).toLocaleString()} registros</strong>
-                    </div>
+                    <>
+                      <ReactECharts
+                        option={{
+                          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+                            formatter: (p: any) => `<b>${p[0].name}</b>: ${p[0].value.toLocaleString()} reportes` },
+                          grid: { left: 130, right: 48, top: 8, bottom: 8, containLabel: false },
+                          xAxis: { type: 'value', axisLabel: { color: '#888', fontSize: 11 } },
+                          yAxis: { type: 'category', axisLabel: { color: '#333', fontSize: 12 },
+                            data: stats!.rs.por_estado.slice(0, 25).map(e => e.estado).reverse() },
+                          series: [{
+                            type: 'bar', barMaxWidth: 22,
+                            data: stats!.rs.por_estado.slice(0, 25).map((e, i) => ({
+                              value: e.total,
+                              itemStyle: { color: `hsl(${280 - i * 6}, 60%, ${45 + i * 1.5}%)`, borderRadius: [0, 4, 4, 0] },
+                            })).reverse(),
+                            label: { show: true, position: 'right', fontSize: 11, color: '#555',
+                              formatter: (p: any) => p.value.toLocaleString() },
+                          }],
+                        }}
+                        style={{ height: Math.max(300, stats!.rs.por_estado.slice(0, 25).length * 28) }}
+                      />
+                      <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 16, fontSize: 12 }}>
+                        <span style={{ color: '#888' }}>{stats!.rs.por_estado.length} estados</span>
+                        <strong>Total: {stats!.rs.por_estado.reduce((s, e) => s + e.total, 0).toLocaleString()} registros</strong>
+                      </div>
+                    </>
                   )}
                 </Card>
               </Col>
