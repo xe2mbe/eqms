@@ -545,7 +545,7 @@ export default function PublicFMREPage() {
       {stats?.ultimo_evento_rf && (
         <div
           onClick={handleUltimoEvento}
-          style={{ background: FMRE_GOLD, padding: '10px 32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}
+          style={{ background: FMRE_GOLD, padding: '10px 32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}
           onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(0.92)')}
           onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
         >
@@ -565,7 +565,7 @@ export default function PublicFMREPage() {
       {stats?.ultimo_evento_rs && (
         <div
           onClick={handleUltimoEventoRS}
-          style={{ background: '#0891b2', padding: '10px 32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}
+          style={{ background: '#0891b2', padding: '10px 32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}
           onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(0.88)')}
           onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
         >
