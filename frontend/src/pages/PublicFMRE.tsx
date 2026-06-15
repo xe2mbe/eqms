@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Row, Col, Card, Tag, Typography, Divider, Spin, Input, Alert, Table, Popover } from 'antd'
 import {
   WifiOutlined, GlobalOutlined, TeamOutlined, RiseOutlined,
@@ -120,6 +120,7 @@ type BusquedaResult = {
 export default function PublicFMREPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [mapReady, setMapReady] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   // Búsqueda por indicativo
   const [busqueda, setBusqueda] = useState('')
@@ -248,6 +249,13 @@ export default function PublicFMREPage() {
     </strong>
   )
 
+  const fetchStats = useCallback(() => {
+    axios.get('/api/public/stats').then(r => {
+      setStats(r.data)
+      setLastUpdated(new Date())
+    }).catch(() => {})
+  }, [])
+
   useEffect(() => {
     // Cargar el mapa de México
     fetch('/mexico-states.json')
@@ -257,8 +265,9 @@ export default function PublicFMREPage() {
         setMapReady(true)
       })
 
-    // Cargar estadísticas
-    axios.get('/api/public/stats').then(r => setStats(r.data))
+    // Cargar estadísticas y refrescar cada 60 s
+    fetchStats()
+    const interval = setInterval(fetchStats, 60_000)
 
     // Contador de visitas — solo una vez por sesión
     const cached = sessionStorage.getItem('visitaInfo')
@@ -270,7 +279,9 @@ export default function PublicFMREPage() {
         sessionStorage.setItem('visitaInfo', JSON.stringify(r.data))
       }).catch(() => {})
     }
-  }, [])
+
+    return () => clearInterval(interval)
+  }, [fetchStats])
 
   const tendenciaOption = !stats ? {} : (() => {
     const meses = [...new Set(stats.rf.tendencia.map(t => t.mes))].sort()
@@ -439,6 +450,7 @@ export default function PublicFMREPage() {
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: '#f5f7fa', minHeight: '100vh' }}>
+      <style>{`@keyframes pulse { 0%,100%{box-shadow:0 0 0 2px rgba(82,196,26,.3)} 50%{box-shadow:0 0 0 5px rgba(82,196,26,0)} }`}</style>
 
       {/* ── HEADER ── */}
       <header style={{ background: FMRE_DARK, padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -480,10 +492,17 @@ export default function PublicFMREPage() {
           <Title level={1} style={{ color: 'white', margin: 0, fontSize: 'clamp(24px, 4vw, 42px)', lineHeight: 1.2 }}>
             Estadísticas Boletín Dominical
           </Title>
-          <Paragraph style={{ color: '#8ab4e0', fontSize: 16, marginTop: 12, marginBottom: 32, maxWidth: 600 }}>
+          <Paragraph style={{ color: '#8ab4e0', fontSize: 16, marginTop: 12, marginBottom: 16, maxWidth: 600 }}>
             Estadísticas en tiempo real de la actividad del Boletín Dominical,
             medio oficial de divulgación de la máxima autoridad de radioafición en México.
           </Paragraph>
+          <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#52c41a', display: 'inline-block', boxShadow: '0 0 0 2px rgba(82,196,26,0.3)', animation: 'pulse 2s infinite' }} />
+            <span style={{ color: '#8ab4e0', fontSize: 13 }}>
+              Actualización automática cada 60 s
+              {lastUpdated && <> · <span style={{ color: '#a0c4e8' }}>Última: {dayjs(lastUpdated).format('HH:mm:ss')}</span></>}
+            </span>
+          </div>
 
           {isLoading ? <Spin size="large" /> : (
             <Row gutter={[24, 16]}>
