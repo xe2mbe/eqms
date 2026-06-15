@@ -454,7 +454,6 @@ export default function PublicFMREPage() {
       },
       series: [{
         type: 'map', map: 'Mexico', roam: false,
-        layoutCenter: ['50%', '50%'], layoutSize: '95%',
         emphasis: { label: { show: true }, itemStyle: { areaColor: FMRE_GOLD } },
         data: stats.rs.por_estado.map(e => ({ name: e.estado, value: e.total })),
         nameMap: {
@@ -483,7 +482,6 @@ export default function PublicFMREPage() {
       },
       series: [{
         type: 'map', map: 'Mexico', roam: false,
-        layoutCenter: ['50%', '50%'], layoutSize: '95%',
         emphasis: { label: { show: true }, itemStyle: { areaColor: FMRE_GOLD } },
         data: stats.rf.por_estado.map(e => ({ name: e.estado, value: e.total })),
         nameMap: {
@@ -943,8 +941,8 @@ export default function PublicFMREPage() {
               <Card title={<span><GlobalOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Cobertura por estado</span>}
                     size="small" className="card-shadow" style={{ flex: 1 }}>
                 {isLoading || !mapReady
-                  ? <div style={{ height: 440, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
-                  : <ReactECharts option={mapaOption} style={{ height: 440 }} />}
+                  ? <div style={{ height: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
+                  : <ReactECharts option={mapaOption} style={{ height: 500 }} />}
               </Card>
             </Col>
 
@@ -991,7 +989,7 @@ export default function PublicFMREPage() {
               <Card title={<span><RadarChartOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Participación por Estado</span>}
                     size="small" className="card-shadow">
                 {isLoading ? <Spin /> : (() => {
-                  const nac = stats!.rf.por_estado.slice(0, 25)
+                  const nac = stats!.rf.por_estado
                   const nacTotal = stats!.rf.por_estado.reduce((s, e) => s + e.total, 0)
                   const intl = stats!.rf.total - nacTotal
                   const yData = [...nac.map(e => e.estado).reverse(), ...(intl > 0 ? ['Extranjero'] : [])]
@@ -1137,8 +1135,8 @@ export default function PublicFMREPage() {
               <Card title={<span><GlobalOutlined style={{ color: '#0891b2', marginRight: 8 }} />Cobertura por estado</span>}
                     size="small" className="card-shadow" style={{ flex: 1 }}>
                 {isLoading || !mapReady
-                  ? <div style={{ height: 440, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
-                  : <ReactECharts option={mapaRSOption} style={{ height: 440 }} />}
+                  ? <div style={{ height: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
+                  : <ReactECharts option={mapaRSOption} style={{ height: 500 }} />}
               </Card>
             </Col>
 
@@ -1186,7 +1184,7 @@ export default function PublicFMREPage() {
                 <Card title={<span><RadarChartOutlined style={{ color: '#0891b2', marginRight: 8 }} />Participación por Estado</span>}
                       size="small" className="card-shadow">
                   {isLoading ? <Spin /> : (() => {
-                    const nac = stats!.rs.por_estado.slice(0, 25)
+                    const nac = stats!.rs.por_estado
                     const nacTotal = stats!.rs.por_estado.reduce((s, e) => s + e.total, 0)
                     const intl = stats!.rs.total - nacTotal
                     const yData = [...nac.map(e => e.estado).reverse(), ...(intl > 0 ? ['Extranjero'] : [])]
