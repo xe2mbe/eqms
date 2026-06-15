@@ -1004,7 +1004,9 @@ export default function PublicFMREPage() {
                     />
                     <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 16, fontSize: 12 }}>
                       <span style={{ color: '#888' }}>{stats!.rf.por_estado.length} estados</span>
-                      <strong>Total: {stats!.rf.por_estado.reduce((s, e) => s + e.total, 0).toLocaleString()} registros</strong>
+                      {(() => { const nac = stats!.rf.por_estado.reduce((s, e) => s + e.total, 0); const intl = stats!.rf.total - nac; return (
+                        <span><strong>{nac.toLocaleString()} nacionales</strong>{intl > 0 && <span style={{ color: '#888' }}> + {intl.toLocaleString()} int'l</span>}</span>
+                      )})()}
                     </div>
                   </>
                 )}
@@ -1189,7 +1191,9 @@ export default function PublicFMREPage() {
                       />
                       <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 16, fontSize: 12 }}>
                         <span style={{ color: '#888' }}>{stats!.rs.por_estado.length} estados</span>
-                        <strong>Total: {stats!.rs.por_estado.reduce((s, e) => s + e.total, 0).toLocaleString()} registros</strong>
+                        {(() => { const nac = stats!.rs.por_estado.reduce((s, e) => s + e.total, 0); const intl = stats!.rs.total - nac; return (
+                          <span><strong>{nac.toLocaleString()} nacionales</strong>{intl > 0 && <span style={{ color: '#888' }}> + {intl.toLocaleString()} int'l</span>}</span>
+                        )})()}
                       </div>
                     </>
                   )}
