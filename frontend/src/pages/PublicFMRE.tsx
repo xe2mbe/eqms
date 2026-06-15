@@ -280,8 +280,8 @@ export default function PublicFMREPage() {
     )
     return {
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-      legend: { data: sistemas, bottom: 0, textStyle: { fontSize: 10 }, itemWidth: 12, itemHeight: 8 },
-      grid: { left: 40, right: 16, top: 22, bottom: 60 },
+      legend: { data: sistemas, top: 4, textStyle: { fontSize: 10 }, itemWidth: 12, itemHeight: 8 },
+      grid: { left: 8, right: 8, top: 44, bottom: 4, containLabel: true },
       xAxis: {
         type: 'category',
         data: meses.map(m => dayjs(m).format('MMM YY')),
@@ -331,8 +331,8 @@ export default function PublicFMREPage() {
     )
     return {
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-      legend: { data: plataformas, bottom: 0, textStyle: { fontSize: 10 }, itemWidth: 12, itemHeight: 8 },
-      grid: { left: 40, right: 16, top: 22, bottom: 60 },
+      legend: { data: plataformas, top: 4, textStyle: { fontSize: 10 }, itemWidth: 12, itemHeight: 8 },
+      grid: { left: 8, right: 8, top: 44, bottom: 4, containLabel: true },
       xAxis: {
         type: 'category',
         data: meses.map(m => dayjs(m).format('MMM YY')),
