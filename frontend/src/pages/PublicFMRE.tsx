@@ -1290,6 +1290,7 @@ export default function PublicFMREPage() {
                 return acc
               }, {} as Record<string, number>)
 
+              const totalQSOsEv = Object.values(porSistema).reduce((s, n) => s + n, 0)
               const totalEstadoEv = Object.values(porEstado).reduce((s, n) => s + n, 0)
               const eventoMapOption = !mapReady ? {} : {
                 tooltip: {
@@ -1329,6 +1330,7 @@ export default function PublicFMREPage() {
                       <Card size="small" title={<span><WifiOutlined style={{ color: FMRE_GOLD, marginRight: 8 }} />Reportes por sistema</span>} className="card-shadow" style={{ height: '100%' }}>
                         <ReactECharts
                           option={{
+                            title: { text: totalQSOsEv.toLocaleString(), subtext: 'QSOs', left: '50%', top: '40%', textAlign: 'center', textStyle: { fontSize: 16, fontWeight: 'bold', color: FMRE_DARK }, subtextStyle: { fontSize: 11, color: '#888' } },
                             tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
                             series: [{
                               type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'],
@@ -1350,7 +1352,7 @@ export default function PublicFMREPage() {
                     dataSource={participantes}
                     rowKey="indicativo"
                     size="small"
-                    pagination={{ pageSize: 50, showSizeChanger: false }}
+                    pagination={{ pageSize: 50, showSizeChanger: false, showTotal: (t) => `${t} estaciones` }}
                     columns={[
                       { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => (
                         <span style={{ fontWeight: 700, color: i < 3 ? FMRE_GOLD : '#8c8c8c' }}>{i + 1}</span>
@@ -1407,6 +1409,7 @@ export default function PublicFMREPage() {
                 return acc
               }, {} as Record<string, number>)
 
+              const totalReportesEv = Object.values(porPlataforma).reduce((s, n) => s + n, 0)
               const totalEstadoEvRS = Object.values(porEstadoRS).reduce((s, n) => s + n, 0)
               const eventoRSMapOption = !mapReady ? {} : {
                 tooltip: {
@@ -1445,6 +1448,7 @@ export default function PublicFMREPage() {
                       <Card size="small" title={<span><GlobalOutlined style={{ color: '#0891b2', marginRight: 8 }} />Reportes por plataforma</span>} className="card-shadow" style={{ height: '100%' }}>
                         <ReactECharts
                           option={{
+                            title: { text: totalReportesEv.toLocaleString(), subtext: 'Reportes', left: '50%', top: '40%', textAlign: 'center', textStyle: { fontSize: 16, fontWeight: 'bold', color: '#0891b2' }, subtextStyle: { fontSize: 11, color: '#888' } },
                             tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
                             series: [{
                               type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'],
@@ -1465,7 +1469,7 @@ export default function PublicFMREPage() {
                     dataSource={participantes}
                     rowKey="indicativo"
                     size="small"
-                    pagination={{ pageSize: 50, showSizeChanger: false }}
+                    pagination={{ pageSize: 50, showSizeChanger: false, showTotal: (t) => `${t} estaciones` }}
                     columns={[
                       { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => (
                         <span style={{ fontWeight: 700, color: i < 3 ? '#0891b2' : '#8c8c8c' }}>{i + 1}</span>
