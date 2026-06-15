@@ -339,23 +339,37 @@ export default function PublicFMREPage() {
   const tendenciaOption = !stats ? {} : (() => {
     const meses = [...new Set(stats.rf.tendencia.map(t => t.mes))].sort()
     const sistemas = [...new Set(stats.rf.tendencia.map(t => t.sistema))].sort()
+    const totales = meses.map(mes =>
+      sistemas.reduce((sum, sis) => sum + (stats.rf.tendencia.find(t => t.mes === mes && t.sistema === sis)?.total ?? 0), 0)
+    )
     return {
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
       legend: { data: sistemas, bottom: 0, textStyle: { fontSize: 10 }, itemWidth: 12, itemHeight: 8 },
-      grid: { left: 40, right: 16, top: 8, bottom: 60 },
+      grid: { left: 40, right: 16, top: 22, bottom: 60 },
       xAxis: {
         type: 'category',
         data: meses.map(m => dayjs(m).format('MMM YY')),
         axisLabel: { color: '#666', fontSize: 11 },
       },
       yAxis: { type: 'value', axisLabel: { color: '#666', fontSize: 11 } },
-      series: sistemas.map(sis => ({
-        name: sis,
-        type: 'bar',
-        stack: 'total',
-        data: meses.map(mes => stats.rf.tendencia.find(t => t.mes === mes && t.sistema === sis)?.total ?? 0),
-        itemStyle: { color: SISTEMA_COLORS[sis] ?? '#999' },
-      })),
+      series: [
+        ...sistemas.map(sis => ({
+          name: sis,
+          type: 'bar',
+          stack: 'total',
+          data: meses.map(mes => stats.rf.tendencia.find(t => t.mes === mes && t.sistema === sis)?.total ?? 0),
+          itemStyle: { color: SISTEMA_COLORS[sis] ?? '#999' },
+        })),
+        {
+          type: 'bar', stack: 'total', silent: true, tooltip: { show: false },
+          itemStyle: { color: 'rgba(0,0,0,0)', borderWidth: 0 },
+          emphasis: { itemStyle: { color: 'rgba(0,0,0,0)' } },
+          data: totales.map(t => ({
+            value: 0,
+            label: { show: t > 0, position: 'top', formatter: () => t.toLocaleString(), color: '#444', fontSize: 10, fontWeight: 700 },
+          })),
+        },
+      ],
     }
   })()
 
@@ -374,23 +388,37 @@ export default function PublicFMREPage() {
   const tendenciaRSOption = !stats ? {} : (() => {
     const meses = [...new Set(stats.rs.tendencia.map(t => t.mes))].sort()
     const plataformas = [...new Set(stats.rs.tendencia.map(t => t.plataforma))].sort()
+    const totalesRS = meses.map(mes =>
+      plataformas.reduce((sum, plat) => sum + (stats.rs.tendencia.find(t => t.mes === mes && t.plataforma === plat)?.total ?? 0), 0)
+    )
     return {
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
       legend: { data: plataformas, bottom: 0, textStyle: { fontSize: 10 }, itemWidth: 12, itemHeight: 8 },
-      grid: { left: 40, right: 16, top: 8, bottom: 60 },
+      grid: { left: 40, right: 16, top: 22, bottom: 60 },
       xAxis: {
         type: 'category',
         data: meses.map(m => dayjs(m).format('MMM YY')),
         axisLabel: { color: '#666', fontSize: 11 },
       },
       yAxis: { type: 'value', axisLabel: { color: '#666', fontSize: 11 } },
-      series: plataformas.map(plat => ({
-        name: plat,
-        type: 'bar',
-        stack: 'total',
-        data: meses.map(mes => stats.rs.tendencia.find(t => t.mes === mes && t.plataforma === plat)?.total ?? 0),
-        itemStyle: { color: PLAT_COLORS[plat] ?? '#999' },
-      })),
+      series: [
+        ...plataformas.map(plat => ({
+          name: plat,
+          type: 'bar',
+          stack: 'total',
+          data: meses.map(mes => stats.rs.tendencia.find(t => t.mes === mes && t.plataforma === plat)?.total ?? 0),
+          itemStyle: { color: PLAT_COLORS[plat] ?? '#999' },
+        })),
+        {
+          type: 'bar', stack: 'total', silent: true, tooltip: { show: false },
+          itemStyle: { color: 'rgba(0,0,0,0)', borderWidth: 0 },
+          emphasis: { itemStyle: { color: 'rgba(0,0,0,0)' } },
+          data: totalesRS.map(t => ({
+            value: 0,
+            label: { show: t > 0, position: 'top', formatter: () => t.toLocaleString(), color: '#444', fontSize: 10, fontWeight: 700 },
+          })),
+        },
+      ],
     }
   })()
 
@@ -881,6 +909,13 @@ export default function PublicFMREPage() {
                               </tr>
                             ))}
                           </tbody>
+                          <tfoot>
+                            <tr style={{ borderTop: '2px solid #d9d9d9' }}>
+                              <td style={{ padding: '5px 0', fontSize: 12, fontWeight: 700, color: '#333' }}>Total</td>
+                              <td style={{ textAlign: 'right', fontSize: 12, fontWeight: 700, paddingRight: 6 }}>{total.toLocaleString()}</td>
+                              <td style={{ textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#333' }}>100%</td>
+                            </tr>
+                          </tfoot>
                         </table>
                       </Col>
                     </Row>
@@ -962,6 +997,10 @@ export default function PublicFMREPage() {
                     }}
                     style={{ height: Math.max(300, stats!.rf.por_estado.slice(0, 25).length * 28) }}
                   />
+                  <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 16, fontSize: 12 }}>
+                    <span style={{ color: '#888' }}>{stats!.rf.por_estado.length} estados</span>
+                    <strong>Total: {stats!.rf.por_estado.reduce((s, e) => s + e.total, 0).toLocaleString()} registros</strong>
+                  </div>
                 )}
               </Card>
             </Col>
@@ -1052,6 +1091,13 @@ export default function PublicFMREPage() {
                               </tr>
                             ))}
                           </tbody>
+                          <tfoot>
+                            <tr style={{ borderTop: '2px solid #d9d9d9' }}>
+                              <td style={{ padding: '5px 0', fontSize: 12, fontWeight: 700, color: '#333' }}>Total</td>
+                              <td style={{ textAlign: 'right', fontSize: 12, fontWeight: 700, paddingRight: 6 }}>{total.toLocaleString()}</td>
+                              <td style={{ textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#333' }}>100%</td>
+                            </tr>
+                          </tfoot>
                         </table>
                       </Col>
                     </Row>
@@ -1134,6 +1180,10 @@ export default function PublicFMREPage() {
                       }}
                       style={{ height: Math.max(300, stats!.rs.por_estado.slice(0, 25).length * 28) }}
                     />
+                    <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 16, fontSize: 12 }}>
+                      <span style={{ color: '#888' }}>{stats!.rs.por_estado.length} estados</span>
+                      <strong>Total: {stats!.rs.por_estado.reduce((s, e) => s + e.total, 0).toLocaleString()} registros</strong>
+                    </div>
                   )}
                 </Card>
               </Col>
