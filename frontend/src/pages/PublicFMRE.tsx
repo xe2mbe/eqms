@@ -1033,7 +1033,9 @@ export default function PublicFMREPage() {
                     bodyStyle={{ display: 'flex', flexDirection: 'column', padding: 12 }}>
                 {isLoading
                   ? <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>
-                  : <ReactECharts option={tendenciaRSOption} style={{ flex: 1, minHeight: 180 }} />}
+                  : <div style={{ flex: 1, position: 'relative', minHeight: 180 }}>
+                      <ReactECharts option={tendenciaRSOption} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+                    </div>}
               </Card>
             </Col>
 
