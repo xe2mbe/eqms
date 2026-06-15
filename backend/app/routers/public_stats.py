@@ -33,12 +33,14 @@ def registrar_visita(request: Request, db: Session = Depends(get_db)):
 
     # Consultar país vía ip-api.com (libre, sin key)
     pais = "Desconocido"
+    pais_codigo = ""
     try:
         with urllib.request.urlopen(
-            f"http://ip-api.com/json/{ip}?fields=country&lang=es", timeout=3
+            f"http://ip-api.com/json/{ip}?fields=country,countryCode&lang=es", timeout=3
         ) as resp:
             data = _json.loads(resp.read())
             pais = data.get("country") or "Desconocido"
+            pais_codigo = data.get("countryCode") or ""
     except Exception:
         pass
 
@@ -46,7 +48,7 @@ def registrar_visita(request: Request, db: Session = Depends(get_db)):
     db.commit()
 
     total = db.execute(text("SELECT COUNT(*) FROM visitas")).scalar()
-    return {"ip": ip, "pais": pais, "total": int(total)}
+    return {"ip": ip, "pais": pais, "pais_codigo": pais_codigo, "total": int(total)}
 
 
 @router.get("/stats")

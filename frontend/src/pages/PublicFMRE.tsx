@@ -210,7 +210,7 @@ export default function PublicFMREPage() {
   const [loadingEstRS, setLoadingEstRS]           = useState(false)
   const [loadingEv, setLoadingEv]                 = useState(false)
   const [loadingEstIntl, setLoadingEstIntl]       = useState(false)
-  const [visitaInfo, setVisitaInfo]               = useState<{ ip: string; pais: string; total: number } | null>(null)
+  const [visitaInfo, setVisitaInfo]               = useState<{ ip: string; pais: string; pais_codigo: string; total: number } | null>(null)
   const [loadingEvRS, setLoadingEvRS]             = useState(false)
 
   const handleCardClick = async (label: string) => {
@@ -423,6 +423,11 @@ export default function PublicFMREPage() {
         'Estado De México': 'México',
       },
     }],
+  }
+
+  const countryFlag = (code: string) => {
+    if (!code || code.length !== 2) return '🌐'
+    return String.fromCodePoint(...code.toUpperCase().split('').map(c => 0x1F1E6 + c.charCodeAt(0) - 65))
   }
 
   const isLoading = !stats
@@ -1284,41 +1289,108 @@ export default function PublicFMREPage() {
                 RS · {ultimoEvRSDetalle?.evento ?? 'Último evento'} — {ultimoEvRSDetalle?.fecha ?? ''}
               </Title>
             </div>
-            {loadingEvRS ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (
-              <Table
-                dataSource={ultimoEvRSDetalle?.participantes ?? []}
-                rowKey="indicativo"
-                size="small"
-                pagination={{ pageSize: 50, showSizeChanger: false }}
-                columns={[
-                  { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => (
-                    <span style={{ fontWeight: 700, color: i < 3 ? '#0891b2' : '#8c8c8c' }}>{i + 1}</span>
-                  )},
-                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: '#0891b2' }}>{v}</strong> },
-                  { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? <span style={{ color: '#bbb', fontStyle: 'italic' }}>Sin registro</span> },
-                  { title: 'Estado', dataIndex: 'estado', width: 120, ellipsis: true, render: (v: string | null) => v ?? '—' },
-                  { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const,
-                    render: (v: number, r: { plataformas: Record<string, number> }) => (
-                      <Popover
-                        trigger="click"
-                        title="Desglose por plataforma"
-                        content={
-                          <div style={{ minWidth: 160 }}>
-                            {Object.entries(r.plataformas).map(([p, n]) => (
-                              <div key={p} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '2px 0' }}>
-                                <Tag color={PLAT_COLORS[p] ?? '#0891b2'} style={{ margin: 0 }}>{p}</Tag>
-                                <strong>{n}</strong>
+            {loadingEvRS ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (() => {
+              const participantes = ultimoEvRSDetalle?.participantes ?? []
+
+              const porEstadoRS = participantes.reduce((acc, p) => {
+                if (p.estado) acc[p.estado] = (acc[p.estado] ?? 0) + 1
+                return acc
+              }, {} as Record<string, number>)
+              const maxEstadoRS = Math.max(...Object.values(porEstadoRS), 1)
+
+              const porPlataforma = participantes.reduce((acc, p) => {
+                Object.entries(p.plataformas).forEach(([pl, n]) => { acc[pl] = (acc[pl] ?? 0) + n })
+                return acc
+              }, {} as Record<string, number>)
+
+              const eventoRSMapOption = !mapReady ? {} : {
+                tooltip: {
+                  trigger: 'item',
+                  formatter: (p: any) => p.value
+                    ? `<b>${p.name}</b><br/>${p.value} estación${p.value > 1 ? 'es' : ''}`
+                    : p.name,
+                },
+                visualMap: {
+                  min: 0, max: maxEstadoRS,
+                  inRange: { color: ['#e0f7fa', '#0891b2'] },
+                  text: ['Más', 'Menos'], textStyle: { color: '#666', fontSize: 11 },
+                  calculable: true, orient: 'horizontal', left: 'center', bottom: 8,
+                },
+                series: [{
+                  type: 'map', map: 'Mexico', roam: false,
+                  emphasis: { label: { show: true }, itemStyle: { areaColor: FMRE_GOLD } },
+                  data: Object.entries(porEstadoRS).map(([estado, count]) => ({ name: estado, value: count })),
+                  nameMap: {
+                    'Ciudad de México': 'Ciudad De México',
+                    'Estado De México': 'México',
+                  },
+                }],
+              }
+
+              return (
+                <>
+                  <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+                    <Col xs={24} lg={14}>
+                      <Card size="small" title={<span><GlobalOutlined style={{ color: '#0891b2', marginRight: 8 }} />Cobertura geográfica del evento</span>} className="card-shadow">
+                        {mapReady
+                          ? <ReactECharts option={eventoRSMapOption} style={{ height: 300 }} />
+                          : <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>}
+                      </Card>
+                    </Col>
+                    <Col xs={24} lg={10}>
+                      <Card size="small" title={<span><GlobalOutlined style={{ color: '#0891b2', marginRight: 8 }} />Reportes por plataforma</span>} className="card-shadow" style={{ height: '100%' }}>
+                        <ReactECharts
+                          option={{
+                            tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+                            series: [{
+                              type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'],
+                              data: Object.entries(porPlataforma).map(([p, n]) => ({
+                                name: p, value: n,
+                                itemStyle: { color: PLAT_COLORS[p] ?? '#0891b2' },
+                              })),
+                              label: { formatter: '{b}: {c}', fontSize: 11 },
+                            }],
+                          }}
+                          style={{ height: 300 }}
+                        />
+                      </Card>
+                    </Col>
+                  </Row>
+
+                  <Table
+                    dataSource={participantes}
+                    rowKey="indicativo"
+                    size="small"
+                    pagination={{ pageSize: 50, showSizeChanger: false }}
+                    columns={[
+                      { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => (
+                        <span style={{ fontWeight: 700, color: i < 3 ? '#0891b2' : '#8c8c8c' }}>{i + 1}</span>
+                      )},
+                      { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => <strong style={{ color: '#0891b2' }}>{v}</strong> },
+                      { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? <span style={{ color: '#bbb', fontStyle: 'italic' }}>Sin registro</span> },
+                      { title: 'Estado', dataIndex: 'estado', width: 120, ellipsis: true, render: (v: string | null) => v ?? '—' },
+                      { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const,
+                        render: (v: number, r: { plataformas: Record<string, number> }) => (
+                          <Popover trigger="click" title="Desglose por plataforma"
+                            content={
+                              <div style={{ minWidth: 160 }}>
+                                {Object.entries(r.plataformas).map(([p, n]) => (
+                                  <div key={p} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '2px 0' }}>
+                                    <Tag color={PLAT_COLORS[p] ?? '#0891b2'} style={{ margin: 0 }}>{p}</Tag>
+                                    <strong>{n}</strong>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                        }
-                      >
-                        <Tag color="cyan" style={{ cursor: 'pointer', fontWeight: 700 }}>{v.toLocaleString()} ▾</Tag>
-                      </Popover>
-                    )},
-                ]}
-              />
-            )}
+                            }
+                          >
+                            <Tag color="cyan" style={{ cursor: 'pointer', fontWeight: 700 }}>{v.toLocaleString()} ▾</Tag>
+                          </Popover>
+                        )},
+                    ]}
+                  />
+                </>
+              )
+            })()}
           </div>
         )}
 
@@ -1333,7 +1405,7 @@ export default function PublicFMREPage() {
           </a>
           {visitaInfo && (
             <div style={{ color: '#8ab4e0', fontSize: 11 }}>
-              🌐 Visita #{visitaInfo.total.toLocaleString()} · {visitaInfo.ip} · {visitaInfo.pais}
+              {countryFlag(visitaInfo.pais_codigo ?? '')} Visita #{visitaInfo.total.toLocaleString()} · {visitaInfo.ip}
             </div>
           )}
           <a href="https://rcg.org.mx" target="_blank" rel="noopener noreferrer"
