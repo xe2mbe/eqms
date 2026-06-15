@@ -503,7 +503,7 @@ export default function PublicFMREPage() {
       {stats?.ultimo_evento_rf && (
         <div
           onClick={handleUltimoEvento}
-          style={{ background: FMRE_GOLD, padding: '10px 32px', textAlign: 'center', cursor: 'pointer' }}
+          style={{ background: FMRE_GOLD, padding: '10px 32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}
           onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(0.92)')}
           onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
         >
@@ -513,6 +513,9 @@ export default function PublicFMREPage() {
             {dayjs(stats.ultimo_evento_rf.ultima).format('D [de] MMMM [de] YYYY')} —{' '}
             {stats.ultimo_evento_rf.total_qsos.toLocaleString()} QSOs · {stats.ultimo_evento_rf.estaciones.toLocaleString()} estaciones
           </Text>
+          <span style={{ color: FMRE_DARK, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', opacity: 0.75 }}>
+            👆 Ver participantes ↓
+          </span>
         </div>
       )}
 
@@ -520,7 +523,7 @@ export default function PublicFMREPage() {
       {stats?.ultimo_evento_rs && (
         <div
           onClick={handleUltimoEventoRS}
-          style={{ background: '#0891b2', padding: '10px 32px', textAlign: 'center', cursor: 'pointer' }}
+          style={{ background: '#0891b2', padding: '10px 32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}
           onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(0.88)')}
           onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
         >
@@ -530,6 +533,9 @@ export default function PublicFMREPage() {
             {dayjs(stats.ultimo_evento_rs.ultima).format('D [de] MMMM [de] YYYY')} —{' '}
             {stats.ultimo_evento_rs.total_qsos.toLocaleString()} QSOs · {stats.ultimo_evento_rs.estaciones.toLocaleString()} estaciones
           </Text>
+          <span style={{ color: 'white', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', opacity: 0.8 }}>
+            👆 Ver participantes ↓
+          </span>
         </div>
       )}
 
