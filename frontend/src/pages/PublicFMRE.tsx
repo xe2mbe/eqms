@@ -605,13 +605,13 @@ export default function PublicFMREPage() {
             {/* HF */}
             <Col xs={24} sm={12} lg={6} style={{ display: 'flex' }}>
               <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 20px', borderLeft: `4px solid ${SISTEMA_COLORS.HF}`, flex: 1 }}>
-                <div style={{ color: SISTEMA_COLORS.HF, fontWeight: 800, fontSize: 16, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ color: FMRE_GOLD, fontWeight: 800, fontSize: 16, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                   📻 HF
                 </div>
                 <div style={{ color: 'white', fontSize: 15, fontWeight: 700, marginBottom: 4 }}>7.082 MHz</div>
-                <div style={{ color: '#8ab4e0', fontSize: 12, marginBottom: 12 }}>LSB</div>
+                <div style={{ color: 'white', fontSize: 12, marginBottom: 12, opacity: 0.75 }}>LSB</div>
                 <div style={{ color: 'white', fontSize: 15, fontWeight: 700, marginBottom: 4 }}>14.120 MHz</div>
-                <div style={{ color: '#8ab4e0', fontSize: 12 }}>USB</div>
+                <div style={{ color: 'white', fontSize: 12, opacity: 0.75 }}>USB</div>
               </div>
             </Col>
 
