@@ -458,7 +458,7 @@ export default function PublicFMREPage() {
           style={{ display: 'flex', alignItems: 'center', gap: 20, textDecoration: 'none' }}>
           <img src="/LogoFMRE.png" alt="FMRE" style={{ height: 72 }} />
           <div style={{ color: 'white', fontWeight: 500, fontSize: 'clamp(20px, 3vw, 40px)', lineHeight: 1.2, letterSpacing: 0.2, textAlign: 'center' }}>
-            Federación Mexicana de Radioexperimentadores, A.C. <span style={{ fontSize: '0.6em', opacity: 0.7 }}>↗</span>
+            Federación Mexicana de Radioexperimentadores, A.C.
           </div>
         </a>
       </header>
@@ -1597,7 +1597,7 @@ export default function PublicFMREPage() {
           <a href="https://fmre.mx" target="_blank" rel="noopener noreferrer"
             style={{ color: FMRE_GOLD, fontWeight: 700, fontSize: 12, textDecoration: 'none' }}>
             <img src="/LogoFMRE.png" alt="FMRE" style={{ height: 20, width: 'auto', verticalAlign: 'middle', marginRight: 6, opacity: 0.9 }} />
-              fmre.mx ↗
+              fmre.mx
           </a>
           {visitaInfo && (
             <div style={{ color: '#8ab4e0', fontSize: 11 }}>
@@ -1609,7 +1609,7 @@ export default function PublicFMREPage() {
             <span style={{ color: '#8ab4e0', fontSize: 11 }}>Página diseñada por miembros del</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <img src="/rcg_small.png" alt="Radio Club Guadiana" style={{ height: 24, width: 'auto', opacity: 0.9 }} />
-              <span style={{ color: 'white', fontSize: 12, fontWeight: 600 }}>Radio Club Guadiana A.C. ↗</span>
+              <span style={{ color: 'white', fontSize: 12, fontWeight: 600 }}>Radio Club Guadiana A.C.</span>
             </div>
           </a>
         </div>
