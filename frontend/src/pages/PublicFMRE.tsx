@@ -678,7 +678,7 @@ export default function PublicFMREPage() {
         <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>📡</div>
           <Title level={3} style={{ color: FMRE_DARK, margin: 0 }}>¿Tomaron mi reporte?</Title>
-          <Paragraph style={{ color: '#666', marginTop: 8, marginBottom: 24 }}>
+          <Paragraph style={{ color: '#444', fontSize: 15, marginTop: 8, marginBottom: 24 }}>
             Consulta los reportes de tu estación registrados en el sistema.
             Ingresa tu indicativo y ve el historial de actividad en RF y redes sociales.
           </Paragraph>
@@ -833,7 +833,7 @@ export default function PublicFMREPage() {
             </Title>
             <Tag color={FMRE_BLUE} style={{ fontWeight: 700 }}>HF · Sistemas RoIP</Tag>
           </div>
-          <Paragraph style={{ color: '#666', marginBottom: 24, maxWidth: 700 }}>
+          <Paragraph style={{ color: '#444', fontSize: 15, marginBottom: 24, maxWidth: 700 }}>
             Registro de estaciones participantes en boletines dominicales a través de sistemas de HF, AllStar, IRLP, DMR y otros.
           </Paragraph>
 
@@ -1002,7 +1002,7 @@ export default function PublicFMREPage() {
             </Title>
             <Tag color="cyan" style={{ fontWeight: 700 }}>Facebook · Zello · y más</Tag>
           </div>
-          <Paragraph style={{ color: '#666', marginBottom: 24, maxWidth: 700 }}>
+          <Paragraph style={{ color: '#444', fontSize: 15, marginBottom: 24, maxWidth: 700 }}>
             Seguimiento de la participación de radioaficionados en plataformas digitales
             durante los eventos de la FMRE. La comunidad XE también está presente en las redes.
           </Paragraph>
