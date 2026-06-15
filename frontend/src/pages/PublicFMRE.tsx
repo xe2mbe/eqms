@@ -1469,10 +1469,12 @@ export default function PublicFMREPage() {
             </div>
           )}
           <a href="https://rcg.org.mx" target="_blank" rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
             <span style={{ color: '#8ab4e0', fontSize: 11 }}>Página diseñada por miembros del</span>
-            <img src="/rcg_small.png" alt="Radio Club Guadiana" style={{ height: 20, width: 'auto', opacity: 0.9 }} />
-            <span style={{ color: 'white', fontSize: 11, fontWeight: 600 }}>Radio Club Guadiana A.C.</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <img src="/rcg_small.png" alt="Radio Club Guadiana" style={{ height: 24, width: 'auto', opacity: 0.9 }} />
+              <span style={{ color: 'white', fontSize: 12, fontWeight: 600 }}>Radio Club Guadiana A.C.</span>
+            </div>
           </a>
         </div>
       </footer>
