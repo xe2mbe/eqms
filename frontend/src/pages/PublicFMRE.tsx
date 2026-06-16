@@ -157,7 +157,7 @@ export default function PublicFMREPage() {
     nodes: { node: string; name: string; url: string | null; keyed: boolean; direction: string }[]
   } | null>(null)
   const [irlpStatus, setIrlpStatus] = useState<{
-    online: boolean; on_air: boolean; connections: number;
+    online: boolean; on_air: boolean; cos: boolean; ptt: boolean; connections: number;
     nodes: { node: string; name: string; url: string }[]
   } | null>(null)
 
@@ -343,7 +343,7 @@ export default function PublicFMREPage() {
         .then(r => setIrlpStatus(r.data))
         .catch(() => {})
     fetchIrlp()
-    const t = setInterval(fetchIrlp, 60_000)
+    const t = setInterval(fetchIrlp, 5_000)
     return () => clearInterval(t)
   }, [])
 
@@ -705,6 +705,19 @@ export default function PublicFMREPage() {
                   : irlpStatus.on_air
                     ? <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● AL AIRE</span>
                     : <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
+                }
+              </div>
+
+              <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
+
+              {/* COS indicator */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, color: '#8ab4e0' }}>COS</span>
+                {irlpStatus?.cos
+                  ? <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>
+                      ● RX ACTIVO
+                    </span>
+                  : <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Silencio</span>
                 }
               </div>
 

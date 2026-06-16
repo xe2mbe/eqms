@@ -96,51 +96,82 @@ async def node_status():
     _node_cache = {"result": result, "ts": now}
     return result
 
-# ── IRLP Reflector 0077 status ────────────────────────────────────────────────
-_IRLP_URL      = "http://85.8.149.218/Chan_Zero_Node_Numbers.html"
+# ── IRLP node 8422 + reflector 0077 status ───────────────────────────────────
+import base64 as _b64
+_IRLP_CGI_URL  = "http://stn8422.ip.irlp.net:8080/cgi-bin/irlpvcon/irlpvcon_get"
+_IRLP_REF_URL  = "http://85.8.149.218/Chan_Zero_Node_Numbers.html"
+_IRLP_AUTH     = _b64.b64encode(b"xe2mbe:Guadiana").decode()
 _IRLP_NODE     = "8422"
 _irlp_cache: dict = {"result": None, "ts": datetime.min}
 
-async def _fetch_irlp_status() -> dict:
-    """
-    Parsea la página HTML del reflector IRLP 0077.
-    Detecta si el nodo 8422 está conectado y devuelve la lista de nodos.
-    """
+async def _fetch_irlp_cgi() -> dict:
+    """CGI del nodo 8422: estado en tiempo real de COS/PTT y conexión al reflector."""
     try:
-        async with httpx.AsyncClient(timeout=8.0) as client:
-            resp = await client.get(_IRLP_URL)
-            html = resp.text
-        # Cada línea de nodo tiene el patrón:
-        # N    Mon DD HH:MM stnXXXX -<a ...>info</a>- XXXX CALLSIGN Description
-        node_re = re.compile(
-            r'\d+\s+\w+ \d+ \d+:\d+\s+(stn(\d+))\s+-.*?-\s+\d+\s+(\w+)\s+(.+?)(?:\s*\n|$)'
-        )
-        nodes = []
-        for m in node_re.finditer(html):
-            node_id   = m.group(2).strip()
-            callsign  = m.group(3).strip()
-            desc      = m.group(4).strip()
-            nodes.append({
-                "node":     node_id,
-                "name":     f"{callsign} — {desc}",
-                "url":      f"http://status.irlp.net/index.php?PSTART=11&nodeid={node_id}",
-            })
-        on_air = any(n["node"] == _IRLP_NODE for n in nodes)
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            resp = await client.get(
+                _IRLP_CGI_URL,
+                headers={"Authorization": f"Basic {_IRLP_AUTH}"},
+            )
+            text = resp.text
+        def _int(pattern):
+            m = re.search(pattern, text)
+            return int(m.group(1)) if m else 0
+        p0 = _int(r'\bp0=(\d+)')
+        p1 = _int(r'\bp1=(\d+)')
+        co = (re.search(r"co='([^']*)'", text) or re.search(r'co="([^"]*)"', text))
+        co = co.group(1) if co else ''
         return {
-            "online":      True,
-            "on_air":      on_air,
-            "connections": len(nodes),
-            "nodes":       nodes,
+            "online": True,
+            "on_air": '0077' in co,
+            "cos":    bool(p1 & 0x80),   # COS verde = alguien transmitiendo
+            "ptt":    bool(p0 & 0x82),   # PTT rojo  = nodo transmitiendo al reflector
         }
     except Exception:
-        pass
-    return {"online": False, "on_air": False, "connections": 0, "nodes": []}
+        return {"online": False, "on_air": False, "cos": False, "ptt": False}
+
+async def _fetch_irlp_reflector() -> list:
+    """Lista de nodos conectados al reflector 0077 (se cachea 60 s aparte)."""
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(_IRLP_REF_URL)
+            html = resp.text
+        node_re = re.compile(
+            r'\d+\s+\w+ \d+ \d+:\d+\s+stn(\d+)\s+-.*?-\s+\d+\s+(\w+)\s+(.+?)(?:\s*\n|$)'
+        )
+        return [
+            {
+                "node": m.group(1).strip(),
+                "name": f"{m.group(2).strip()} — {m.group(3).strip()}",
+                "url":  f"http://status.irlp.net/index.php?PSTART=11&nodeid={m.group(1).strip()}",
+            }
+            for m in node_re.finditer(html)
+        ]
+    except Exception:
+        return []
+
+_irlp_nodes_cache: dict = {"nodes": [], "ts": datetime.min}
+
+async def _fetch_irlp_status() -> dict:
+    global _irlp_nodes_cache
+    now = datetime.utcnow()
+    # Nodos del reflector: refrescar cada 60 s
+    if (now - _irlp_nodes_cache["ts"]).total_seconds() > 60:
+        nodes = await _fetch_irlp_reflector()
+        _irlp_nodes_cache = {"nodes": nodes, "ts": now}
+    nodes = _irlp_nodes_cache["nodes"]
+    # Estado CGI en tiempo real
+    cgi = await _fetch_irlp_cgi()
+    return {
+        **cgi,
+        "connections": len(nodes),
+        "nodes":       nodes,
+    }
 
 @router.get("/irlp-status")
 async def irlp_status():
     global _irlp_cache
     now = datetime.utcnow()
-    if _irlp_cache["result"] and (now - _irlp_cache["ts"]).total_seconds() < 60:
+    if _irlp_cache["result"] and (now - _irlp_cache["ts"]).total_seconds() < 5:
         return _irlp_cache["result"]
     result = await _fetch_irlp_status()
     _irlp_cache = {"result": result, "ts": now}
