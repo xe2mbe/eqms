@@ -621,7 +621,7 @@ export default function PublicFMREPage() {
                     boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
                     animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
                   }} />
-                  <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Hub XE1LM · 299081</span>
+                  <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Hub 299081</span>
                 </div>
                 <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -629,10 +629,12 @@ export default function PublicFMREPage() {
                   {nodeStatus == null
                     ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
                     : !nodeStatus.on_air
-                      ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
-                      : nodeStatus.keyed
-                        ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                        : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                      ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● OFF AIR</span>
+                      : <><span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● ON AIR</span>
+                        {nodeStatus.keyed
+                          ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
+                          : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                        }</>
                   }
                 </div>
               </div>
@@ -685,10 +687,12 @@ export default function PublicFMREPage() {
                   {irlpStatus == null
                     ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
                     : !irlpStatus.on_air
-                      ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
-                      : irlpStatus.cos
-                        ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                        : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                      ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● OFF AIR</span>
+                      : <><span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● ON AIR</span>
+                        {irlpStatus.cos
+                          ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
+                          : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                        }</>
                   }
                 </div>
               </div>
@@ -950,7 +954,7 @@ export default function PublicFMREPage() {
                         boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
                         animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
                       }} />
-                      <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Hub XE1LM · 299081</span>
+                      <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Hub 299081</span>
                     </div>
                     <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -958,10 +962,12 @@ export default function PublicFMREPage() {
                       {nodeStatus == null
                         ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
                         : !nodeStatus.on_air
-                          ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
-                          : nodeStatus.keyed
-                            ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                            : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                          ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● OFF AIR</span>
+                          : <><span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● ON AIR</span>
+                            {nodeStatus.keyed
+                              ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
+                              : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                            }</>
                       }
                     </div>
                   </div>
@@ -1011,10 +1017,12 @@ export default function PublicFMREPage() {
                       {irlpStatus == null
                         ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
                         : !irlpStatus.on_air
-                          ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
-                          : irlpStatus.cos
-                            ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                            : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                          ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● OFF AIR</span>
+                          : <><span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● ON AIR</span>
+                            {irlpStatus.cos
+                              ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
+                              : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                            }</>
                       }
                     </div>
                   </div>
