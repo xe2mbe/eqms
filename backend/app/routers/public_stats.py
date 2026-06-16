@@ -43,18 +43,24 @@ async def _fetch_node_status() -> dict:
                     remote_nodes = node_data.get("remote_nodes", [])
                     # Buscar el nodo del boletín entre los conectados al hub
                     boletin = next(
-                        (rn for rn in remote_nodes if str(rn.get("node", "")) == _BOLETIN_NODE),
+                        (rn for rn in remote_nodes
+                         if str(rn.get("node", "")) == _BOLETIN_NODE
+                         and rn.get("link") == "Established"),
                         None,
                     )
                     on_air = boletin is not None
-                    keyed  = on_air and (
-                        int(boletin.get("cos_keyed", 0)) or int(boletin.get("tx_keyed", 0))
+                    # PTT: campo "keyed" es string "yes"/"no"
+                    keyed  = on_air and str(boletin.get("keyed", "no")).lower() == "yes"
+                    # Contar solo nodos con link Established (excluir node=1 local)
+                    established = sum(
+                        1 for rn in remote_nodes
+                        if rn.get("link") == "Established"
                     )
                     return {
                         "online":      True,
                         "on_air":      on_air,
                         "keyed":       keyed,
-                        "connections": len(remote_nodes),
+                        "connections": established,
                     }
     except Exception:
         pass
