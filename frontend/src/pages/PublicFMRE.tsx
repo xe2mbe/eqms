@@ -154,6 +154,7 @@ export default function PublicFMREPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [boletinInfo, setBoletinInfo] = useState(getNextBoletinInfo)
   const voipStatusRef = useRef<HTMLDivElement>(null)
+  const [voipStatusVisible, setVoipStatusVisible] = useState(false)
   const [nodeStatus, setNodeStatus] = useState<{
     online: boolean; on_air: boolean; keyed: boolean; connections: number;
     nodes: { node: string; name: string; url: string | null; keyed: boolean; direction: string }[]
@@ -858,6 +859,16 @@ export default function PublicFMREPage() {
                   🔗 Sistemas VoIP / RoIP
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                  <span
+                    title="Ver estado en tiempo real"
+                    onClick={() => { setVoipStatusVisible(true); setTimeout(() => voipStatusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50) }}
+                    style={{
+                      width: 10, height: 10, borderRadius: '50%', display: 'inline-block', flexShrink: 0, cursor: 'pointer',
+                      background: irlpStatus == null ? '#555' : irlpStatus.online ? '#52c41a' : '#ff4d4f',
+                      boxShadow: irlpStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
+                      animation: irlpStatus?.online ? 'pulse 2s infinite' : 'none',
+                    }}
+                  />
                   <div style={{ width: 38, height: 38, borderRadius: 7, background: '#C62828', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ color: 'white', fontSize: 9, fontWeight: 'bold' }}>IRLP</span>
                   </div>
@@ -868,18 +879,18 @@ export default function PublicFMREPage() {
                       <a href="http://xe1dvi.crabdance.com/Auto_Refresh_0077Con.html" target="_blank" rel="noopener noreferrer" style={{ color: '#8ab4e0', marginLeft: 4 }}>↗</a>
                     </div>
                   </div>
-                  <span
-                    title="Ver estado en tiempo real"
-                    onClick={() => voipStatusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                    style={{
-                      width: 10, height: 10, borderRadius: '50%', display: 'inline-block', flexShrink: 0, cursor: 'pointer',
-                      background: irlpStatus == null ? '#555' : irlpStatus.online ? '#52c41a' : '#ff4d4f',
-                      boxShadow: irlpStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
-                      animation: irlpStatus?.online ? 'pulse 2s infinite' : 'none',
-                    }}
-                  />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span
+                    title="Ver estado en tiempo real"
+                    onClick={() => { setVoipStatusVisible(true); setTimeout(() => voipStatusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50) }}
+                    style={{
+                      width: 10, height: 10, borderRadius: '50%', display: 'inline-block', flexShrink: 0, cursor: 'pointer',
+                      background: nodeStatus == null ? '#555' : nodeStatus.online ? '#52c41a' : '#ff4d4f',
+                      boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
+                      animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
+                    }}
+                  />
                   <div style={{ width: 38, height: 38, borderRadius: 7, background: '#1B5E20', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ color: 'white', fontSize: 7, fontWeight: 'bold', lineHeight: 1.3 }}>AllStar</span>
                     <span style={{ color: '#A5D6A7', fontSize: 6, lineHeight: 1.3 }}>Link</span>
@@ -888,16 +899,6 @@ export default function PublicFMREPage() {
                     <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>AllStar Link</div>
                     <div style={{ color: '#8ab4e0', fontSize: 13 }}>Hub <strong style={{ color: 'white' }}>299081</strong></div>
                   </div>
-                  <span
-                    title="Ver estado en tiempo real"
-                    onClick={() => voipStatusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                    style={{
-                      width: 10, height: 10, borderRadius: '50%', display: 'inline-block', flexShrink: 0, cursor: 'pointer',
-                      background: nodeStatus == null ? '#555' : nodeStatus.online ? '#52c41a' : '#ff4d4f',
-                      boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
-                      animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
-                    }}
-                  />
                 </div>
               </div>
             </Col>
@@ -942,8 +943,8 @@ export default function PublicFMREPage() {
             </Col>
           </Row>
 
-          {/* Estado en tiempo real VoIP / RoIP — siempre visible */}
-          <div ref={voipStatusRef} style={{ marginTop: 20, marginBottom: 4 }}>
+          {/* Estado en tiempo real VoIP / RoIP — visible al hacer clic en el LED */}
+          {voipStatusVisible && <div ref={voipStatusRef} style={{ marginTop: 20, marginBottom: 4 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <span style={{ color: '#06b6d4', fontWeight: 800, fontSize: 12, letterSpacing: 2, whiteSpace: 'nowrap' }}>
                 📡 ESTADO EN TIEMPO REAL
@@ -1058,7 +1059,7 @@ export default function PublicFMREPage() {
               </div>
 
             </div>
-          </div>
+          </div>}
 
           {/* Sub-encabezado: Redes Sociales */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24, marginBottom: 16 }}>
