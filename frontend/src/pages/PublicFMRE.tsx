@@ -152,9 +152,7 @@ export default function PublicFMREPage() {
   const [mapReady, setMapReady] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [boletinInfo, setBoletinInfo] = useState(getNextBoletinInfo)
-  const [nodeStatus, setNodeStatus] = useState<{ online: boolean; keyed: boolean; connections: number } | null>(
-    { online: true, keyed: false, connections: 0 }  // placeholder hasta conectar Allmon
-  )
+  const [nodeStatus, setNodeStatus] = useState<{ online: boolean; keyed: boolean; connections: number } | null>(null)
 
   // Búsqueda por indicativo
   const [busqueda, setBusqueda] = useState('')
@@ -319,6 +317,16 @@ export default function PublicFMREPage() {
 
   useEffect(() => {
     const t = setInterval(() => setBoletinInfo(getNextBoletinInfo()), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    const fetchNode = () =>
+      axios.get('/api/public/node-status')
+        .then(r => setNodeStatus(r.data))
+        .catch(() => setNodeStatus(prev => prev))
+    fetchNode()
+    const t = setInterval(fetchNode, 5_000)
     return () => clearInterval(t)
   }, [])
 
@@ -581,7 +589,7 @@ export default function PublicFMREPage() {
             </div>
 
             {/* Barra de estado del nodo AllStar 299080 */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '8px 18px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', width: 'fit-content', alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 20px', flexWrap: 'wrap' }}>
               {/* Online indicator */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 9, height: 9, borderRadius: '50%', background: nodeStatus?.online === false ? '#ff4d4f' : '#52c41a', display: 'inline-block', boxShadow: nodeStatus?.online === false ? 'none' : '0 0 0 3px rgba(82,196,26,0.25)', animation: nodeStatus?.online !== false ? 'pulse 2s infinite' : 'none' }} />

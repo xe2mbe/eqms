@@ -4,8 +4,57 @@ from sqlalchemy import text
 from app.database import get_db
 import urllib.request
 import json as _json
+import httpx
+import asyncio
+from datetime import datetime
 
 router = APIRouter()
+
+# ── AllScan node status cache ─────────────────────────────────────────────────
+_ALLSCAN_URL  = "http://stn8422.ip.irlp.net:8081/allscan/astapi/server.php?nodes=299080"
+_NODE_ID      = "299080"
+_node_cache: dict = {"result": None, "ts": datetime.min}
+
+async def _fetch_node_status() -> dict:
+    """Lee el SSE de AllScan y devuelve {online, keyed, connections}."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            async with client.stream("GET", _ALLSCAN_URL) as resp:
+                async for raw in resp.aiter_lines():
+                    line = raw.strip()
+                    if not line.startswith("data:"):
+                        continue
+                    try:
+                        payload = _json.loads(line[5:].strip())
+                    except Exception:
+                        continue
+                    # AllScan manda el nodo como objeto raíz o dentro de un dict keyed por node id
+                    node_data = payload if isinstance(payload, dict) else {}
+                    if isinstance(node_data, dict) and "node" not in node_data:
+                        node_data = node_data.get(_NODE_ID, {})
+                    if not node_data:
+                        continue
+                    remote_nodes = node_data.get("remote_nodes", [])
+                    connections  = len(remote_nodes)
+                    # PTT: cualquier nodo con cos_keyed=1 o tx_keyed=1
+                    keyed = any(
+                        int(rn.get("cos_keyed", 0)) or int(rn.get("tx_keyed", 0))
+                        for rn in remote_nodes
+                    )
+                    return {"online": True, "keyed": keyed, "connections": connections}
+    except Exception:
+        pass
+    return {"online": False, "keyed": False, "connections": 0}
+
+@router.get("/node-status")
+async def node_status():
+    global _node_cache
+    now = datetime.utcnow()
+    if _node_cache["result"] and (now - _node_cache["ts"]).total_seconds() < 5:
+        return _node_cache["result"]
+    result = await _fetch_node_status()
+    _node_cache = {"result": result, "ts": now}
+    return result
 
 _visitas_ready = False
 
