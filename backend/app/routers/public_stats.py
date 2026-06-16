@@ -159,10 +159,13 @@ async def _fetch_irlp_status() -> dict:
         nodes = await _fetch_irlp_reflector()
         _irlp_nodes_cache = {"nodes": nodes, "ts": now}
     nodes = _irlp_nodes_cache["nodes"]
-    # Estado CGI en tiempo real
+    # Estado CGI en tiempo real (COS/PTT y online)
     cgi = await _fetch_irlp_cgi()
+    # on_air = nodo 8422 visible en la lista del reflector (igual que AllStar)
+    on_air = any(n["node"] == _IRLP_NODE for n in nodes)
     return {
         **cgi,
+        "on_air":      on_air,
         "connections": len(nodes),
         "nodes":       nodes,
     }
