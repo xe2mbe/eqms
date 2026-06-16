@@ -11,12 +11,19 @@ from datetime import datetime
 router = APIRouter()
 
 # ── AllScan node status cache ─────────────────────────────────────────────────
-_ALLSCAN_URL  = "http://stn8422.ip.irlp.net:8081/allscan/astapi/server.php?nodes=299080"
-_NODE_ID      = "299080"
+# Monitoreamos el hub 299081; si el nodo 299080 (XE1LM-R) está conectado = al aire
+_ALLSCAN_URL  = "http://stn8422.ip.irlp.net:8081/allscan/astapi/server.php?nodes=299081"
+_HUB_ID       = "299081"
+_BOLETIN_NODE = "299080"
 _node_cache: dict = {"result": None, "ts": datetime.min}
 
 async def _fetch_node_status() -> dict:
-    """Lee el SSE de AllScan y devuelve {online, keyed, connections}."""
+    """
+    Lee el SSE de AllScan del hub 299081.
+    Devuelve {online, on_air, keyed, connections}.
+      - on_air: el nodo 299080 está conectado al hub
+      - keyed:  299080 está transmitiendo activamente (cos_keyed o tx_keyed)
+    """
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             async with client.stream("GET", _ALLSCAN_URL) as resp:
@@ -28,23 +35,30 @@ async def _fetch_node_status() -> dict:
                         payload = _json.loads(line[5:].strip())
                     except Exception:
                         continue
-                    # AllScan manda el nodo como objeto raíz o dentro de un dict keyed por node id
                     node_data = payload if isinstance(payload, dict) else {}
-                    if isinstance(node_data, dict) and "node" not in node_data:
-                        node_data = node_data.get(_NODE_ID, {})
+                    if "node" not in node_data:
+                        node_data = node_data.get(_HUB_ID, {})
                     if not node_data:
                         continue
                     remote_nodes = node_data.get("remote_nodes", [])
-                    connections  = len(remote_nodes)
-                    # PTT: cualquier nodo con cos_keyed=1 o tx_keyed=1
-                    keyed = any(
-                        int(rn.get("cos_keyed", 0)) or int(rn.get("tx_keyed", 0))
-                        for rn in remote_nodes
+                    # Buscar el nodo del boletín entre los conectados al hub
+                    boletin = next(
+                        (rn for rn in remote_nodes if str(rn.get("node", "")) == _BOLETIN_NODE),
+                        None,
                     )
-                    return {"online": True, "keyed": keyed, "connections": connections}
+                    on_air = boletin is not None
+                    keyed  = on_air and (
+                        int(boletin.get("cos_keyed", 0)) or int(boletin.get("tx_keyed", 0))
+                    )
+                    return {
+                        "online":      True,
+                        "on_air":      on_air,
+                        "keyed":       keyed,
+                        "connections": len(remote_nodes),
+                    }
     except Exception:
         pass
-    return {"online": False, "keyed": False, "connections": 0}
+    return {"online": False, "on_air": False, "keyed": False, "connections": 0}
 
 @router.get("/node-status")
 async def node_status():

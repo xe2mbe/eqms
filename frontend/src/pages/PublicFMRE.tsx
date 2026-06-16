@@ -152,7 +152,7 @@ export default function PublicFMREPage() {
   const [mapReady, setMapReady] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [boletinInfo, setBoletinInfo] = useState(getNextBoletinInfo)
-  const [nodeStatus, setNodeStatus] = useState<{ online: boolean; keyed: boolean; connections: number } | null>(null)
+  const [nodeStatus, setNodeStatus] = useState<{ online: boolean; on_air: boolean; keyed: boolean; connections: number } | null>(null)
 
   // Búsqueda por indicativo
   const [busqueda, setBusqueda] = useState('')
@@ -590,38 +590,48 @@ export default function PublicFMREPage() {
 
             {/* Barra de estado del nodo AllStar 299080 */}
             <div style={{ display: 'flex', width: 'fit-content', alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 20px', flexWrap: 'wrap' }}>
-              {/* Online indicator */}
+              {/* Hub online */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 9, height: 9, borderRadius: '50%', background: nodeStatus?.online === false ? '#ff4d4f' : '#52c41a', display: 'inline-block', boxShadow: nodeStatus?.online === false ? 'none' : '0 0 0 3px rgba(82,196,26,0.25)', animation: nodeStatus?.online !== false ? 'pulse 2s infinite' : 'none' }} />
-                <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Nodo XE1LM-R · 299080</span>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
+                  background: nodeStatus == null ? '#888' : nodeStatus.online ? '#52c41a' : '#ff4d4f',
+                  boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
+                  animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
+                }} />
+                <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Hub XE1LM · 299081</span>
               </div>
 
-              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 16 }}>|</span>
+              <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
 
-              {/* PTT indicator */}
+              {/* Nodo 299080 conectado al hub = al aire */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 12, color: '#8ab4e0' }}>PTT</span>
-                {nodeStatus?.keyed
-                  ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 1, animation: 'pulse-red 0.8s ease-in-out infinite' }}>
-                      ● TRANSMITIENDO
-                    </span>
-                  : <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ En espera</span>
+                <span style={{ fontSize: 12, color: '#8ab4e0' }}>XE1LM-R</span>
+                {nodeStatus == null
+                  ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
+                  : nodeStatus.on_air
+                    ? <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● AL AIRE</span>
+                    : <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
                 }
               </div>
 
-              {/* Connections */}
-              {nodeStatus != null && (
-                <>
-                  <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 16 }}>|</span>
-                  <span style={{ color: '#8ab4e0', fontSize: 12 }}>
-                    <span style={{ color: FMRE_GOLD, fontWeight: 700 }}>{nodeStatus.connections}</span> nodos conectados
-                  </span>
-                </>
-              )}
+              <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
 
-              {nodeStatus == null && (
-                <span style={{ color: '#8ab4e0', fontSize: 12 }}>Conectando…</span>
-              )}
+              {/* PTT */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, color: '#8ab4e0' }}>PTT</span>
+                {nodeStatus?.keyed
+                  ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>
+                      ● TX
+                    </span>
+                  : <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ RX</span>
+                }
+              </div>
+
+              <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
+
+              {/* Conexiones al hub */}
+              <span style={{ color: '#8ab4e0', fontSize: 12 }}>
+                {nodeStatus == null ? '…' : <><span style={{ color: FMRE_GOLD, fontWeight: 700 }}>{nodeStatus.connections}</span> en hub</>}
+              </span>
             </div>
           </div>
 
