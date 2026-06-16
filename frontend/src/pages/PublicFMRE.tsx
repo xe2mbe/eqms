@@ -781,6 +781,7 @@ export default function PublicFMREPage() {
               {lastUpdated && <> · <span style={{ color: '#a0c4e8' }}>Última: {dayjs(lastUpdated).format('HH:mm:ss')}</span></>}
             </span>
           </div>
+
         </div>
       </section>
 
@@ -959,6 +960,63 @@ export default function PublicFMREPage() {
             </Col>
           </Row>
 
+
+          {/* Sub-encabezado: Redes Sociales */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24, marginBottom: 16 }}>
+            <span style={{ color: '#FF6B00', fontWeight: 800, fontSize: 12, letterSpacing: 2, whiteSpace: 'nowrap' }}>
+              📱 REDES SOCIALES
+            </span>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.15)' }} />
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              {[
+                {
+                  plataforma: 'Facebook', detalle: 'Boletín Dominical', color: '#1877F2',
+                  href: 'https://www.facebook.com/boletin.dominical.2025',
+                  logo: (
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="white">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                  ),
+                },
+                {
+                  plataforma: 'Zello', detalle: 'Canal ARJAC', color: '#FF6B00',
+                  href: null,
+                  logo: <img src="/zello.png" alt="Zello" style={{ width: 28, height: 28, objectFit: 'contain' }} />,
+                },
+              ].map(({ plataforma, detalle, color, href, logo }) => {
+                const inner = (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '10px 16px',
+                    borderLeft: `3px solid ${color}`,
+                    transition: 'background 0.2s',
+                    cursor: href ? 'pointer' : 'default',
+                  }}
+                  onMouseEnter={e => { if (href) (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.16)' }}
+                  onMouseLeave={e => { if (href) (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.08)' }}
+                  >
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 7,
+                      background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>
+                      {logo}
+                    </div>
+                    <div>
+                      <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>{plataforma}</div>
+                      <div style={{ color: '#8ab4e0', fontSize: 11 }}>{detalle}{href ? ' ↗' : ''}</div>
+                    </div>
+                  </div>
+                )
+                return href
+                  ? <a key={plataforma} href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>{inner}</a>
+                  : <div key={plataforma}>{inner}</div>
+              })}
+            </div>
+          </div>
+
           {/* Estado en tiempo real VoIP / RoIP — visible al hacer clic en el LED */}
           {voipStatusVisible && <div ref={voipStatusRef} style={{ marginTop: 20, marginBottom: 4 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
@@ -1090,62 +1148,6 @@ export default function PublicFMREPage() {
 
             </div>
           </div>}
-
-          {/* Sub-encabezado: Redes Sociales */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24, marginBottom: 16 }}>
-            <span style={{ color: '#FF6B00', fontWeight: 800, fontSize: 12, letterSpacing: 2, whiteSpace: 'nowrap' }}>
-              📱 REDES SOCIALES
-            </span>
-            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.15)' }} />
-          </div>
-
-          <div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              {[
-                {
-                  plataforma: 'Facebook', detalle: 'Boletín Dominical', color: '#1877F2',
-                  href: 'https://www.facebook.com/boletin.dominical.2025',
-                  logo: (
-                    <svg viewBox="0 0 24 24" width="22" height="22" fill="white">
-                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                    </svg>
-                  ),
-                },
-                {
-                  plataforma: 'Zello', detalle: 'Canal ARJAC', color: '#FF6B00',
-                  href: null,
-                  logo: <img src="/zello.png" alt="Zello" style={{ width: 28, height: 28, objectFit: 'contain' }} />,
-                },
-              ].map(({ plataforma, detalle, color, href, logo }) => {
-                const inner = (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '10px 16px',
-                    borderLeft: `3px solid ${color}`,
-                    transition: 'background 0.2s',
-                    cursor: href ? 'pointer' : 'default',
-                  }}
-                  onMouseEnter={e => { if (href) (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.16)' }}
-                  onMouseLeave={e => { if (href) (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.08)' }}
-                  >
-                    <div style={{
-                      width: 38, height: 38, borderRadius: 7,
-                      background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                    }}>
-                      {logo}
-                    </div>
-                    <div>
-                      <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>{plataforma}</div>
-                      <div style={{ color: '#8ab4e0', fontSize: 11 }}>{detalle}{href ? ' ↗' : ''}</div>
-                    </div>
-                  </div>
-                )
-                return href
-                  ? <a key={plataforma} href={href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>{inner}</a>
-                  : <div key={plataforma}>{inner}</div>
-              })}
-            </div>
-          </div>
         </div>
       </section>
 
