@@ -35,12 +35,15 @@ async def _fetch_node_status() -> dict:
                         payload = _json.loads(line[5:].strip())
                     except Exception:
                         continue
-                    node_data = payload if isinstance(payload, dict) else {}
-                    if "node" not in node_data:
-                        node_data = node_data.get(_HUB_ID, {})
+                    # El evento "nodes" tiene estructura {"299081": {...}}
+                    # El evento "connection" tiene {"host":...,"node":...,"status":...}
+                    # Solo nos interesa el evento "nodes" que tiene remote_nodes
+                    node_data = payload.get(_HUB_ID) if isinstance(payload, dict) else None
                     if not node_data:
                         continue
-                    remote_nodes = node_data.get("remote_nodes", [])
+                    remote_nodes = node_data.get("remote_nodes")
+                    if remote_nodes is None:
+                        continue
                     # Buscar el nodo del boletín entre los conectados al hub
                     boletin = next(
                         (rn for rn in remote_nodes
