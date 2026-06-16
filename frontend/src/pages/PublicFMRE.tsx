@@ -613,119 +613,103 @@ export default function PublicFMREPage() {
             <div style={{ marginBottom: 10 }}>
               <span style={{ color: FMRE_GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>ALLSTAR LINK ESTADO</span>
             </div>
-            <div style={{ display: 'flex', width: 'fit-content', alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 20px', flexWrap: 'wrap' }}>
-              {/* Hub online */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
-                  background: nodeStatus == null ? '#888' : nodeStatus.online ? '#52c41a' : '#ff4d4f',
-                  boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
-                  animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
-                }} />
-                <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Hub XE1LM · 299081</span>
+            <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
+                    background: nodeStatus == null ? '#888' : nodeStatus.online ? '#52c41a' : '#ff4d4f',
+                    boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
+                    animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
+                  }} />
+                  <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Hub XE1LM · 299081</span>
+                </div>
+                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
+                  {nodeStatus == null
+                    ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
+                    : !nodeStatus.on_air
+                      ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
+                      : nodeStatus.keyed
+                        ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
+                        : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                  }
+                </div>
               </div>
 
-              <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-
-              {/* Nodo 299080 conectado al hub = al aire */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
-                {nodeStatus == null
-                  ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
-                  : !nodeStatus.on_air
-                    ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
-                    : nodeStatus.keyed
-                      ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                      : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+              <div style={{ marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8 }}>
+                <div style={{ color: '#8ab4e0', fontSize: 11, marginBottom: 6 }}>
+                  <span style={{ color: FMRE_GOLD, fontWeight: 700 }}>{nodeStatus?.connections ?? '…'}</span> nodos conectados
+                </div>
+                {(nodeStatus?.nodes ?? []).length === 0
+                  ? <span style={{ color: '#555', fontSize: 12 }}>Sin nodos conectados</span>
+                  : (nodeStatus?.nodes ?? []).map(n => (
+                    <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                        background: n.keyed ? '#ff4d4f' : '#52c41a',
+                        boxShadow: n.keyed ? '0 0 0 2px rgba(255,77,79,.2)' : '0 0 0 2px rgba(82,196,26,.2)',
+                      }} />
+                      <span style={{ fontWeight: 700, color: FMRE_GOLD, minWidth: 52, fontSize: 12 }}>{n.node}</span>
+                      {n.url
+                        ? <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
+                        : <span style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</span>
+                      }
+                      <Tag style={{ margin: 0, fontSize: 10 }} color={n.keyed ? 'red' : 'default'}>
+                        {n.keyed ? 'TX' : n.direction || 'RX'}
+                      </Tag>
+                    </div>
+                  ))
                 }
               </div>
-
-              <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-
-              {/* Conexiones al hub — clickeable */}
-              <Popover
-                trigger="click"
-                title={<span style={{ fontWeight: 700 }}>Nodos conectados al hub 299081</span>}
-                content={
-                  <div style={{ minWidth: 320, maxHeight: 300, overflowY: 'auto' }}>
-                    {(nodeStatus?.nodes ?? []).map(n => (
-                      <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                          background: n.keyed ? '#ff4d4f' : '#52c41a',
-                          boxShadow: n.keyed ? '0 0 0 2px rgba(255,77,79,.25)' : '0 0 0 2px rgba(82,196,26,.25)',
-                        }} />
-                        <span style={{ fontWeight: 700, color: '#1A569E', minWidth: 52, fontSize: 12 }}>{n.node}</span>
-                        {n.url
-                          ? <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#444', flex: 1 }}>{n.name}</a>
-                          : <span style={{ fontSize: 12, color: '#444', flex: 1 }}>{n.name}</span>
-                        }
-                        <Tag style={{ margin: 0, fontSize: 10 }} color={n.keyed ? 'red' : 'default'}>
-                          {n.keyed ? 'TX' : n.direction || 'RX'}
-                        </Tag>
-                      </div>
-                    ))}
-                    {(nodeStatus?.nodes ?? []).length === 0 && <span style={{ color: '#aaa', fontSize: 12 }}>Sin nodos conectados</span>}
-                  </div>
-                }
-              >
-                <span style={{ color: '#8ab4e0', fontSize: 12, cursor: 'pointer', borderBottom: '1px dashed rgba(160,196,232,0.5)' }}>
-                  {nodeStatus == null ? '…' : <><span style={{ color: FMRE_GOLD, fontWeight: 700 }}>{nodeStatus.connections}</span> nodos conectados</>}
-                </span>
-              </Popover>
             </div>
 
             {/* Barra de estado IRLP */}
             <div style={{ marginTop: 10, marginBottom: 4 }}>
               <span style={{ color: '#06b6d4', fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>IRLP ESTADO</span>
             </div>
-            <div style={{ display: 'flex', width: 'fit-content', alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 10, padding: '10px 20px', flexWrap: 'wrap' }}>
-              {/* Reflector online */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
-                  background: irlpStatus == null ? '#888' : irlpStatus.online ? '#52c41a' : '#ff4d4f',
-                  boxShadow: irlpStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
-                  animation: irlpStatus?.online ? 'pulse 2s infinite' : 'none',
-                }} />
-                <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Reflector 0077</span>
+            <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 10, padding: '10px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
+                    background: irlpStatus == null ? '#888' : irlpStatus.online ? '#52c41a' : '#ff4d4f',
+                    boxShadow: irlpStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
+                    animation: irlpStatus?.online ? 'pulse 2s infinite' : 'none',
+                  }} />
+                  <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Reflector 0077</span>
+                </div>
+
+                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
+                  {irlpStatus == null
+                    ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
+                    : !irlpStatus.on_air
+                      ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
+                      : irlpStatus.cos
+                        ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
+                        : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                  }
+                </div>
               </div>
 
-              <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-
-              {/* Nodo 8422 conectado = al aire */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
-                {irlpStatus == null
-                  ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
-                  : !irlpStatus.on_air
-                    ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
-                    : irlpStatus.cos
-                      ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                      : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+              <div style={{ marginTop: 8, borderTop: '1px solid rgba(6,182,212,0.2)', paddingTop: 8 }}>
+                <div style={{ color: '#8ab4e0', fontSize: 11, marginBottom: 6 }}>
+                  <span style={{ color: '#06b6d4', fontWeight: 700 }}>{irlpStatus?.connections ?? '…'}</span> nodos conectados
+                </div>
+                {(irlpStatus?.nodes ?? []).length === 0
+                  ? <span style={{ color: '#555', fontSize: 12 }}>Sin nodos conectados</span>
+                  : (irlpStatus?.nodes ?? []).map(n => (
+                    <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid rgba(6,182,212,0.1)' }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                        background: n.node === '8422' ? '#52c41a' : '#06b6d4',
+                      }} />
+                      <span style={{ fontWeight: 700, color: '#06b6d4', minWidth: 46, fontSize: 12 }}>{n.node}</span>
+                      <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
+                    </div>
+                  ))
                 }
               </div>
-
-              <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-
-              {/* Nodos conectados */}
-              <Popover
-                trigger="click"
-                title={<span style={{ fontWeight: 700 }}>Nodos conectados al reflector 0077</span>}
-                content={
-                  <div style={{ minWidth: 320, maxHeight: 300, overflowY: 'auto' }}>
-                    {(irlpStatus?.nodes ?? []).map(n => (
-                      <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: n.node === '8422' ? '#52c41a' : '#06b6d4' }} />
-                        <span style={{ fontWeight: 700, color: '#0e7490', minWidth: 46, fontSize: 12 }}>{n.node}</span>
-                        <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#444', flex: 1 }}>{n.name}</a>
-                      </div>
-                    ))}
-                    {(irlpStatus?.nodes ?? []).length === 0 && <span style={{ color: '#aaa', fontSize: 12 }}>Sin nodos conectados</span>}
-                  </div>
-                }
-              >
-                <span style={{ color: '#8ab4e0', fontSize: 12, cursor: 'pointer', borderBottom: '1px dashed rgba(6,182,212,0.4)' }}>
-                  {irlpStatus == null ? '…' : <><span style={{ color: '#06b6d4', fontWeight: 700 }}>{irlpStatus.connections}</span> nodos conectados</>}
-                </span>
-              </Popover>
             </div>
             </>}
           </div>
@@ -858,17 +842,17 @@ export default function PublicFMREPage() {
                 <div style={{ color: SISTEMA_COLORS.IRLP, fontWeight: 800, fontSize: 16, marginBottom: 14 }}>
                   🔗 Sistemas VoIP / RoIP
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                  <span
-                    title="Ver estado en tiempo real"
-                    onClick={() => { setVoipStatusVisible(true); setTimeout(() => voipStatusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50) }}
-                    style={{
-                      width: 10, height: 10, borderRadius: '50%', display: 'inline-block', flexShrink: 0, cursor: 'pointer',
-                      background: irlpStatus == null ? '#555' : irlpStatus.online ? '#52c41a' : '#ff4d4f',
-                      boxShadow: irlpStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
-                      animation: irlpStatus?.online ? 'pulse 2s infinite' : 'none',
-                    }}
-                  />
+                <div
+                  title="Ver estado en tiempo real"
+                  onClick={() => { setVoipStatusVisible(true); setTimeout(() => voipStatusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50) }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, cursor: 'pointer' }}
+                >
+                  <span style={{
+                    width: 10, height: 10, borderRadius: '50%', display: 'inline-block', flexShrink: 0,
+                    background: irlpStatus == null ? '#555' : irlpStatus.online ? '#52c41a' : '#ff4d4f',
+                    boxShadow: irlpStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
+                    animation: irlpStatus?.online ? 'pulse 2s infinite' : 'none',
+                  }} />
                   <div style={{ width: 38, height: 38, borderRadius: 7, background: '#C62828', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ color: 'white', fontSize: 9, fontWeight: 'bold' }}>IRLP</span>
                   </div>
@@ -876,21 +860,23 @@ export default function PublicFMREPage() {
                     <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>IRLP</div>
                     <div style={{ color: '#8ab4e0', fontSize: 13 }}>
                       Reflector <strong style={{ color: 'white' }}>0077</strong>
-                      <a href="http://xe1dvi.crabdance.com/Auto_Refresh_0077Con.html" target="_blank" rel="noopener noreferrer" style={{ color: '#8ab4e0', marginLeft: 4 }}>↗</a>
+                      <a href="http://xe1dvi.crabdance.com/Auto_Refresh_0077Con.html" target="_blank" rel="noopener noreferrer"
+                        style={{ color: '#8ab4e0', marginLeft: 4 }}
+                        onClick={e => e.stopPropagation()}>↗</a>
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span
-                    title="Ver estado en tiempo real"
-                    onClick={() => { setVoipStatusVisible(true); setTimeout(() => voipStatusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50) }}
-                    style={{
-                      width: 10, height: 10, borderRadius: '50%', display: 'inline-block', flexShrink: 0, cursor: 'pointer',
-                      background: nodeStatus == null ? '#555' : nodeStatus.online ? '#52c41a' : '#ff4d4f',
-                      boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
-                      animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
-                    }}
-                  />
+                <div
+                  title="Ver estado en tiempo real"
+                  onClick={() => { setVoipStatusVisible(true); setTimeout(() => voipStatusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50) }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                >
+                  <span style={{
+                    width: 10, height: 10, borderRadius: '50%', display: 'inline-block', flexShrink: 0,
+                    background: nodeStatus == null ? '#555' : nodeStatus.online ? '#52c41a' : '#ff4d4f',
+                    boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
+                    animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
+                  }} />
                   <div style={{ width: 38, height: 38, borderRadius: 7, background: '#1B5E20', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ color: 'white', fontSize: 7, fontWeight: 'bold', lineHeight: 1.3 }}>AllStar</span>
                     <span style={{ color: '#A5D6A7', fontSize: 6, lineHeight: 1.3 }}>Link</span>
@@ -956,105 +942,99 @@ export default function PublicFMREPage() {
               {/* AllStar Link */}
               <div>
                 <div style={{ color: FMRE_GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>ALLSTAR LINK ESTADO</div>
-                <div style={{ display: 'flex', width: 'fit-content', alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 20px', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
-                      background: nodeStatus == null ? '#888' : nodeStatus.online ? '#52c41a' : '#ff4d4f',
-                      boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
-                      animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
-                    }} />
-                    <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Hub XE1LM · 299081</span>
+                <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
+                        background: nodeStatus == null ? '#888' : nodeStatus.online ? '#52c41a' : '#ff4d4f',
+                        boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
+                        animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
+                      }} />
+                      <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Hub XE1LM · 299081</span>
+                    </div>
+                    <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
+                      {nodeStatus == null
+                        ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
+                        : !nodeStatus.on_air
+                          ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
+                          : nodeStatus.keyed
+                            ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
+                            : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                      }
+                    </div>
                   </div>
-                  <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
-                    {nodeStatus == null
-                      ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
-                      : !nodeStatus.on_air
-                        ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
-                        : nodeStatus.keyed
-                          ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                          : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                  <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8 }}>
+                    <div style={{ color: '#8ab4e0', fontSize: 11, marginBottom: 6 }}>
+                      <span style={{ color: FMRE_GOLD, fontWeight: 700 }}>{nodeStatus?.connections ?? '…'}</span> nodos conectados
+                    </div>
+                    {(nodeStatus?.nodes ?? []).length === 0
+                      ? <span style={{ color: '#555', fontSize: 12 }}>Sin nodos conectados</span>
+                      : (nodeStatus?.nodes ?? []).map(n => (
+                        <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                            background: n.keyed ? '#ff4d4f' : '#52c41a',
+                            boxShadow: n.keyed ? '0 0 0 2px rgba(255,77,79,.2)' : '0 0 0 2px rgba(82,196,26,.2)',
+                          }} />
+                          <span style={{ fontWeight: 700, color: FMRE_GOLD, minWidth: 52, fontSize: 12 }}>{n.node}</span>
+                          {n.url
+                            ? <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
+                            : <span style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</span>
+                          }
+                          <Tag style={{ margin: 0, fontSize: 10 }} color={n.keyed ? 'red' : 'default'}>
+                            {n.keyed ? 'TX' : n.direction || 'RX'}
+                          </Tag>
+                        </div>
+                      ))
                     }
                   </div>
-                  <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-                  <Popover
-                    trigger="click"
-                    title={<span style={{ fontWeight: 700 }}>Nodos conectados al hub 299081</span>}
-                    content={
-                      <div style={{ minWidth: 320, maxHeight: 300, overflowY: 'auto' }}>
-                        {(nodeStatus?.nodes ?? []).map(n => (
-                          <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                              background: n.keyed ? '#ff4d4f' : '#52c41a',
-                              boxShadow: n.keyed ? '0 0 0 2px rgba(255,77,79,.25)' : '0 0 0 2px rgba(82,196,26,.25)',
-                            }} />
-                            <span style={{ fontWeight: 700, color: '#1A569E', minWidth: 52, fontSize: 12 }}>{n.node}</span>
-                            {n.url
-                              ? <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#444', flex: 1 }}>{n.name}</a>
-                              : <span style={{ fontSize: 12, color: '#444', flex: 1 }}>{n.name}</span>
-                            }
-                            <Tag style={{ margin: 0, fontSize: 10 }} color={n.keyed ? 'red' : 'default'}>
-                              {n.keyed ? 'TX' : n.direction || 'RX'}
-                            </Tag>
-                          </div>
-                        ))}
-                        {(nodeStatus?.nodes ?? []).length === 0 && <span style={{ color: '#aaa', fontSize: 12 }}>Sin nodos conectados</span>}
-                      </div>
-                    }
-                  >
-                    <span style={{ color: '#8ab4e0', fontSize: 12, cursor: 'pointer', borderBottom: '1px dashed rgba(160,196,232,0.5)' }}>
-                      {nodeStatus == null ? '…' : <><span style={{ color: FMRE_GOLD, fontWeight: 700 }}>{nodeStatus.connections}</span> nodos conectados</>}
-                    </span>
-                  </Popover>
                 </div>
               </div>
 
               {/* IRLP */}
               <div>
                 <div style={{ color: '#06b6d4', fontSize: 10, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>IRLP ESTADO</div>
-                <div style={{ display: 'flex', width: 'fit-content', alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 10, padding: '10px 20px', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
-                      background: irlpStatus == null ? '#888' : irlpStatus.online ? '#52c41a' : '#ff4d4f',
-                      boxShadow: irlpStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
-                      animation: irlpStatus?.online ? 'pulse 2s infinite' : 'none',
-                    }} />
-                    <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Reflector 0077</span>
+                <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 10, padding: '10px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
+                        background: irlpStatus == null ? '#888' : irlpStatus.online ? '#52c41a' : '#ff4d4f',
+                        boxShadow: irlpStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
+                        animation: irlpStatus?.online ? 'pulse 2s infinite' : 'none',
+                      }} />
+                      <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Reflector 0077</span>
+                    </div>
+                    <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
+                      {irlpStatus == null
+                        ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
+                        : !irlpStatus.on_air
+                          ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
+                          : irlpStatus.cos
+                            ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
+                            : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                      }
+                    </div>
                   </div>
-                  <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
-                    {irlpStatus == null
-                      ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
-                      : !irlpStatus.on_air
-                        ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
-                        : irlpStatus.cos
-                          ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                          : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                  <div style={{ marginTop: 10, borderTop: '1px solid rgba(6,182,212,0.2)', paddingTop: 8 }}>
+                    <div style={{ color: '#8ab4e0', fontSize: 11, marginBottom: 6 }}>
+                      <span style={{ color: '#06b6d4', fontWeight: 700 }}>{irlpStatus?.connections ?? '…'}</span> nodos conectados
+                    </div>
+                    {(irlpStatus?.nodes ?? []).length === 0
+                      ? <span style={{ color: '#555', fontSize: 12 }}>Sin nodos conectados</span>
+                      : (irlpStatus?.nodes ?? []).map(n => (
+                        <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid rgba(6,182,212,0.1)' }}>
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                            background: n.node === '8422' ? '#52c41a' : '#06b6d4',
+                          }} />
+                          <span style={{ fontWeight: 700, color: '#06b6d4', minWidth: 46, fontSize: 12 }}>{n.node}</span>
+                          <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
+                        </div>
+                      ))
                     }
                   </div>
-                  <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-                  <Popover
-                    trigger="click"
-                    title={<span style={{ fontWeight: 700 }}>Nodos conectados al reflector 0077</span>}
-                    content={
-                      <div style={{ minWidth: 320, maxHeight: 300, overflowY: 'auto' }}>
-                        {(irlpStatus?.nodes ?? []).map(n => (
-                          <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: n.node === '8422' ? '#52c41a' : '#06b6d4' }} />
-                            <span style={{ fontWeight: 700, color: '#0e7490', minWidth: 46, fontSize: 12 }}>{n.node}</span>
-                            <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#444', flex: 1 }}>{n.name}</a>
-                          </div>
-                        ))}
-                        {(irlpStatus?.nodes ?? []).length === 0 && <span style={{ color: '#aaa', fontSize: 12 }}>Sin nodos conectados</span>}
-                      </div>
-                    }
-                  >
-                    <span style={{ color: '#8ab4e0', fontSize: 12, cursor: 'pointer', borderBottom: '1px dashed rgba(6,182,212,0.4)' }}>
-                      {irlpStatus == null ? '…' : <><span style={{ color: '#06b6d4', fontWeight: 700 }}>{irlpStatus.connections}</span> nodos conectados</>}
-                    </span>
-                  </Popover>
                 </div>
               </div>
 
