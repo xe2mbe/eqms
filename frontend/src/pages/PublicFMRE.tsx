@@ -646,7 +646,13 @@ export default function PublicFMREPage() {
                 {(nodeStatus?.nodes ?? []).length === 0
                   ? <span style={{ color: '#555', fontSize: 12 }}>Sin nodos conectados</span>
                   : (nodeStatus?.nodes ?? []).map(n => (
-                    <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div key={n.node} style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '4px 0 4px 6px',
+                      borderBottom: '1px solid rgba(255,255,255,0.06)',
+                      borderLeft: n.node === '299080' ? '2px solid #D4A017' : '2px solid transparent',
+                      background: n.node === '299080' ? 'rgba(212,160,23,0.1)' : undefined,
+                    }}>
                       <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
                         background: n.keyed ? '#ff4d4f' : '#52c41a',
                         boxShadow: n.keyed ? '0 0 0 2px rgba(255,77,79,.2)' : '0 0 0 2px rgba(82,196,26,.2)',
@@ -656,6 +662,7 @@ export default function PublicFMREPage() {
                         ? <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
                         : <span style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</span>
                       }
+                      {n.node === '299080' && <Tag style={{ margin: '0 4px 0 0', fontSize: 9, flexShrink: 0 }} color="gold">BD</Tag>}
                       <Tag style={{ margin: 0, fontSize: 10 }} color={n.keyed ? 'red' : 'default'}>
                         {n.keyed ? 'TX' : n.direction || 'RX'}
                       </Tag>
@@ -704,12 +711,19 @@ export default function PublicFMREPage() {
                 {(irlpStatus?.nodes ?? []).length === 0
                   ? <span style={{ color: '#555', fontSize: 12 }}>Sin nodos conectados</span>
                   : (irlpStatus?.nodes ?? []).map(n => (
-                    <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid rgba(6,182,212,0.1)' }}>
+                    <div key={n.node} style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '4px 0 4px 6px',
+                      borderBottom: '1px solid rgba(6,182,212,0.1)',
+                      borderLeft: n.node === '8422' ? '2px solid #D4A017' : '2px solid transparent',
+                      background: n.node === '8422' ? 'rgba(212,160,23,0.1)' : undefined,
+                    }}>
                       <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
                         background: n.node === '8422' ? '#52c41a' : '#06b6d4',
                       }} />
                       <span style={{ fontWeight: 700, color: '#06b6d4', minWidth: 46, fontSize: 12 }}>{n.node}</span>
                       <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
+                      {n.node === '8422' && <Tag style={{ margin: 0, fontSize: 9, flexShrink: 0 }} color="gold">BD</Tag>}
                     </div>
                   ))
                 }
@@ -978,7 +992,13 @@ export default function PublicFMREPage() {
                     {(nodeStatus?.nodes ?? []).length === 0
                       ? <span style={{ color: '#555', fontSize: 12 }}>Sin nodos conectados</span>
                       : (nodeStatus?.nodes ?? []).map(n => (
-                        <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div key={n.node} style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          padding: '4px 0 4px 6px',
+                          borderBottom: '1px solid rgba(255,255,255,0.06)',
+                          borderLeft: n.node === '299080' ? '2px solid #D4A017' : '2px solid transparent',
+                          background: n.node === '299080' ? 'rgba(212,160,23,0.1)' : undefined,
+                        }}>
                           <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
                             background: n.keyed ? '#ff4d4f' : '#52c41a',
                             boxShadow: n.keyed ? '0 0 0 2px rgba(255,77,79,.2)' : '0 0 0 2px rgba(82,196,26,.2)',
@@ -988,6 +1008,7 @@ export default function PublicFMREPage() {
                             ? <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
                             : <span style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</span>
                           }
+                          {n.node === '299080' && <Tag style={{ margin: '0 4px 0 0', fontSize: 9, flexShrink: 0 }} color="gold">BD</Tag>}
                           <Tag style={{ margin: 0, fontSize: 10 }} color={n.keyed ? 'red' : 'default'}>
                             {n.keyed ? 'TX' : n.direction || 'RX'}
                           </Tag>
@@ -1033,12 +1054,19 @@ export default function PublicFMREPage() {
                     {(irlpStatus?.nodes ?? []).length === 0
                       ? <span style={{ color: '#555', fontSize: 12 }}>Sin nodos conectados</span>
                       : (irlpStatus?.nodes ?? []).map(n => (
-                        <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid rgba(6,182,212,0.1)' }}>
+                        <div key={n.node} style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          padding: '4px 0 4px 6px',
+                          borderBottom: '1px solid rgba(6,182,212,0.1)',
+                          borderLeft: n.node === '8422' ? '2px solid #D4A017' : '2px solid transparent',
+                          background: n.node === '8422' ? 'rgba(212,160,23,0.1)' : undefined,
+                        }}>
                           <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
                             background: n.node === '8422' ? '#52c41a' : '#06b6d4',
                           }} />
                           <span style={{ fontWeight: 700, color: '#06b6d4', minWidth: 46, fontSize: 12 }}>{n.node}</span>
                           <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
+                          {n.node === '8422' && <Tag style={{ margin: 0, fontSize: 9, flexShrink: 0 }} color="gold">BD</Tag>}
                         </div>
                       ))
                     }
