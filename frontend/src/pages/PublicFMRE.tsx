@@ -117,10 +117,41 @@ type BusquedaResult = {
   }
 }
 
+// ─── Próximo Boletín Dominical ────────────────────────────────────────────────
+const MX_OFFSET = -6 * 60 * 60 * 1000 // Mexico City = UTC-6 (sin horario de verano desde 2023)
+
+function getNextBoletinInfo() {
+  const now = new Date()
+  const mx = new Date(now.getTime() + MX_OFFSET)
+  const dow = mx.getUTCDay()
+  const minuteOfDay = mx.getUTCHours() * 60 + mx.getUTCMinutes()
+  const isLive = dow === 0 && minuteOfDay >= 9 * 60 && minuteOfDay < 10 * 60
+
+  const targetMx = new Date(mx)
+  targetMx.setUTCHours(9, 0, 0, 0)
+  if (dow !== 0 || minuteOfDay >= 10 * 60)
+    targetMx.setUTCDate(targetMx.getUTCDate() + (dow === 0 ? 7 : 7 - dow))
+
+  const year = targetMx.getUTCFullYear()
+  const jan1dow = new Date(Date.UTC(year, 0, 1)).getUTCDay()
+  const firstSunday = new Date(Date.UTC(year, 0, 1 + (7 - jan1dow) % 7))
+  const boletinNum = Math.round((targetMx.getTime() - firstSunday.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1
+
+  const diff = Math.max(0, targetMx.getTime() - MX_OFFSET - now.getTime())
+  return {
+    days:    Math.floor(diff / 86400000),
+    hours:   Math.floor((diff % 86400000) / 3600000),
+    minutes: Math.floor((diff % 3600000) / 60000),
+    seconds: Math.floor((diff % 60000) / 1000),
+    isLive, boletinNum, year,
+  }
+}
+
 export default function PublicFMREPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [mapReady, setMapReady] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [boletinInfo, setBoletinInfo] = useState(getNextBoletinInfo)
 
   // Búsqueda por indicativo
   const [busqueda, setBusqueda] = useState('')
@@ -282,6 +313,11 @@ export default function PublicFMREPage() {
 
     return () => clearInterval(interval)
   }, [fetchStats])
+
+  useEffect(() => {
+    const t = setInterval(() => setBoletinInfo(getNextBoletinInfo()), 1000)
+    return () => clearInterval(t)
+  }, [])
 
   const tendenciaOption = !stats ? {} : (() => {
     const meses = [...new Set(stats.rf.tendencia.map(t => t.mes))].sort()
@@ -450,7 +486,10 @@ export default function PublicFMREPage() {
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: '#f5f7fa', minHeight: '100vh' }}>
-      <style>{`@keyframes pulse { 0%,100%{box-shadow:0 0 0 2px rgba(82,196,26,.3)} 50%{box-shadow:0 0 0 5px rgba(82,196,26,0)} }`}</style>
+      <style>{`
+        @keyframes pulse { 0%,100%{box-shadow:0 0 0 2px rgba(82,196,26,.3)} 50%{box-shadow:0 0 0 5px rgba(82,196,26,0)} }
+        @keyframes pulse-red { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.75;transform:scale(1.04)} }
+      `}</style>
 
       {/* ── HEADER ── */}
       <header style={{ background: FMRE_DARK, padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -497,6 +536,41 @@ export default function PublicFMREPage() {
             Estadísticas en tiempo real de la actividad del Boletín Dominical,
             medio oficial de divulgación de la máxima autoridad de radioafición en México.
           </Paragraph>
+          {/* Countdown boletín */}
+          {boletinInfo.isLive ? (
+            <div style={{ marginBottom: 28, display: 'flex', alignItems: 'center', gap: 14 }}>
+              <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, padding: '8px 22px', borderRadius: 24, fontSize: 15, letterSpacing: 1, animation: 'pulse-red 1.2s ease-in-out infinite', display: 'inline-block' }}>
+                🔴 EN VIVO
+              </span>
+              <span style={{ color: 'white', fontWeight: 600, fontSize: 15 }}>
+                Boletín <span style={{ color: FMRE_GOLD }}>#{boletinInfo.boletinNum}</span> · {boletinInfo.year}
+              </span>
+            </div>
+          ) : (
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ color: FMRE_GOLD, fontSize: 11, fontWeight: 700, letterSpacing: 2, marginBottom: 10 }}>
+                PRÓXIMO BOLETÍN #{boletinInfo.boletinNum} · {boletinInfo.year}
+              </div>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {[
+                  { value: boletinInfo.days,    label: 'DÍAS'  },
+                  { value: boletinInfo.hours,   label: 'HORAS' },
+                  { value: boletinInfo.minutes, label: 'MIN'   },
+                  { value: boletinInfo.seconds, label: 'SEG'   },
+                ].map(({ value, label }) => (
+                  <div key={label} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, padding: '10px 18px', textAlign: 'center', minWidth: 68 }}>
+                    <div style={{ color: 'white', fontSize: 30, fontWeight: 700, lineHeight: 1, fontFamily: 'monospace' }}>
+                      {String(value).padStart(2, '0')}
+                    </div>
+                    <div style={{ color: FMRE_GOLD, fontSize: 10, fontWeight: 700, marginTop: 4, letterSpacing: 1 }}>
+                      {label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#52c41a', display: 'inline-block', boxShadow: '0 0 0 2px rgba(82,196,26,0.3)', animation: 'pulse 2s infinite' }} />
             <span style={{ color: '#8ab4e0', fontSize: 13 }}>
