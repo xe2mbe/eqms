@@ -627,22 +627,11 @@ export default function PublicFMREPage() {
                 <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
                 {nodeStatus == null
                   ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
-                  : nodeStatus.on_air
-                    ? <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● AL AIRE</span>
-                    : <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
-                }
-              </div>
-
-              <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-
-              {/* PTT */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 12, color: '#8ab4e0' }}>PTT</span>
-                {nodeStatus?.keyed
-                  ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>
-                      ● TX
-                    </span>
-                  : <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ RX</span>
+                  : !nodeStatus.on_air
+                    ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
+                    : nodeStatus.keyed
+                      ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
+                      : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
                 }
               </div>
 
@@ -702,22 +691,11 @@ export default function PublicFMREPage() {
                 <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
                 {irlpStatus == null
                   ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
-                  : irlpStatus.on_air
-                    ? <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● AL AIRE</span>
-                    : <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
-                }
-              </div>
-
-              <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-
-              {/* COS indicator */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 12, color: '#8ab4e0' }}>COS</span>
-                {irlpStatus?.cos
-                  ? <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>
-                      ● RX ACTIVO
-                    </span>
-                  : <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Silencio</span>
+                  : !irlpStatus.on_air
+                    ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
+                    : irlpStatus.cos
+                      ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
+                      : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
                 }
               </div>
 
