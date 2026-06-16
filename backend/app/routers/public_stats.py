@@ -159,15 +159,12 @@ async def _fetch_irlp_status() -> dict:
         nodes = await _fetch_irlp_reflector()
         _irlp_nodes_cache = {"nodes": nodes, "ts": now}
     nodes = _irlp_nodes_cache["nodes"]
-    # Estado CGI en tiempo real (COS/PTT y online)
+    # Estado CGI en tiempo real (on_air/COS/PTT) — co='...0077...' = conectado al reflector
     cgi = await _fetch_irlp_cgi()
-    # on_air = nodo 8422 visible en la lista del reflector (igual que AllStar)
-    on_air = any(n["node"] == _IRLP_NODE for n in nodes)
     return {
-        **cgi,
-        "on_air":      on_air,
+        **cgi,                   # on_air viene del CGI: '0077' in co, actualiza cada 5 s
         "connections": len(nodes),
-        "nodes":       nodes,
+        "nodes":       nodes,    # lista del reflector: se actualiza cada 60 s
     }
 
 @router.get("/irlp-status")
