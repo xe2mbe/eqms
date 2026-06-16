@@ -161,7 +161,7 @@ export default function PublicFMREPage() {
   } | null>(null)
   const [irlpStatus, setIrlpStatus] = useState<{
     online: boolean; on_air: boolean; cos: boolean; ptt: boolean; connections: number;
-    nodes: { node: string; name: string; url: string }[]
+    nodes: { node: string; name: string; url: string; warning?: boolean }[]
   } | null>(null)
 
   // Búsqueda por indicativo
@@ -717,13 +717,15 @@ export default function PublicFMREPage() {
                       borderBottom: '1px solid rgba(6,182,212,0.1)',
                       borderLeft: n.node === '8422' ? '2px solid #D4A017' : '2px solid transparent',
                       background: n.node === '8422' ? 'rgba(212,160,23,0.1)' : undefined,
+                      opacity: n.warning ? 0.6 : 1,
                     }}>
                       <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                        background: n.node === '8422' ? '#52c41a' : '#06b6d4',
+                        background: n.warning ? '#faad14' : n.node === '8422' ? '#52c41a' : '#06b6d4',
                       }} />
                       <span style={{ fontWeight: 700, color: '#06b6d4', minWidth: 46, fontSize: 12 }}>{n.node}</span>
-                      <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
-                      {n.node === '8422' && <Tag style={{ margin: 0, fontSize: 9, flexShrink: 0 }} color="gold">Origen del boletín</Tag>}
+                      <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: n.warning ? '#8c8c8c' : '#a0c4e8', flex: 1 }}>{n.name}</a>
+                      {n.node === '8422' && <Tag style={{ margin: '0 4px 0 0', fontSize: 9, flexShrink: 0 }} color="gold">Origen del boletín</Tag>}
+                      {n.warning && <Tag style={{ margin: 0, fontSize: 9, flexShrink: 0 }} color="warning">⚠ Sin heartbeat</Tag>}
                     </div>
                   ))
                 }
@@ -1060,13 +1062,15 @@ export default function PublicFMREPage() {
                           borderBottom: '1px solid rgba(6,182,212,0.1)',
                           borderLeft: n.node === '8422' ? '2px solid #D4A017' : '2px solid transparent',
                           background: n.node === '8422' ? 'rgba(212,160,23,0.1)' : undefined,
+                          opacity: n.warning ? 0.6 : 1,
                         }}>
                           <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                            background: n.node === '8422' ? '#52c41a' : '#06b6d4',
+                            background: n.warning ? '#faad14' : n.node === '8422' ? '#52c41a' : '#06b6d4',
                           }} />
                           <span style={{ fontWeight: 700, color: '#06b6d4', minWidth: 46, fontSize: 12 }}>{n.node}</span>
-                          <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
-                          {n.node === '8422' && <Tag style={{ margin: 0, fontSize: 9, flexShrink: 0 }} color="gold">Origen del boletín</Tag>}
+                          <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: n.warning ? '#8c8c8c' : '#a0c4e8', flex: 1 }}>{n.name}</a>
+                          {n.node === '8422' && <Tag style={{ margin: '0 4px 0 0', fontSize: 9, flexShrink: 0 }} color="gold">Origen del boletín</Tag>}
+                          {n.warning && <Tag style={{ margin: 0, fontSize: 9, flexShrink: 0 }} color="warning">⚠ Sin heartbeat</Tag>}
                         </div>
                       ))
                     }

@@ -134,6 +134,9 @@ async def _fetch_irlp_cgi() -> dict:
     except Exception:
         return {"online": False, "on_air": False, "cos": False, "ptt": False}
 
+_HTML_TAG_RE    = re.compile(r'<[^>]+>')
+_IRLP_WARN_RE   = re.compile(r'\*\*.*?\*\*|sin latido|desconectado', re.IGNORECASE)
+
 async def _fetch_irlp_reflector() -> list:
     """Lista de nodos conectados al reflector 0077 (se cachea 60 s aparte)."""
     try:
@@ -143,14 +146,18 @@ async def _fetch_irlp_reflector() -> list:
         node_re = re.compile(
             r'\d+\s+\w+ \d+ \d+:\d+\s+stn(\d+)\s+-.*?-\s+\d+\s+(\w+)\s+(.+?)(?:\s*\n|$)'
         )
-        return [
-            {
-                "node": m.group(1).strip(),
-                "name": f"{m.group(2).strip()} — {m.group(3).strip()}",
-                "url":  f"http://status.irlp.net/index.php?PSTART=11&nodeid={m.group(1).strip()}",
-            }
-            for m in node_re.finditer(html)
-        ]
+        nodes = []
+        for m in node_re.finditer(html):
+            raw = _HTML_TAG_RE.sub('', m.group(3)).strip()
+            warning = bool(_IRLP_WARN_RE.search(raw))
+            clean = _IRLP_WARN_RE.sub('', raw).strip(' *')
+            nodes.append({
+                "node":    m.group(1).strip(),
+                "name":    f"{m.group(2).strip()} — {clean}",
+                "url":     f"http://status.irlp.net/index.php?PSTART=11&nodeid={m.group(1).strip()}",
+                "warning": warning,
+            })
+        return nodes
     except Exception:
         return []
 
