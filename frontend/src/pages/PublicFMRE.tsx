@@ -662,7 +662,7 @@ export default function PublicFMREPage() {
                         ? <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
                         : <span style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</span>
                       }
-                      {n.node === '299080' && <Tag style={{ margin: '0 4px 0 0', fontSize: 9, flexShrink: 0 }} color="gold">BD</Tag>}
+                      {n.node === '299080' && <Tag style={{ margin: '0 4px 0 0', fontSize: 9, flexShrink: 0 }} color="gold">Origen del boletín</Tag>}
                       <Tag style={{ margin: 0, fontSize: 10 }} color={n.keyed ? 'red' : 'default'}>
                         {n.keyed ? 'TX' : n.direction || 'RX'}
                       </Tag>
@@ -723,7 +723,7 @@ export default function PublicFMREPage() {
                       }} />
                       <span style={{ fontWeight: 700, color: '#06b6d4', minWidth: 46, fontSize: 12 }}>{n.node}</span>
                       <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
-                      {n.node === '8422' && <Tag style={{ margin: 0, fontSize: 9, flexShrink: 0 }} color="gold">BD</Tag>}
+                      {n.node === '8422' && <Tag style={{ margin: 0, fontSize: 9, flexShrink: 0 }} color="gold">Origen del boletín</Tag>}
                     </div>
                   ))
                 }
@@ -1008,7 +1008,7 @@ export default function PublicFMREPage() {
                             ? <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
                             : <span style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</span>
                           }
-                          {n.node === '299080' && <Tag style={{ margin: '0 4px 0 0', fontSize: 9, flexShrink: 0 }} color="gold">BD</Tag>}
+                          {n.node === '299080' && <Tag style={{ margin: '0 4px 0 0', fontSize: 9, flexShrink: 0 }} color="gold">Origen del boletín</Tag>}
                           <Tag style={{ margin: 0, fontSize: 10 }} color={n.keyed ? 'red' : 'default'}>
                             {n.keyed ? 'TX' : n.direction || 'RX'}
                           </Tag>
@@ -1066,7 +1066,7 @@ export default function PublicFMREPage() {
                           }} />
                           <span style={{ fontWeight: 700, color: '#06b6d4', minWidth: 46, fontSize: 12 }}>{n.node}</span>
                           <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
-                          {n.node === '8422' && <Tag style={{ margin: 0, fontSize: 9, flexShrink: 0 }} color="gold">BD</Tag>}
+                          {n.node === '8422' && <Tag style={{ margin: 0, fontSize: 9, flexShrink: 0 }} color="gold">Origen del boletín</Tag>}
                         </div>
                       ))
                     }
