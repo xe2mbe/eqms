@@ -156,6 +156,10 @@ export default function PublicFMREPage() {
     online: boolean; on_air: boolean; keyed: boolean; connections: number;
     nodes: { node: string; name: string; url: string | null; keyed: boolean; direction: string }[]
   } | null>(null)
+  const [irlpStatus, setIrlpStatus] = useState<{
+    online: boolean; on_air: boolean; connections: number;
+    nodes: { node: string; name: string; url: string }[]
+  } | null>(null)
 
   // Búsqueda por indicativo
   const [busqueda, setBusqueda] = useState('')
@@ -327,9 +331,19 @@ export default function PublicFMREPage() {
     const fetchNode = () =>
       axios.get('/api/public/node-status')
         .then(r => setNodeStatus(r.data))
-        .catch(() => setNodeStatus(prev => prev))
+        .catch(() => {})
     fetchNode()
     const t = setInterval(fetchNode, 5_000)
+    return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    const fetchIrlp = () =>
+      axios.get('/api/public/irlp-status')
+        .then(r => setIrlpStatus(r.data))
+        .catch(() => {})
+    fetchIrlp()
+    const t = setInterval(fetchIrlp, 60_000)
     return () => clearInterval(t)
   }, [])
 
@@ -591,7 +605,10 @@ export default function PublicFMREPage() {
               ))}
             </div>
 
-            {/* Barra de estado del nodo AllStar 299080 */}
+            {/* Barra de estado AllStar Link */}
+            <div style={{ marginBottom: 10 }}>
+              <span style={{ color: FMRE_GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>ALLSTAR LINK ESTADO</span>
+            </div>
             <div style={{ display: 'flex', width: 'fit-content', alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 20px', flexWrap: 'wrap' }}>
               {/* Hub online */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -607,7 +624,7 @@ export default function PublicFMREPage() {
 
               {/* Nodo 299080 conectado al hub = al aire */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 12, color: '#8ab4e0' }}>XE1LM-R</span>
+                <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
                 {nodeStatus == null
                   ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
                   : nodeStatus.on_air
@@ -658,7 +675,60 @@ export default function PublicFMREPage() {
                 }
               >
                 <span style={{ color: '#8ab4e0', fontSize: 12, cursor: 'pointer', borderBottom: '1px dashed rgba(160,196,232,0.5)' }}>
-                  {nodeStatus == null ? '…' : <><span style={{ color: FMRE_GOLD, fontWeight: 700 }}>{nodeStatus.connections}</span> en hub</>}
+                  {nodeStatus == null ? '…' : <><span style={{ color: FMRE_GOLD, fontWeight: 700 }}>{nodeStatus.connections}</span> nodos conectados</>}
+                </span>
+              </Popover>
+            </div>
+
+            {/* Barra de estado IRLP */}
+            <div style={{ marginTop: 10, marginBottom: 4 }}>
+              <span style={{ color: '#06b6d4', fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>IRLP ESTADO</span>
+            </div>
+            <div style={{ display: 'flex', width: 'fit-content', alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 10, padding: '10px 20px', flexWrap: 'wrap' }}>
+              {/* Reflector online */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
+                  background: irlpStatus == null ? '#888' : irlpStatus.online ? '#52c41a' : '#ff4d4f',
+                  boxShadow: irlpStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
+                  animation: irlpStatus?.online ? 'pulse 2s infinite' : 'none',
+                }} />
+                <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Reflector 0077</span>
+              </div>
+
+              <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
+
+              {/* Nodo 8422 conectado = al aire */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
+                {irlpStatus == null
+                  ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
+                  : irlpStatus.on_air
+                    ? <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● AL AIRE</span>
+                    : <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
+                }
+              </div>
+
+              <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
+
+              {/* Nodos conectados */}
+              <Popover
+                trigger="click"
+                title={<span style={{ fontWeight: 700 }}>Nodos conectados al reflector 0077</span>}
+                content={
+                  <div style={{ minWidth: 320, maxHeight: 300, overflowY: 'auto' }}>
+                    {(irlpStatus?.nodes ?? []).map(n => (
+                      <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: n.node === '8422' ? '#52c41a' : '#06b6d4' }} />
+                        <span style={{ fontWeight: 700, color: '#0e7490', minWidth: 46, fontSize: 12 }}>{n.node}</span>
+                        <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#444', flex: 1 }}>{n.name}</a>
+                      </div>
+                    ))}
+                    {(irlpStatus?.nodes ?? []).length === 0 && <span style={{ color: '#aaa', fontSize: 12 }}>Sin nodos conectados</span>}
+                  </div>
+                }
+              >
+                <span style={{ color: '#8ab4e0', fontSize: 12, cursor: 'pointer', borderBottom: '1px dashed rgba(6,182,212,0.4)' }}>
+                  {irlpStatus == null ? '…' : <><span style={{ color: '#06b6d4', fontWeight: 700 }}>{irlpStatus.connections}</span> nodos conectados</>}
                 </span>
               </Popover>
             </div>

@@ -84,7 +84,7 @@ async def _fetch_node_status() -> dict:
                     }
     except Exception:
         pass
-    return {"online": False, "on_air": False, "keyed": False, "connections": 0}
+    return {"online": False, "on_air": False, "keyed": False, "connections": 0, "nodes": []}
 
 @router.get("/node-status")
 async def node_status():
@@ -94,6 +94,56 @@ async def node_status():
         return _node_cache["result"]
     result = await _fetch_node_status()
     _node_cache = {"result": result, "ts": now}
+    return result
+
+# ── IRLP Reflector 0077 status ────────────────────────────────────────────────
+_IRLP_URL      = "http://85.8.149.218/Chan_Zero_Node_Numbers.html"
+_IRLP_NODE     = "8422"
+_irlp_cache: dict = {"result": None, "ts": datetime.min}
+
+async def _fetch_irlp_status() -> dict:
+    """
+    Parsea la página HTML del reflector IRLP 0077.
+    Detecta si el nodo 8422 está conectado y devuelve la lista de nodos.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(_IRLP_URL)
+            html = resp.text
+        # Cada línea de nodo tiene el patrón:
+        # N    Mon DD HH:MM stnXXXX -<a ...>info</a>- XXXX CALLSIGN Description
+        node_re = re.compile(
+            r'\d+\s+\w+ \d+ \d+:\d+\s+(stn(\d+))\s+-.*?-\s+\d+\s+(\w+)\s+(.+?)(?:\s*\n|$)'
+        )
+        nodes = []
+        for m in node_re.finditer(html):
+            node_id   = m.group(2).strip()
+            callsign  = m.group(3).strip()
+            desc      = m.group(4).strip()
+            nodes.append({
+                "node":     node_id,
+                "name":     f"{callsign} — {desc}",
+                "url":      f"http://status.irlp.net/index.php?PSTART=11&nodeid={node_id}",
+            })
+        on_air = any(n["node"] == _IRLP_NODE for n in nodes)
+        return {
+            "online":      True,
+            "on_air":      on_air,
+            "connections": len(nodes),
+            "nodes":       nodes,
+        }
+    except Exception:
+        pass
+    return {"online": False, "on_air": False, "connections": 0, "nodes": []}
+
+@router.get("/irlp-status")
+async def irlp_status():
+    global _irlp_cache
+    now = datetime.utcnow()
+    if _irlp_cache["result"] and (now - _irlp_cache["ts"]).total_seconds() < 60:
+        return _irlp_cache["result"]
+    result = await _fetch_irlp_status()
+    _irlp_cache = {"result": result, "ts": now}
     return result
 
 _visitas_ready = False
