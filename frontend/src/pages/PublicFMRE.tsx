@@ -152,7 +152,10 @@ export default function PublicFMREPage() {
   const [mapReady, setMapReady] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [boletinInfo, setBoletinInfo] = useState(getNextBoletinInfo)
-  const [nodeStatus, setNodeStatus] = useState<{ online: boolean; on_air: boolean; keyed: boolean; connections: number } | null>(null)
+  const [nodeStatus, setNodeStatus] = useState<{
+    online: boolean; on_air: boolean; keyed: boolean; connections: number;
+    nodes: { node: string; name: string; url: string | null; keyed: boolean; direction: string }[]
+  } | null>(null)
 
   // Búsqueda por indicativo
   const [busqueda, setBusqueda] = useState('')
@@ -628,10 +631,36 @@ export default function PublicFMREPage() {
 
               <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
 
-              {/* Conexiones al hub */}
-              <span style={{ color: '#8ab4e0', fontSize: 12 }}>
-                {nodeStatus == null ? '…' : <><span style={{ color: FMRE_GOLD, fontWeight: 700 }}>{nodeStatus.connections}</span> en hub</>}
-              </span>
+              {/* Conexiones al hub — clickeable */}
+              <Popover
+                trigger="click"
+                title={<span style={{ fontWeight: 700 }}>Nodos conectados al hub 299081</span>}
+                content={
+                  <div style={{ minWidth: 320, maxHeight: 300, overflowY: 'auto' }}>
+                    {(nodeStatus?.nodes ?? []).map(n => (
+                      <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                          background: n.keyed ? '#ff4d4f' : '#52c41a',
+                          boxShadow: n.keyed ? '0 0 0 2px rgba(255,77,79,.25)' : '0 0 0 2px rgba(82,196,26,.25)',
+                        }} />
+                        <span style={{ fontWeight: 700, color: '#1A569E', minWidth: 52, fontSize: 12 }}>{n.node}</span>
+                        {n.url
+                          ? <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#444', flex: 1 }}>{n.name}</a>
+                          : <span style={{ fontSize: 12, color: '#444', flex: 1 }}>{n.name}</span>
+                        }
+                        <Tag style={{ margin: 0, fontSize: 10 }} color={n.keyed ? 'red' : 'default'}>
+                          {n.keyed ? 'TX' : n.direction || 'RX'}
+                        </Tag>
+                      </div>
+                    ))}
+                    {(nodeStatus?.nodes ?? []).length === 0 && <span style={{ color: '#aaa', fontSize: 12 }}>Sin nodos conectados</span>}
+                  </div>
+                }
+              >
+                <span style={{ color: '#8ab4e0', fontSize: 12, cursor: 'pointer', borderBottom: '1px dashed rgba(160,196,232,0.5)' }}>
+                  {nodeStatus == null ? '…' : <><span style={{ color: FMRE_GOLD, fontWeight: 700 }}>{nodeStatus.connections}</span> en hub</>}
+                </span>
+              </Popover>
             </div>
           </div>
 

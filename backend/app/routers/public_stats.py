@@ -6,23 +6,33 @@ import urllib.request
 import json as _json
 import httpx
 import asyncio
+import re
 from datetime import datetime
 
 router = APIRouter()
 
 # ── AllScan node status cache ─────────────────────────────────────────────────
-# Monitoreamos el hub 299081; si el nodo 299080 (XE1LM-R) está conectado = al aire
 _ALLSCAN_URL  = "http://stn8422.ip.irlp.net:8081/allscan/astapi/server.php?nodes=299081"
 _HUB_ID       = "299081"
 _BOLETIN_NODE = "299080"
 _node_cache: dict = {"result": None, "ts": datetime.min}
 
+def _parse_node_info(info_html: str | None):
+    """Extrae nombre y URL de stats del campo info HTML de AllScan."""
+    if not info_html:
+        return {"name": "—", "url": None}
+    m = re.search(r'href="([^"]+)"[^>]*>([^<]+)<', info_html)
+    if m:
+        return {"name": m.group(2).strip(), "url": m.group(1).strip()}
+    return {"name": re.sub(r"<[^>]+>", "", info_html).strip(), "url": None}
+
 async def _fetch_node_status() -> dict:
     """
     Lee el SSE de AllScan del hub 299081.
-    Devuelve {online, on_air, keyed, connections}.
-      - on_air: el nodo 299080 está conectado al hub
-      - keyed:  299080 está transmitiendo activamente (cos_keyed o tx_keyed)
+    Devuelve {online, on_air, keyed, connections, nodes[]}.
+      - on_air:   el nodo 299080 está conectado al hub
+      - keyed:    299080 está transmitiendo activamente
+      - nodes:    lista de nodos conectados con nombre, URL y estado
     """
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
@@ -35,16 +45,13 @@ async def _fetch_node_status() -> dict:
                         payload = _json.loads(line[5:].strip())
                     except Exception:
                         continue
-                    # El evento "nodes" tiene estructura {"299081": {...}}
-                    # El evento "connection" tiene {"host":...,"node":...,"status":...}
-                    # Solo nos interesa el evento "nodes" que tiene remote_nodes
                     node_data = payload.get(_HUB_ID) if isinstance(payload, dict) else None
                     if not node_data:
                         continue
                     remote_nodes = node_data.get("remote_nodes")
                     if remote_nodes is None:
                         continue
-                    # Buscar el nodo del boletín entre los conectados al hub
+
                     boletin = next(
                         (rn for rn in remote_nodes
                          if str(rn.get("node", "")) == _BOLETIN_NODE
@@ -52,18 +59,28 @@ async def _fetch_node_status() -> dict:
                         None,
                     )
                     on_air = boletin is not None
-                    # PTT: campo "keyed" es string "yes"/"no"
                     keyed  = on_air and str(boletin.get("keyed", "no")).lower() == "yes"
-                    # Contar solo nodos con link Established (excluir node=1 local)
-                    established = sum(
-                        1 for rn in remote_nodes
-                        if rn.get("link") == "Established"
-                    )
+
+                    # Lista de nodos Established (excluye node=1 local)
+                    node_list = []
+                    for rn in remote_nodes:
+                        if rn.get("link") != "Established":
+                            continue
+                        parsed = _parse_node_info(rn.get("info"))
+                        node_list.append({
+                            "node":      str(rn.get("node", "")),
+                            "name":      parsed["name"],
+                            "url":       parsed["url"],
+                            "keyed":     str(rn.get("keyed", "no")).lower() == "yes",
+                            "direction": rn.get("direction", ""),
+                        })
+
                     return {
                         "online":      True,
                         "on_air":      on_air,
                         "keyed":       keyed,
-                        "connections": established,
+                        "connections": len(node_list),
+                        "nodes":       node_list,
                     }
     except Exception:
         pass
