@@ -152,6 +152,9 @@ export default function PublicFMREPage() {
   const [mapReady, setMapReady] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [boletinInfo, setBoletinInfo] = useState(getNextBoletinInfo)
+  const [nodeStatus, setNodeStatus] = useState<{ online: boolean; keyed: boolean; connections: number } | null>(
+    { online: true, keyed: false, connections: 0 }  // placeholder hasta conectar Allmon
+  )
 
   // Búsqueda por indicativo
   const [busqueda, setBusqueda] = useState('')
@@ -536,40 +539,83 @@ export default function PublicFMREPage() {
             Estadísticas en tiempo real de la actividad del Boletín Dominical,
             medio oficial de divulgación de la máxima autoridad de radioafición en México.
           </Paragraph>
-          {/* Countdown boletín */}
-          {boletinInfo.isLive ? (
-            <div style={{ marginBottom: 28, display: 'flex', alignItems: 'center', gap: 14 }}>
-              <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, padding: '8px 22px', borderRadius: 24, fontSize: 15, letterSpacing: 1, animation: 'pulse-red 1.2s ease-in-out infinite', display: 'inline-block' }}>
-                🔴 EN VIVO
-              </span>
-              <span style={{ color: 'white', fontWeight: 600, fontSize: 15 }}>
-                Boletín <span style={{ color: FMRE_GOLD }}>#{boletinInfo.boletinNum}</span> · {boletinInfo.year}
+          {/* Countdown + estado nodo */}
+          <div style={{ marginBottom: 28 }}>
+
+            {/* Fila superior: badge EN VIVO o label próximo boletín */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
+              {boletinInfo.isLive
+                ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, padding: '6px 20px', borderRadius: 24, fontSize: 14, letterSpacing: 1, animation: 'pulse-red 1.2s ease-in-out infinite', display: 'inline-block' }}>
+                    🔴 EN VIVO
+                  </span>
+                : <span style={{ color: FMRE_GOLD, fontSize: 11, fontWeight: 700, letterSpacing: 2 }}>
+                    PRÓXIMO BOLETÍN
+                  </span>
+              }
+              <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>
+                #{boletinInfo.boletinNum} · {boletinInfo.year}
               </span>
             </div>
-          ) : (
-            <div style={{ marginBottom: 28 }}>
-              <div style={{ color: FMRE_GOLD, fontSize: 11, fontWeight: 700, letterSpacing: 2, marginBottom: 10 }}>
-                PRÓXIMO BOLETÍN #{boletinInfo.boletinNum} · {boletinInfo.year}
-              </div>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                {[
-                  { value: boletinInfo.days,    label: 'DÍAS'  },
-                  { value: boletinInfo.hours,   label: 'HORAS' },
-                  { value: boletinInfo.minutes, label: 'MIN'   },
-                  { value: boletinInfo.seconds, label: 'SEG'   },
-                ].map(({ value, label }) => (
-                  <div key={label} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, padding: '10px 18px', textAlign: 'center', minWidth: 68 }}>
-                    <div style={{ color: 'white', fontSize: 30, fontWeight: 700, lineHeight: 1, fontFamily: 'monospace' }}>
-                      {String(value).padStart(2, '0')}
-                    </div>
-                    <div style={{ color: FMRE_GOLD, fontSize: 10, fontWeight: 700, marginTop: 4, letterSpacing: 1 }}>
-                      {label}
-                    </div>
+
+            {/* Cajas D/H/M/S — siempre visibles */}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+              {[
+                { value: boletinInfo.days,    label: 'DÍAS'  },
+                { value: boletinInfo.hours,   label: 'HORAS' },
+                { value: boletinInfo.minutes, label: 'MIN'   },
+                { value: boletinInfo.seconds, label: 'SEG'   },
+              ].map(({ value, label }) => (
+                <div key={label} style={{
+                  background: boletinInfo.isLive ? 'rgba(255,77,79,0.15)' : 'rgba(255,255,255,0.1)',
+                  border: `1px solid ${boletinInfo.isLive ? 'rgba(255,77,79,0.4)' : 'rgba(255,255,255,0.2)'}`,
+                  borderRadius: 8, padding: '10px 18px', textAlign: 'center', minWidth: 68,
+                }}>
+                  <div style={{ color: 'white', fontSize: 30, fontWeight: 700, lineHeight: 1, fontFamily: 'monospace' }}>
+                    {String(value).padStart(2, '0')}
                   </div>
-                ))}
-              </div>
+                  <div style={{ color: FMRE_GOLD, fontSize: 10, fontWeight: 700, marginTop: 4, letterSpacing: 1 }}>
+                    {label}
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
+
+            {/* Barra de estado del nodo AllStar 299080 */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '8px 18px', flexWrap: 'wrap' }}>
+              {/* Online indicator */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: nodeStatus?.online === false ? '#ff4d4f' : '#52c41a', display: 'inline-block', boxShadow: nodeStatus?.online === false ? 'none' : '0 0 0 3px rgba(82,196,26,0.25)', animation: nodeStatus?.online !== false ? 'pulse 2s infinite' : 'none' }} />
+                <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Nodo XE1LM-R · 299080</span>
+              </div>
+
+              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 16 }}>|</span>
+
+              {/* PTT indicator */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, color: '#8ab4e0' }}>PTT</span>
+                {nodeStatus?.keyed
+                  ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 1, animation: 'pulse-red 0.8s ease-in-out infinite' }}>
+                      ● TRANSMITIENDO
+                    </span>
+                  : <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ En espera</span>
+                }
+              </div>
+
+              {/* Connections */}
+              {nodeStatus != null && (
+                <>
+                  <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 16 }}>|</span>
+                  <span style={{ color: '#8ab4e0', fontSize: 12 }}>
+                    <span style={{ color: FMRE_GOLD, fontWeight: 700 }}>{nodeStatus.connections}</span> nodos conectados
+                  </span>
+                </>
+              )}
+
+              {nodeStatus == null && (
+                <span style={{ color: '#8ab4e0', fontSize: 12 }}>Conectando…</span>
+              )}
+            </div>
+          </div>
 
           <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#52c41a', display: 'inline-block', boxShadow: '0 0 0 2px rgba(82,196,26,0.3)', animation: 'pulse 2s infinite' }} />
