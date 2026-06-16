@@ -125,7 +125,8 @@ function getNextBoletinInfo() {
   const mx = new Date(now.getTime() + MX_OFFSET)
   const dow = mx.getUTCDay()
   const minuteOfDay = mx.getUTCHours() * 60 + mx.getUTCMinutes()
-  const isLive = dow === 0 && minuteOfDay >= 9 * 60 && minuteOfDay < 10 * 60
+  const isLive         = dow === 0 && minuteOfDay >= 9 * 60     && minuteOfDay < 10 * 60
+  const isBoletinWindow = dow === 0 && minuteOfDay >= 8 * 60 + 30 && minuteOfDay < 10 * 60 + 30
 
   const targetMx = new Date(mx)
   targetMx.setUTCHours(9, 0, 0, 0)
@@ -143,7 +144,7 @@ function getNextBoletinInfo() {
     hours:   Math.floor((diff % 86400000) / 3600000),
     minutes: Math.floor((diff % 3600000) / 60000),
     seconds: Math.floor((diff % 60000) / 1000),
-    isLive, boletinNum, year,
+    isLive, isBoletinWindow, boletinNum, year,
   }
 }
 
@@ -152,6 +153,7 @@ export default function PublicFMREPage() {
   const [mapReady, setMapReady] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [boletinInfo, setBoletinInfo] = useState(getNextBoletinInfo)
+  const voipStatusRef = useRef<HTMLDivElement>(null)
   const [nodeStatus, setNodeStatus] = useState<{
     online: boolean; on_air: boolean; keyed: boolean; connections: number;
     nodes: { node: string; name: string; url: string | null; keyed: boolean; direction: string }[]
@@ -605,6 +607,7 @@ export default function PublicFMREPage() {
               ))}
             </div>
 
+            {boletinInfo.isBoletinWindow && <>
             {/* Barra de estado AllStar Link */}
             <div style={{ marginBottom: 10 }}>
               <span style={{ color: FMRE_GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>ALLSTAR LINK ESTADO</span>
@@ -723,6 +726,7 @@ export default function PublicFMREPage() {
                 </span>
               </Popover>
             </div>
+            </>}
           </div>
 
           <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -853,27 +857,47 @@ export default function PublicFMREPage() {
                 <div style={{ color: SISTEMA_COLORS.IRLP, fontWeight: 800, fontSize: 16, marginBottom: 14 }}>
                   🔗 Sistemas VoIP / RoIP
                 </div>
-                <a href="http://xe1dvi.crabdance.com/Auto_Refresh_0077Con.html" target="_blank" rel="noopener noreferrer"
-                  style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}
-                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
-                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
                   <div style={{ width: 38, height: 38, borderRadius: 7, background: '#C62828', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ color: 'white', fontSize: 9, fontWeight: 'bold' }}>IRLP</span>
                   </div>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>IRLP</div>
-                    <div style={{ color: '#8ab4e0', fontSize: 13 }}>Reflector <strong style={{ color: 'white' }}>0077</strong> ↗</div>
+                    <div style={{ color: '#8ab4e0', fontSize: 13 }}>
+                      Reflector <strong style={{ color: 'white' }}>0077</strong>
+                      <a href="http://xe1dvi.crabdance.com/Auto_Refresh_0077Con.html" target="_blank" rel="noopener noreferrer" style={{ color: '#8ab4e0', marginLeft: 4 }}>↗</a>
+                    </div>
                   </div>
-                </a>
+                  <span
+                    title="Ver estado en tiempo real"
+                    onClick={() => voipStatusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                    style={{
+                      width: 10, height: 10, borderRadius: '50%', display: 'inline-block', flexShrink: 0, cursor: 'pointer',
+                      background: irlpStatus == null ? '#555' : irlpStatus.online ? '#52c41a' : '#ff4d4f',
+                      boxShadow: irlpStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
+                      animation: irlpStatus?.online ? 'pulse 2s infinite' : 'none',
+                    }}
+                  />
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 38, height: 38, borderRadius: 7, background: '#1B5E20', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ color: 'white', fontSize: 7, fontWeight: 'bold', lineHeight: 1.3 }}>AllStar</span>
                     <span style={{ color: '#A5D6A7', fontSize: 6, lineHeight: 1.3 }}>Link</span>
                   </div>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={{ color: 'white', fontSize: 14, fontWeight: 700 }}>AllStar Link</div>
                     <div style={{ color: '#8ab4e0', fontSize: 13 }}>Hub <strong style={{ color: 'white' }}>299081</strong></div>
                   </div>
+                  <span
+                    title="Ver estado en tiempo real"
+                    onClick={() => voipStatusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                    style={{
+                      width: 10, height: 10, borderRadius: '50%', display: 'inline-block', flexShrink: 0, cursor: 'pointer',
+                      background: nodeStatus == null ? '#555' : nodeStatus.online ? '#52c41a' : '#ff4d4f',
+                      boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
+                      animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
+                    }}
+                  />
                 </div>
               </div>
             </Col>
@@ -917,6 +941,124 @@ export default function PublicFMREPage() {
               </div>
             </Col>
           </Row>
+
+          {/* Estado en tiempo real VoIP / RoIP — siempre visible */}
+          <div ref={voipStatusRef} style={{ marginTop: 20, marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <span style={{ color: '#06b6d4', fontWeight: 800, fontSize: 12, letterSpacing: 2, whiteSpace: 'nowrap' }}>
+                📡 ESTADO EN TIEMPO REAL
+              </span>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.15)' }} />
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+
+              {/* AllStar Link */}
+              <div>
+                <div style={{ color: FMRE_GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>ALLSTAR LINK ESTADO</div>
+                <div style={{ display: 'flex', width: 'fit-content', alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 20px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
+                      background: nodeStatus == null ? '#888' : nodeStatus.online ? '#52c41a' : '#ff4d4f',
+                      boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
+                      animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
+                    }} />
+                    <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Hub XE1LM · 299081</span>
+                  </div>
+                  <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
+                    {nodeStatus == null
+                      ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
+                      : !nodeStatus.on_air
+                        ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
+                        : nodeStatus.keyed
+                          ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
+                          : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                    }
+                  </div>
+                  <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
+                  <Popover
+                    trigger="click"
+                    title={<span style={{ fontWeight: 700 }}>Nodos conectados al hub 299081</span>}
+                    content={
+                      <div style={{ minWidth: 320, maxHeight: 300, overflowY: 'auto' }}>
+                        {(nodeStatus?.nodes ?? []).map(n => (
+                          <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                              background: n.keyed ? '#ff4d4f' : '#52c41a',
+                              boxShadow: n.keyed ? '0 0 0 2px rgba(255,77,79,.25)' : '0 0 0 2px rgba(82,196,26,.25)',
+                            }} />
+                            <span style={{ fontWeight: 700, color: '#1A569E', minWidth: 52, fontSize: 12 }}>{n.node}</span>
+                            {n.url
+                              ? <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#444', flex: 1 }}>{n.name}</a>
+                              : <span style={{ fontSize: 12, color: '#444', flex: 1 }}>{n.name}</span>
+                            }
+                            <Tag style={{ margin: 0, fontSize: 10 }} color={n.keyed ? 'red' : 'default'}>
+                              {n.keyed ? 'TX' : n.direction || 'RX'}
+                            </Tag>
+                          </div>
+                        ))}
+                        {(nodeStatus?.nodes ?? []).length === 0 && <span style={{ color: '#aaa', fontSize: 12 }}>Sin nodos conectados</span>}
+                      </div>
+                    }
+                  >
+                    <span style={{ color: '#8ab4e0', fontSize: 12, cursor: 'pointer', borderBottom: '1px dashed rgba(160,196,232,0.5)' }}>
+                      {nodeStatus == null ? '…' : <><span style={{ color: FMRE_GOLD, fontWeight: 700 }}>{nodeStatus.connections}</span> nodos conectados</>}
+                    </span>
+                  </Popover>
+                </div>
+              </div>
+
+              {/* IRLP */}
+              <div>
+                <div style={{ color: '#06b6d4', fontSize: 10, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>IRLP ESTADO</div>
+                <div style={{ display: 'flex', width: 'fit-content', alignItems: 'center', gap: 16, background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 10, padding: '10px 20px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
+                      background: irlpStatus == null ? '#888' : irlpStatus.online ? '#52c41a' : '#ff4d4f',
+                      boxShadow: irlpStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
+                      animation: irlpStatus?.online ? 'pulse 2s infinite' : 'none',
+                    }} />
+                    <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Reflector 0077</span>
+                  </div>
+                  <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
+                    {irlpStatus == null
+                      ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
+                      : !irlpStatus.on_air
+                        ? <span style={{ color: '#8ab4e0', fontSize: 12 }}>○ Desconectado</span>
+                        : irlpStatus.cos
+                          ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
+                          : <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                    }
+                  </div>
+                  <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
+                  <Popover
+                    trigger="click"
+                    title={<span style={{ fontWeight: 700 }}>Nodos conectados al reflector 0077</span>}
+                    content={
+                      <div style={{ minWidth: 320, maxHeight: 300, overflowY: 'auto' }}>
+                        {(irlpStatus?.nodes ?? []).map(n => (
+                          <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #f0f0f0' }}>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: n.node === '8422' ? '#52c41a' : '#06b6d4' }} />
+                            <span style={{ fontWeight: 700, color: '#0e7490', minWidth: 46, fontSize: 12 }}>{n.node}</span>
+                            <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#444', flex: 1 }}>{n.name}</a>
+                          </div>
+                        ))}
+                        {(irlpStatus?.nodes ?? []).length === 0 && <span style={{ color: '#aaa', fontSize: 12 }}>Sin nodos conectados</span>}
+                      </div>
+                    }
+                  >
+                    <span style={{ color: '#8ab4e0', fontSize: 12, cursor: 'pointer', borderBottom: '1px dashed rgba(6,182,212,0.4)' }}>
+                      {irlpStatus == null ? '…' : <><span style={{ color: '#06b6d4', fontWeight: 700 }}>{irlpStatus.connections}</span> nodos conectados</>}
+                    </span>
+                  </Popover>
+                </div>
+              </div>
+
+            </div>
+          </div>
 
           {/* Sub-encabezado: Redes Sociales */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 24, marginBottom: 16 }}>
