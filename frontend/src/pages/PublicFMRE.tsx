@@ -734,14 +734,6 @@ export default function PublicFMREPage() {
             </>}
           </div>
 
-          <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#52c41a', display: 'inline-block', boxShadow: '0 0 0 2px rgba(82,196,26,0.3)', animation: 'pulse 2s infinite' }} />
-            <span style={{ color: '#8ab4e0', fontSize: 13 }}>
-              Actualización automática cada 60 s
-              {lastUpdated && <> · <span style={{ color: '#a0c4e8' }}>Última: {dayjs(lastUpdated).format('HH:mm:ss')}</span></>}
-            </span>
-          </div>
-
           {isLoading ? <Spin size="large" /> : (
             <Row gutter={[24, 16]}>
               {[
@@ -771,6 +763,14 @@ export default function PublicFMREPage() {
               ))}
             </Row>
           )}
+
+          <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#52c41a', display: 'inline-block', boxShadow: '0 0 0 2px rgba(82,196,26,0.3)', animation: 'pulse 2s infinite' }} />
+            <span style={{ color: '#8ab4e0', fontSize: 13 }}>
+              Actualización automática cada 60 s
+              {lastUpdated && <> · <span style={{ color: '#a0c4e8' }}>Última: {dayjs(lastUpdated).format('HH:mm:ss')}</span></>}
+            </span>
+          </div>
         </div>
       </section>
 
