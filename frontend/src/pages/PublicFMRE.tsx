@@ -611,7 +611,7 @@ export default function PublicFMREPage() {
             {boletinInfo.isBoletinWindow && <>
             {/* Barra de estado AllStar Link */}
             <div style={{ marginBottom: 10 }}>
-              <span style={{ color: FMRE_GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>ALLSTAR LINK ESTADO</span>
+              <span style={{ color: FMRE_GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>RED ALLSTAR LINK</span>
             </div>
             <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
@@ -674,7 +674,7 @@ export default function PublicFMREPage() {
 
             {/* Barra de estado IRLP */}
             <div style={{ marginTop: 10, marginBottom: 4 }}>
-              <span style={{ color: '#06b6d4', fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>IRLP ESTADO</span>
+              <span style={{ color: '#06b6d4', fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>RED IRLP</span>
             </div>
             <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 10, padding: '10px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
@@ -959,7 +959,7 @@ export default function PublicFMREPage() {
 
               {/* AllStar Link */}
               <div>
-                <div style={{ color: FMRE_GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>ALLSTAR LINK ESTADO</div>
+                <div style={{ color: FMRE_GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>RED ALLSTAR LINK</div>
                 <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1021,7 +1021,7 @@ export default function PublicFMREPage() {
 
               {/* IRLP */}
               <div>
-                <div style={{ color: '#06b6d4', fontSize: 10, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>IRLP ESTADO</div>
+                <div style={{ color: '#06b6d4', fontSize: 10, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>RED IRLP</div>
                 <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 10, padding: '10px 20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
