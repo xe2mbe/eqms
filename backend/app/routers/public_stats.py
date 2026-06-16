@@ -122,10 +122,9 @@ async def _fetch_irlp_cgi() -> dict:
         p0 = _int(r'\bp0=(\d+)')
         p1 = _int(r'\bp1=(\d+)')
         # ac='exp0077' cuando conectado, '' cuando NODE IDLE
+        # co NO es confiable: mantiene el valor de la última conexión al desconectarse
         ac = _str(r"\bac='([^']*)'") or _str(r'\bac="([^"]*)"')
-        # co='I- 0077,...' — respaldo adicional
-        co = _str(r"\bco='([^']*)'") or _str(r'\bco="([^"]*)"')
-        on_air = bool(ac) or '0077' in co
+        on_air = bool(ac)
         return {
             "online": True,
             "on_air": on_air,
