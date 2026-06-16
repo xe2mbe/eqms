@@ -148,6 +148,16 @@ function getNextBoletinInfo() {
   }
 }
 
+function getBoletinNumForDate(dateStr: string): number {
+  const utc = new Date(dateStr)
+  const mx = new Date(utc.getTime() + MX_OFFSET)
+  const year = mx.getUTCFullYear()
+  const eventDay = new Date(Date.UTC(year, mx.getUTCMonth(), mx.getUTCDate()))
+  const jan1dow = new Date(Date.UTC(year, 0, 1)).getUTCDay()
+  const firstSunday = new Date(Date.UTC(year, 0, 1 + (7 - jan1dow) % 7))
+  return Math.round((eventDay.getTime() - firstSunday.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1
+}
+
 export default function PublicFMREPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [mapReady, setMapReady] = useState(false)
@@ -784,7 +794,7 @@ export default function PublicFMREPage() {
         >
           <Text style={{ fontWeight: 700, color: FMRE_DARK }}>
             <WifiOutlined style={{ marginRight: 8 }} />
-            Último evento RF: <strong>{stats.ultimo_evento_rf.tipo}</strong> —{' '}
+            Último evento RF: <strong>{stats.ultimo_evento_rf.tipo} #{getBoletinNumForDate(stats.ultimo_evento_rf.ultima)}</strong> —{' '}
             {dayjs(stats.ultimo_evento_rf.ultima).format('D [de] MMMM [de] YYYY')} —{' '}
             {stats.ultimo_evento_rf.total_qsos.toLocaleString()} QSOs · {stats.ultimo_evento_rf.estaciones.toLocaleString()} estaciones
           </Text>
@@ -804,7 +814,7 @@ export default function PublicFMREPage() {
         >
           <Text style={{ fontWeight: 700, color: 'white' }}>
             <GlobalOutlined style={{ marginRight: 8 }} />
-            Último evento RS: <strong>{stats.ultimo_evento_rs.tipo}</strong> —{' '}
+            Último evento RS: <strong>{stats.ultimo_evento_rs.tipo} #{getBoletinNumForDate(stats.ultimo_evento_rs.ultima)}</strong> —{' '}
             {dayjs(stats.ultimo_evento_rs.ultima).format('D [de] MMMM [de] YYYY')} —{' '}
             {stats.ultimo_evento_rs.total_qsos.toLocaleString()} QSOs · {stats.ultimo_evento_rs.estaciones.toLocaleString()} estaciones
           </Text>
