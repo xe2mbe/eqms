@@ -951,7 +951,7 @@ export default function PublicFMREPage() {
           {voipStatusVisible && <div ref={voipStatusRef} style={{ marginTop: 20, marginBottom: 4 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <span style={{ color: '#06b6d4', fontWeight: 800, fontSize: 12, letterSpacing: 2, whiteSpace: 'nowrap' }}>
-                📡 ESTADO EN TIEMPO REAL
+                📡 ESTADO DE SISTEMAS EN TIEMPO REAL
               </span>
               <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.15)' }} />
             </div>
