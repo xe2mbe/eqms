@@ -116,15 +116,21 @@ async def _fetch_irlp_cgi() -> dict:
         def _int(pattern):
             m = re.search(pattern, text)
             return int(m.group(1)) if m else 0
+        def _str(pattern):
+            m = re.search(pattern, text)
+            return m.group(1) if m else ''
         p0 = _int(r'\bp0=(\d+)')
         p1 = _int(r'\bp1=(\d+)')
-        co = (re.search(r"co='([^']*)'", text) or re.search(r'co="([^"]*)"', text))
-        co = co.group(1) if co else ''
+        # ac='exp0077' cuando conectado, '' cuando NODE IDLE
+        ac = _str(r"\bac='([^']*)'") or _str(r'\bac="([^"]*)"')
+        # co='I- 0077,...' — respaldo adicional
+        co = _str(r"\bco='([^']*)'") or _str(r'\bco="([^"]*)"')
+        on_air = bool(ac) or '0077' in co
         return {
             "online": True,
-            "on_air": '0077' in co,
-            "cos":    bool(p1 & 0x80),   # COS verde = alguien transmitiendo
-            "ptt":    bool(p0 & 0x82),   # PTT rojo  = nodo transmitiendo al reflector
+            "on_air": on_air,
+            "cos":    bool(p1 & 0x80),   # COS  = alguien transmitiendo al nodo
+            "ptt":    bool(p0 & 0x82),   # PTT  = nodo transmitiendo al reflector
         }
     except Exception:
         return {"online": False, "on_air": False, "cos": False, "ptt": False}
