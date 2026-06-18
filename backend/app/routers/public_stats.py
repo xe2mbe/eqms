@@ -327,6 +327,7 @@ def public_stats(db: Session = Depends(get_db)):
             SELECT e.tipo, DATE_TRUNC('day', MAX(r.fecha_reporte))::date AS ultima
             FROM reportes r JOIN eventos e ON e.id = r.evento_id
             WHERE r.fecha_reporte >= NOW() - INTERVAL '30 days'
+              AND e.tipo ILIKE '%dominical%'
             GROUP BY e.tipo ORDER BY ultima DESC LIMIT 1
         )
         SELECT u.tipo, u.ultima,
@@ -344,6 +345,7 @@ def public_stats(db: Session = Depends(get_db)):
             SELECT e.tipo, DATE_TRUNC('day', MAX(r.fecha_reporte))::date AS ultima
             FROM reportes_rs r JOIN eventos e ON e.id = r.evento_id
             WHERE r.fecha_reporte >= NOW() - INTERVAL '30 days'
+              AND e.tipo ILIKE '%dominical%'
             GROUP BY e.tipo ORDER BY ultima DESC LIMIT 1
         )
         SELECT u.tipo, u.ultima,
