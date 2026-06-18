@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.database import get_db
+from app import models
 import urllib.request
 import json as _json
 import httpx
@@ -11,10 +12,38 @@ from datetime import datetime
 
 router = APIRouter()
 
+# ── Node config cache (TTL 60 s) ──────────────────────────────────────────────
+_NODE_CONFIG_DEFAULTS = {
+    "asl_hub_id":        "299081",
+    "asl_host":          "stn8422.ip.irlp.net",
+    "asl_port":          "8081",
+    "asl_boletin_node":  "299080",
+    "irlp_reflector_id": "0077",
+    "irlp_ref_url":      "http://85.8.149.218/Chan_Zero_Node_Numbers.html",
+    "irlp_user":         "",
+    "irlp_password":     "",
+    "irlp_boletin_node": "",
+    "irlp_host":         "stn8422.ip.irlp.net",
+    "irlp_port":         "8080",
+}
+_node_config_cache: dict = {"cfg": None, "ts": datetime.min}
+
+def _load_node_config(db: Session) -> dict:
+    global _node_config_cache
+    now = datetime.utcnow()
+    if _node_config_cache["cfg"] and (now - _node_config_cache["ts"]).total_seconds() < 60:
+        return _node_config_cache["cfg"]
+    row = db.query(models.ConfiguracionSistema).filter_by(clave="node_config").first()
+    cfg = _NODE_CONFIG_DEFAULTS.copy()
+    if row and row.valor:
+        try:
+            cfg = {**cfg, **_json.loads(row.valor)}
+        except Exception:
+            pass
+    _node_config_cache = {"cfg": cfg, "ts": now}
+    return cfg
+
 # ── AllScan node status cache ─────────────────────────────────────────────────
-_ALLSCAN_URL  = "http://stn8422.ip.irlp.net:8081/allscan/astapi/server.php?nodes=299081"
-_HUB_ID       = "299081"
-_BOLETIN_NODE = "299080"
 _node_cache: dict = {"result": None, "ts": datetime.min}
 
 def _parse_node_info(info_html: str | None):
@@ -26,18 +55,17 @@ def _parse_node_info(info_html: str | None):
         return {"name": m.group(2).strip(), "url": m.group(1).strip()}
     return {"name": re.sub(r"<[^>]+>", "", info_html).strip(), "url": None}
 
-async def _fetch_node_status() -> dict:
+async def _fetch_node_status(cfg: dict) -> dict:
     """
-    Lee el SSE de AllScan del hub 299081 (evento 'nodes').
+    Lee el SSE de AllScan del hub configurado (evento 'nodes').
     Devuelve {online, on_air, cos_keyed, tx_keyed, connections, nodes[]}.
-      - on_air:     el nodo 299080 está conectado al hub
-      - cos_keyed:  alguien está transmitiendo al hub (cos del nodo local, node=1)
-      - tx_keyed:   el hub está retransmitiendo (tx del nodo local, node=1)
-      - nodes:      lista de nodos Established con nombre, URL y estado keyed
     """
+    hub_id      = cfg["asl_hub_id"]
+    boletin     = cfg["asl_boletin_node"]
+    allscan_url = f"http://{cfg['asl_host']}:{cfg.get('asl_port', '8081')}/allscan/astapi/server.php?nodes={hub_id}"
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            async with client.stream("GET", _ALLSCAN_URL) as resp:
+            async with client.stream("GET", allscan_url) as resp:
                 async for raw in resp.aiter_lines():
                     line = raw.strip()
                     if not line.startswith("data:"):
@@ -46,25 +74,23 @@ async def _fetch_node_status() -> dict:
                         payload = _json.loads(line[5:].strip())
                     except Exception:
                         continue
-                    node_data = payload.get(_HUB_ID) if isinstance(payload, dict) else None
+                    node_data = payload.get(hub_id) if isinstance(payload, dict) else None
                     if not node_data:
                         continue
                     remote_nodes = node_data.get("remote_nodes")
                     if remote_nodes is None:
                         continue
 
-                    # node=1 es el hub local: cos_keyed/tx_keyed indican actividad
                     local = next((rn for rn in remote_nodes if str(rn.get("node", "")) == "1"), None)
                     cos_keyed = bool(local and local.get("cos_keyed"))
                     tx_keyed  = bool(local and local.get("tx_keyed"))
 
                     on_air = any(
-                        str(rn.get("node", "")) == _BOLETIN_NODE
+                        str(rn.get("node", "")) == boletin
                         and rn.get("link") == "Established"
                         for rn in remote_nodes
                     )
 
-                    # Lista de nodos Established (excluye node=1 local)
                     node_list = []
                     for rn in remote_nodes:
                         if rn.get("link") != "Established":
@@ -91,31 +117,27 @@ async def _fetch_node_status() -> dict:
     return {"online": False, "on_air": False, "cos_keyed": False, "tx_keyed": False, "connections": 0, "nodes": []}
 
 @router.get("/node-status")
-async def node_status():
+async def node_status(db: Session = Depends(get_db)):
     global _node_cache
     now = datetime.utcnow()
     if _node_cache["result"] and (now - _node_cache["ts"]).total_seconds() < 5:
         return _node_cache["result"]
-    result = await _fetch_node_status()
+    cfg = _load_node_config(db)
+    result = await _fetch_node_status(cfg)
     _node_cache = {"result": result, "ts": now}
     return result
 
-# ── IRLP node 8422 + reflector 0077 status ───────────────────────────────────
+# ── IRLP status ───────────────────────────────────────────────────────────────
 import base64 as _b64
-_IRLP_CGI_URL  = "http://stn8422.ip.irlp.net:8080/cgi-bin/irlpvcon/irlpvcon_get"
-_IRLP_REF_URL  = "http://85.8.149.218/Chan_Zero_Node_Numbers.html"
-_IRLP_AUTH     = _b64.b64encode(b"xe2mbe:Guadiana").decode()
-_IRLP_NODE     = "8422"
 _irlp_cache: dict = {"result": None, "ts": datetime.min}
 
-async def _fetch_irlp_cgi() -> dict:
-    """CGI del nodo 8422: estado en tiempo real de COS/PTT y conexión al reflector."""
+async def _fetch_irlp_cgi(cfg: dict) -> dict:
+    """CGI del nodo IRLP: estado en tiempo real de COS/PTT y conexión al reflector."""
+    cgi_url = f"http://{cfg['irlp_host']}:{cfg.get('irlp_port', '8080')}/cgi-bin/irlpvcon/irlpvcon_get"
+    auth    = _b64.b64encode(f"{cfg['irlp_user']}:{cfg['irlp_password']}".encode()).decode()
     try:
         async with httpx.AsyncClient(timeout=4.0) as client:
-            resp = await client.get(
-                _IRLP_CGI_URL,
-                headers={"Authorization": f"Basic {_IRLP_AUTH}"},
-            )
+            resp = await client.get(cgi_url, headers={"Authorization": f"Basic {auth}"})
             text = resp.text
         def _int(pattern):
             m = re.search(pattern, text)
@@ -125,27 +147,26 @@ async def _fetch_irlp_cgi() -> dict:
             return m.group(1) if m else ''
         p0 = _int(r'\bp0=(\d+)')
         p1 = _int(r'\bp1=(\d+)')
-        # ac='exp0077' cuando conectado, '' cuando NODE IDLE
-        # co NO es confiable: mantiene el valor de la última conexión al desconectarse
         ac = _str(r"\bac='([^']*)'") or _str(r'\bac="([^"]*)"')
-        on_air = bool(ac)
         return {
             "online": True,
-            "on_air": on_air,
-            "cos":    bool(p1 & 0x80),   # COS  = alguien transmitiendo al nodo
-            "ptt":    bool(p0 & 0x82),   # PTT  = nodo transmitiendo al reflector
+            "on_air": bool(ac),
+            "cos":    bool(p1 & 0x80),
+            "ptt":    bool(p0 & 0x82),
         }
     except Exception:
         return {"online": False, "on_air": False, "cos": False, "ptt": False}
 
-_HTML_TAG_RE    = re.compile(r'<[^>]+>')
-_IRLP_WARN_RE   = re.compile(r'\*\*.*?\*\*|sin latido|desconectado', re.IGNORECASE)
+_HTML_TAG_RE  = re.compile(r'<[^>]+>')
+_IRLP_WARN_RE = re.compile(r'\*\*.*?\*\*|sin latido|desconectado', re.IGNORECASE)
 
-async def _fetch_irlp_reflector() -> list:
-    """Lista de nodos conectados al reflector 0077 (se cachea 60 s aparte)."""
+_irlp_nodes_cache: dict = {"nodes": [], "ts": datetime.min}
+
+async def _fetch_irlp_reflector(cfg: dict) -> list:
+    """Lista de nodos conectados al reflector (se cachea 60 s aparte)."""
     try:
         async with httpx.AsyncClient(timeout=8.0) as client:
-            resp = await client.get(_IRLP_REF_URL)
+            resp = await client.get(cfg["irlp_ref_url"])
             html = resp.text
         node_re = re.compile(
             r'\d+\s+\w+ \d+ \d+:\d+\s+stn(\d+)\s+-.*?-\s+\d+\s+(\w+)\s+(.+?)(?:\s*\n|$)'
@@ -165,31 +186,33 @@ async def _fetch_irlp_reflector() -> list:
     except Exception:
         return []
 
-_irlp_nodes_cache: dict = {"nodes": [], "ts": datetime.min}
-
-async def _fetch_irlp_status() -> dict:
+async def _fetch_irlp_status(cfg: dict) -> dict:
     global _irlp_nodes_cache
     now = datetime.utcnow()
-    # Nodos del reflector: refrescar cada 60 s
     if (now - _irlp_nodes_cache["ts"]).total_seconds() > 60:
-        nodes = await _fetch_irlp_reflector()
+        nodes = await _fetch_irlp_reflector(cfg)
         _irlp_nodes_cache = {"nodes": nodes, "ts": now}
     nodes = _irlp_nodes_cache["nodes"]
-    # Estado CGI en tiempo real (on_air/COS/PTT) — co='...0077...' = conectado al reflector
-    cgi = await _fetch_irlp_cgi()
-    return {
-        **cgi,                   # on_air viene del CGI: '0077' in co, actualiza cada 5 s
-        "connections": len(nodes),
-        "nodes":       nodes,    # lista del reflector: se actualiza cada 60 s
-    }
+    cgi = await _fetch_irlp_cgi(cfg)
+
+    # on_air: si hay nodo boletín configurado, verificar si está en la lista del reflector;
+    # si no está configurado, usar el on_air del CGI (el nodo local está conectado al reflector)
+    boletin = cfg.get("irlp_boletin_node", "").strip()
+    if boletin:
+        on_air = any(n["node"] == boletin for n in nodes)
+    else:
+        on_air = cgi.get("on_air", False)
+
+    return {**cgi, "on_air": on_air, "connections": len(nodes), "nodes": nodes}
 
 @router.get("/irlp-status")
-async def irlp_status():
+async def irlp_status(db: Session = Depends(get_db)):
     global _irlp_cache
     now = datetime.utcnow()
     if _irlp_cache["result"] and (now - _irlp_cache["ts"]).total_seconds() < 5:
         return _irlp_cache["result"]
-    result = await _fetch_irlp_status()
+    cfg = _load_node_config(db)
+    result = await _fetch_irlp_status(cfg)
     _irlp_cache = {"result": result, "ts": now}
     return result
 

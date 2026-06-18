@@ -22,6 +22,7 @@ SMTP_KEY = "smtp"
 RECORDATORIO_KEY = "dias_reaparicion"
 SISTEMA_INFO_KEY = "sistema_info"
 EMAIL_BIENVENIDA_KEY = "email_bienvenida"
+NODE_CONFIG_KEY = "node_config"
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -175,4 +176,27 @@ def save_recordatorio(
     _=Depends(require_admin),
 ):
     _set_valor(db, RECORDATORIO_KEY, str(body.dias_reaparicion))
+    return body
+
+
+# ─── Configuración de nodos ASL / IRLP ───────────────────────────────────────
+
+@router.get("/node-config", response_model=schemas.NodeConfig)
+def get_node_config(db: Session = Depends(get_db), _=Depends(require_admin)):
+    raw = _get_valor(db, NODE_CONFIG_KEY)
+    if raw:
+        try:
+            return schemas.NodeConfig(**json.loads(raw))
+        except Exception:
+            pass
+    return schemas.NodeConfig()
+
+
+@router.put("/node-config", response_model=schemas.NodeConfig)
+def save_node_config(
+    body: schemas.NodeConfig,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    _set_valor(db, NODE_CONFIG_KEY, body.model_dump_json())
     return body

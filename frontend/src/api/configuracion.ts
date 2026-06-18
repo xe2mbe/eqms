@@ -24,6 +24,20 @@ export interface EmailBienvenidaConfig {
   cuerpo: string
 }
 
+export interface NodeConfig {
+  asl_hub_id: string
+  asl_host: string
+  asl_port: string
+  asl_boletin_node: string
+  irlp_reflector_id: string
+  irlp_ref_url: string
+  irlp_user: string
+  irlp_password: string
+  irlp_boletin_node: string
+  irlp_host: string
+  irlp_port: string
+}
+
 export const configuracionApi = {
   getSmtp: () => client.get<SmtpConfig>('/configuracion/smtp'),
   saveSmtp: (data: SmtpConfig) => client.put<SmtpConfig>('/configuracion/smtp', data),
@@ -38,4 +52,6 @@ export const configuracionApi = {
   getEmailBienvenida: () => client.get<EmailBienvenidaConfig>('/configuracion/email-bienvenida'),
   saveEmailBienvenida: (data: EmailBienvenidaConfig) =>
     client.put<EmailBienvenidaConfig>('/configuracion/email-bienvenida', data),
+  getNodeConfig: () => client.get<NodeConfig>('/configuracion/node-config'),
+  saveNodeConfig: (data: NodeConfig) => client.put<NodeConfig>('/configuracion/node-config', data),
 }

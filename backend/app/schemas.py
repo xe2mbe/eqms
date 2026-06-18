@@ -401,6 +401,21 @@ class EmailBienvenidaConfig(BaseModel):
     asunto: str = DEFAULT_EMAIL_BIENVENIDA_ASUNTO
     cuerpo: str = DEFAULT_EMAIL_BIENVENIDA_CUERPO
 
+class NodeConfig(BaseModel):
+    # AllStarLink / AllScan
+    asl_hub_id: str = "299081"
+    asl_host: str = "stn8422.ip.irlp.net"
+    asl_port: str = "8081"
+    asl_boletin_node: str = "299080"
+    # IRLP
+    irlp_reflector_id: str = "0077"
+    irlp_ref_url: str = "http://85.8.149.218/Chan_Zero_Node_Numbers.html"
+    irlp_user: str = ""
+    irlp_password: str = ""
+    irlp_boletin_node: str = ""
+    irlp_host: str = "stn8422.ip.irlp.net"
+    irlp_port: str = "8080"
+
 class ReenviarCorreoRequest(BaseModel):
     password_inicial: str = ""
 
