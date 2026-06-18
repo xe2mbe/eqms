@@ -793,19 +793,29 @@ export default function PublicFMREPage() {
           onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(0.92)')}
           onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
         >
-          <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontWeight: 800, color: FMRE_DARK, fontSize: 14 }}>
-                <WifiOutlined style={{ marginRight: 8 }} />
-                Último evento RF
+          <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontWeight: 800, color: FMRE_DARK, fontSize: 14 }}>
+                  <WifiOutlined style={{ marginRight: 8 }} />
+                  Último evento RF
+                </div>
+                <div style={{ color: FMRE_DARK, fontSize: 13, marginTop: 2, opacity: 0.8 }}>
+                  <strong>{stats.ultimo_evento_rf.tipo} #{getBoletinNumForDate(stats.ultimo_evento_rf.ultima)}</strong>
+                  {' · '}
+                  {dayjs(stats.ultimo_evento_rf.ultima).format('D [de] MMMM [de] YYYY')}
+                </div>
               </div>
-              <div style={{ color: FMRE_DARK, fontSize: 13, marginTop: 2, opacity: 0.8 }}>
-                <strong>{stats.ultimo_evento_rf.tipo} #{getBoletinNumForDate(stats.ultimo_evento_rf.ultima)}</strong>
-                {' · '}
-                {dayjs(stats.ultimo_evento_rf.ultima).format('D [de] MMMM [de] YYYY')}
+              <div style={{
+                border: `2px solid ${FMRE_DARK}`, borderRadius: 8,
+                padding: '7px 20px', fontWeight: 800, color: FMRE_DARK,
+                fontSize: 13, display: 'flex', alignItems: 'center', gap: 6,
+                whiteSpace: 'nowrap', background: 'rgba(0,0,0,0.08)',
+              }}>
+                Ver detalles <RightOutlined />
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
               <div style={{ background: 'rgba(0,0,0,0.12)', borderRadius: 10, padding: '6px 20px', textAlign: 'center', minWidth: 90 }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: FMRE_DARK, lineHeight: 1.2 }}>
                   {stats.ultimo_evento_rf.total_qsos.toLocaleString()}
@@ -819,14 +829,6 @@ export default function PublicFMREPage() {
                 <div style={{ fontSize: 10, fontWeight: 700, color: FMRE_DARK, opacity: 0.7, letterSpacing: 1, textTransform: 'uppercase' }}>Estaciones</div>
               </div>
             </div>
-            <div style={{
-              border: `2px solid ${FMRE_DARK}`, borderRadius: 8,
-              padding: '7px 20px', fontWeight: 800, color: FMRE_DARK,
-              fontSize: 13, display: 'flex', alignItems: 'center', gap: 6,
-              whiteSpace: 'nowrap', background: 'rgba(0,0,0,0.08)',
-            }}>
-              Ver detalles <RightOutlined />
-            </div>
           </div>
         </div>
       )}
@@ -839,19 +841,29 @@ export default function PublicFMREPage() {
           onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(0.88)')}
           onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
         >
-          <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontWeight: 800, color: 'white', fontSize: 14 }}>
-                <GlobalOutlined style={{ marginRight: 8 }} />
-                Último evento RS
+          <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontWeight: 800, color: 'white', fontSize: 14 }}>
+                  <GlobalOutlined style={{ marginRight: 8 }} />
+                  Último evento RS
+                </div>
+                <div style={{ color: 'white', fontSize: 13, marginTop: 2, opacity: 0.85 }}>
+                  <strong>{stats.ultimo_evento_rs.tipo} #{getBoletinNumForDate(stats.ultimo_evento_rs.ultima)}</strong>
+                  {' · '}
+                  {dayjs(stats.ultimo_evento_rs.ultima).format('D [de] MMMM [de] YYYY')}
+                </div>
               </div>
-              <div style={{ color: 'white', fontSize: 13, marginTop: 2, opacity: 0.85 }}>
-                <strong>{stats.ultimo_evento_rs.tipo} #{getBoletinNumForDate(stats.ultimo_evento_rs.ultima)}</strong>
-                {' · '}
-                {dayjs(stats.ultimo_evento_rs.ultima).format('D [de] MMMM [de] YYYY')}
+              <div style={{
+                border: '2px solid rgba(255,255,255,0.85)', borderRadius: 8,
+                padding: '7px 20px', fontWeight: 800, color: 'white',
+                fontSize: 13, display: 'flex', alignItems: 'center', gap: 6,
+                whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.15)',
+              }}>
+                Ver detalles <RightOutlined />
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
               <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 10, padding: '6px 20px', textAlign: 'center', minWidth: 90 }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: 'white', lineHeight: 1.2 }}>
                   {stats.ultimo_evento_rs.total_qsos.toLocaleString()}
@@ -864,14 +876,6 @@ export default function PublicFMREPage() {
                 </div>
                 <div style={{ fontSize: 10, fontWeight: 700, color: 'white', opacity: 0.8, letterSpacing: 1, textTransform: 'uppercase' }}>Estaciones</div>
               </div>
-            </div>
-            <div style={{
-              border: '2px solid rgba(255,255,255,0.85)', borderRadius: 8,
-              padding: '7px 20px', fontWeight: 800, color: 'white',
-              fontSize: 13, display: 'flex', alignItems: 'center', gap: 6,
-              whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.15)',
-            }}>
-              Ver detalles <RightOutlined />
             </div>
           </div>
         </div>
