@@ -21,6 +21,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useColPrefs } from '@/components/common/ColSettings'
 import type { Evento, Sistema, Estacion, Estado, Zona, Reporte } from '@/types'
 import { useResizableColumns } from '@/hooks/useResizableColumns'
+import SystemStatusWidget from '@/components/common/SystemStatusWidget'
 
 const { Title, Text } = Typography
 const { Panel } = Collapse
@@ -1289,6 +1290,9 @@ export default function LibretaPage() {
                 onMouseDown={e => e.preventDefault()}>
                 Agregar
               </Button>
+            </Col>
+            <Col>
+              <SystemStatusWidget />
             </Col>
             <Col flex="auto" style={{ textAlign: 'right' }}>
               <Space>
