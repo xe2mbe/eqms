@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 
-type NodeStatus = { online: boolean; cos_keyed: boolean; tx_keyed: boolean }
+type RemoteNode = { node: string; name: string; keyed: boolean }
+type NodeStatus = { online: boolean; cos_keyed: boolean; tx_keyed: boolean; nodes: RemoteNode[] }
 type IrlpStatus = { online: boolean; on_air: boolean; cos: boolean; ptt: boolean }
 type DotState = 'loading' | 'off' | 'idle' | 'rx' | 'tx'
 
@@ -26,6 +27,11 @@ function Dot({ state }: { state: DotState }) {
   )
 }
 
+const pillStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 5,
+  background: '#f5f5f5', border: '1px solid #e8e8e8', borderRadius: 6, padding: '3px 9px',
+}
+
 export default function SystemStatusWidget() {
   const [asl, setAsl] = useState<NodeStatus | null>(null)
   const [irlp, setIrlp] = useState<IrlpStatus | null>(null)
@@ -43,15 +49,22 @@ export default function SystemStatusWidget() {
   const aslState: DotState = !asl ? 'loading' : !asl.online ? 'off' : asl.tx_keyed ? 'tx' : asl.cos_keyed ? 'rx' : 'idle'
   const irlpState: DotState = !irlp ? 'loading' : !irlp.online ? 'off' : irlp.ptt ? 'tx' : irlp.cos ? 'rx' : 'idle'
 
-  const pill = (bg: string) => ({ display: 'flex', alignItems: 'center', gap: 5, background: bg, border: '1px solid #e8e8e8', borderRadius: 6, padding: '3px 9px' } as React.CSSProperties)
+  const activeNode = asl?.nodes.find(n => n.keyed)
 
   return (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-      <div style={pill('#f5f5f5')}>
-        <span style={{ fontSize: 10, fontWeight: 700, color: '#389e0d', lineHeight: 1 }}>ASL</span>
-        <Dot state={aslState} />
+    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+        <div style={pillStyle}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#389e0d', lineHeight: 1 }}>ASL</span>
+          <Dot state={aslState} />
+        </div>
+        {activeNode && (
+          <span style={{ fontSize: 9, color: '#595959', paddingLeft: 4, whiteSpace: 'nowrap', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            nodo {activeNode.node}{activeNode.name && activeNode.name !== '—' ? ` · ${activeNode.name}` : ''}
+          </span>
+        )}
       </div>
-      <div style={pill('#f5f5f5')}>
+      <div style={pillStyle}>
         <span style={{ fontSize: 10, fontWeight: 700, color: '#0891b2', lineHeight: 1 }}>IRLP</span>
         <Dot state={irlpState} />
       </div>
