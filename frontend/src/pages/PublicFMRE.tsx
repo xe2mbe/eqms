@@ -166,7 +166,7 @@ export default function PublicFMREPage() {
   const voipStatusRef = useRef<HTMLDivElement>(null)
   const [voipStatusVisible, setVoipStatusVisible] = useState(false)
   const [nodeStatus, setNodeStatus] = useState<{
-    online: boolean; on_air: boolean; keyed: boolean; connections: number;
+    online: boolean; on_air: boolean; cos_keyed: boolean; tx_keyed: boolean; connections: number;
     nodes: { node: string; name: string; url: string | null; keyed: boolean; direction: string }[]
   } | null>(null)
   const [irlpStatus, setIrlpStatus] = useState<{
@@ -641,9 +641,11 @@ export default function PublicFMREPage() {
                     : !nodeStatus.on_air
                       ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● OFF AIR</span>
                       : <><span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● ON AIR</span>
-                        {nodeStatus.keyed
+                        {nodeStatus.tx_keyed
                           ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                          : <span style={{ background: '#595959', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● IDLE</span>
+                          : nodeStatus.cos_keyed
+                            ? <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                            : <span style={{ background: '#595959', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● IDLE</span>
                         }</>
                   }
                 </div>
@@ -1102,9 +1104,11 @@ export default function PublicFMREPage() {
                         : !nodeStatus.on_air
                           ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● OFF AIR</span>
                           : <><span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● ON AIR</span>
-                            {nodeStatus.keyed
+                            {nodeStatus.tx_keyed
                               ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                              : <span style={{ background: '#595959', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● IDLE</span>
+                              : nodeStatus.cos_keyed
+                                ? <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
+                                : <span style={{ background: '#595959', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● IDLE</span>
                             }</>
                       }
                     </div>

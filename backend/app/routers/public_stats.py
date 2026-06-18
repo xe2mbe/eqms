@@ -28,11 +28,12 @@ def _parse_node_info(info_html: str | None):
 
 async def _fetch_node_status() -> dict:
     """
-    Lee el SSE de AllScan del hub 299081.
-    Devuelve {online, on_air, keyed, connections, nodes[]}.
-      - on_air:   el nodo 299080 está conectado al hub
-      - keyed:    299080 está transmitiendo activamente
-      - nodes:    lista de nodos conectados con nombre, URL y estado
+    Lee el SSE de AllScan del hub 299081 (evento 'nodes').
+    Devuelve {online, on_air, cos_keyed, tx_keyed, connections, nodes[]}.
+      - on_air:     el nodo 299080 está conectado al hub
+      - cos_keyed:  alguien está transmitiendo al hub (cos del nodo local, node=1)
+      - tx_keyed:   el hub está retransmitiendo (tx del nodo local, node=1)
+      - nodes:      lista de nodos Established con nombre, URL y estado keyed
     """
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
@@ -52,14 +53,16 @@ async def _fetch_node_status() -> dict:
                     if remote_nodes is None:
                         continue
 
-                    boletin = next(
-                        (rn for rn in remote_nodes
-                         if str(rn.get("node", "")) == _BOLETIN_NODE
-                         and rn.get("link") == "Established"),
-                        None,
+                    # node=1 es el hub local: cos_keyed/tx_keyed indican actividad
+                    local = next((rn for rn in remote_nodes if str(rn.get("node", "")) == "1"), None)
+                    cos_keyed = bool(local and local.get("cos_keyed"))
+                    tx_keyed  = bool(local and local.get("tx_keyed"))
+
+                    on_air = any(
+                        str(rn.get("node", "")) == _BOLETIN_NODE
+                        and rn.get("link") == "Established"
+                        for rn in remote_nodes
                     )
-                    on_air = boletin is not None
-                    keyed  = on_air and str(boletin.get("keyed", "no")).lower() == "yes"
 
                     # Lista de nodos Established (excluye node=1 local)
                     node_list = []
@@ -78,13 +81,14 @@ async def _fetch_node_status() -> dict:
                     return {
                         "online":      True,
                         "on_air":      on_air,
-                        "keyed":       keyed,
+                        "cos_keyed":   cos_keyed,
+                        "tx_keyed":    tx_keyed,
                         "connections": len(node_list),
                         "nodes":       node_list,
                     }
     except Exception:
         pass
-    return {"online": False, "on_air": False, "keyed": False, "connections": 0, "nodes": []}
+    return {"online": False, "on_air": False, "cos_keyed": False, "tx_keyed": False, "connections": 0, "nodes": []}
 
 @router.get("/node-status")
 async def node_status():
