@@ -438,6 +438,7 @@ def ultimo_evento_participantes(db: Session = Depends(get_db)):
         SELECT e.tipo, DATE_TRUNC('day', MAX(r.fecha_reporte))::date AS fecha
         FROM reportes r JOIN eventos e ON e.id = r.evento_id
         WHERE r.fecha_reporte >= NOW() - INTERVAL '30 days'
+          AND e.tipo ILIKE '%dominical%'
         GROUP BY e.tipo ORDER BY fecha DESC LIMIT 1
     """)).first()
     if not ultimo:
@@ -482,6 +483,7 @@ def ultimo_evento_rs_participantes(db: Session = Depends(get_db)):
         SELECT e.tipo, DATE_TRUNC('day', MAX(r.fecha_reporte))::date AS fecha
         FROM reportes_rs r JOIN eventos e ON e.id = r.evento_id
         WHERE r.fecha_reporte >= NOW() - INTERVAL '30 days'
+          AND e.tipo ILIKE '%dominical%'
         GROUP BY e.tipo ORDER BY fecha DESC LIMIT 1
     """)).first()
     if not ultimo:
