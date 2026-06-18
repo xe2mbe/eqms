@@ -793,7 +793,7 @@ export default function PublicFMREPage() {
           onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(0.92)')}
           onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
         >
-          <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ maxWidth: 1100, margin: '0 auto', textAlign: 'center' }}>
             <div style={{ fontWeight: 800, color: FMRE_DARK, fontSize: 14 }}>
               <WifiOutlined style={{ marginRight: 8 }} />
               Último evento RF
@@ -803,7 +803,7 @@ export default function PublicFMREPage() {
               {' · '}
               {dayjs(stats.ultimo_evento_rf.ultima).format('D [de] MMMM [de] YYYY')}
             </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+            <div style={{ display: 'flex', gap: 10, marginTop: 10, justifyContent: 'center' }}>
               <div style={{ background: 'rgba(0,0,0,0.12)', borderRadius: 10, padding: '6px 20px', textAlign: 'center', minWidth: 90 }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: FMRE_DARK, lineHeight: 1.2 }}>
                   {stats.ultimo_evento_rf.total_qsos.toLocaleString()}
@@ -839,7 +839,7 @@ export default function PublicFMREPage() {
           onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(0.88)')}
           onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
         >
-          <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ maxWidth: 1100, margin: '0 auto', textAlign: 'center' }}>
             <div style={{ fontWeight: 800, color: 'white', fontSize: 14 }}>
               <GlobalOutlined style={{ marginRight: 8 }} />
               Último evento RS
@@ -849,7 +849,7 @@ export default function PublicFMREPage() {
               {' · '}
               {dayjs(stats.ultimo_evento_rs.ultima).format('D [de] MMMM [de] YYYY')}
             </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+            <div style={{ display: 'flex', gap: 10, marginTop: 10, justifyContent: 'center' }}>
               <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 10, padding: '6px 20px', textAlign: 'center', minWidth: 90 }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: 'white', lineHeight: 1.2 }}>
                   {stats.ultimo_evento_rs.total_qsos.toLocaleString()}
