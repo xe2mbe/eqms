@@ -130,6 +130,7 @@ async def _fetch_irlp_cgi() -> dict:
             "on_air": on_air,
             "cos":    bool(p1 & 0x80),   # COS  = alguien transmitiendo al nodo
             "ptt":    bool(p0 & 0x82),   # PTT  = nodo transmitiendo al reflector
+            "_debug": {"p0": p0, "p1": p1, "ac": ac},
         }
     except Exception:
         return {"online": False, "on_air": False, "cos": False, "ptt": False}
