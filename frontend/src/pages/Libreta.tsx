@@ -353,22 +353,25 @@ export default function LibretaPage() {
           setDmrDbg('EIO:open — esperando 40...')
           return
         }
-        // socket.io namespace connect — suscribir con todos los formatos conocidos
+        // socket.io namespace connect — suscribir con todos los formatos conocidos + namespace
         if (raw === '40') {
           tgs.forEach(tg => {
             ws.send(`42["subscribe","TGD_${tg}"]`)
             ws.send(`42["subscribe","dst_${tg}"]`)
             ws.send(`42["subscribe","${tg}"]`)
             ws.send(`42["subscribe",${Number(tg)}]`)
+            // también intentar namespace específico por TG
+            ws.send(`40/TGD_${tg},`)
           })
-          setDmrDbg(`40: suscritos TGs ${tgs.join(',')} × 4 formatos`)
+          setDmrDbg(`40: suscritos ${tgs.join(',')} — esperando EVT...`)
           return
         }
-        // Cualquier paquete 42 (evento socket.io)
-        if (raw.startsWith('42')) {
+        // Cualquier paquete — mostrar en debug
+        if (raw.startsWith('42') || raw.startsWith('44')) {
           try {
-            const parsed = JSON.parse(raw.slice(2))
-            const [eventName, p] = parsed
+            const body = raw.startsWith('44') ? raw.slice(2) : raw.slice(2)
+            const parsed = JSON.parse(body)
+            const [eventName, p] = Array.isArray(parsed) ? parsed : [parsed, null]
             setDmrDbg(`EVT[${eventName}] ${JSON.stringify(p).slice(0, 100)}`)
             if (eventName === 'mqtt' && p) {
               if (p.Stop == 0) {
@@ -378,7 +381,7 @@ export default function LibretaPage() {
               }
             }
           } catch (_) {
-            setDmrDbg(`RAW42: ${raw.slice(0, 120)}`)
+            setDmrDbg(`RAW: ${raw.slice(0, 120)}`)
           }
           return
         }
