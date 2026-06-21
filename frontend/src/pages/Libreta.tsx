@@ -174,7 +174,8 @@ export default function LibretaPage() {
   const [irlpStatus, setIrlpStatus] = useState<{ online: boolean; on_air: boolean; cos: boolean; ptt: boolean; connections: number; nodes: { node: string; name: string; url?: string; warning: boolean }[] } | null>(null)
   const [nodeCfg, setNodeCfg] = useState({ asl_hub_id: '', asl_boletin_node: '', irlp_reflector_id: '', irlp_boletin_node: '', bm_tgs: '33450,334', bm_api_key: '' })
   const [dmrStatus, setDmrStatus] = useState<{ connected: boolean; active: boolean; callsign: string; tg: number; tgName: string }>({ connected: false, active: false, callsign: '', tg: 0, tgName: '' })
-  const [dmrDbg, setDmrDbg] = useState<string>('')
+  const [dmrWsDbg, setDmrWsDbg] = useState<string>('')
+  const [dmrRestDbg, setDmrRestDbg] = useState<string>('')
   const dmrSocketRef = useRef<any>(null)
 
   const [inputRst, setInputRst] = useState('59')
@@ -367,11 +368,11 @@ export default function LibretaPage() {
             ws.send(`42["subscribe","TGD_${tg}"]`)
             ws.send(`42["subscribe",${tg}]`)
           })
-          setDmrDbg(`WS OK${apiKey ? '+auth' : ''} — TGD: ${tgs.join(',')}`)
+          setDmrWsDbg(`OK${apiKey ? '+auth' : ''} TGD:${tgs.join(',')}`)
           return
         }
         if (raw.startsWith('44')) {
-          setDmrDbg(`WS err: ${raw.slice(0, 80)}`)
+          setDmrWsDbg(`err: ${raw.slice(0, 80)}`)
           return
         }
         if (raw.startsWith('42')) {
@@ -380,7 +381,7 @@ export default function LibretaPage() {
           try {
             const parsed = JSON.parse(payload)
             const [eventName, p] = Array.isArray(parsed) ? parsed : [String(parsed), null]
-            setDmrDbg(`EVT[${eventName}] ${JSON.stringify(p).slice(0, 100)}`)
+            setDmrWsDbg(`EVT[${eventName}] ${JSON.stringify(p).slice(0, 100)}`)
             if (eventName === 'mqtt' && p) {
               if (p.Stop == 0) {
                 setDmrStatus(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
@@ -388,7 +389,7 @@ export default function LibretaPage() {
                 setDmrStatus(d => ({ ...d, active: false }))
               }
             }
-          } catch (_) { setDmrDbg(`raw: ${raw.slice(0, 120)}`) }
+          } catch (_) { setDmrWsDbg(`raw: ${raw.slice(0, 120)}`) }
           return
         }
       }
@@ -414,15 +415,15 @@ export default function LibretaPage() {
         const { data } = await client.get('/libreta/dmr-lastheard')
         if (data.active) {
           setDmrStatus(d => ({ ...d, active: true, callsign: data.callsign, tg: data.tg, tgName: data.tg_name }))
-          setDmrDbg(`TX: ${data.callsign} · TG ${data.tg}`)
+          setDmrRestDbg(`TX: ${data.callsign} · TG ${data.tg}`)
         } else if (data.error === 'no_api_key') {
-          setDmrDbg('sin API key')
+          setDmrRestDbg('sin API key')
         } else {
           setDmrStatus(d => ({ ...d, active: false, callsign: '', tg: 0, tgName: '' }))
-          setDmrDbg(data.dbg ? `IDLE [${data.dbg}]` : 'IDLE')
+          setDmrRestDbg(data.dbg ?? 'IDLE')
         }
       } catch (err: unknown) {
-        setDmrDbg(`poll err: ${String(err).slice(0, 60)}`)
+        setDmrRestDbg(`err: ${String(err).slice(0, 60)}`)
       }
     }
     poll()
@@ -1557,9 +1558,10 @@ export default function LibretaPage() {
                             <span style={{ color: '#8c8c8c' }}>TG {dmrStatus.tg}{dmrStatus.tgName ? ` · ${dmrStatus.tgName}` : ''}</span>
                           </div>
                         )}
-                        {dmrDbg && (
+                        {(dmrWsDbg || dmrRestDbg) && (
                           <div style={{ marginTop: 6, fontSize: 10, color: '#888', fontFamily: 'monospace', wordBreak: 'break-all', borderTop: '1px dashed #e9d5ff', paddingTop: 4 }}>
-                            {dmrDbg}
+                            {dmrWsDbg && <div>WS: {dmrWsDbg}</div>}
+                            {dmrRestDbg && <div>REST: {dmrRestDbg}</div>}
                           </div>
                         )}
                       </div>

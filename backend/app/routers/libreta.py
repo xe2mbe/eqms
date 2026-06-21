@@ -160,47 +160,35 @@ async def dmr_lastheard(
 
     headers = {"Authorization": f"Bearer {cfg.bm_api_key}"}
 
-    tg_ints = {int(t) for t in tgs}
     dbg_parts: list[str] = []
 
-    # Endpoints a intentar en orden
-    candidate_urls = [
-        f"https://api.brandmeister.network/v2/lastheard/?limit=25",                  # global — filtramos por TG localmente
-        f"https://api.brandmeister.network/v2/talkgroup/{tgs[0]}/lastheard/?limit=5" if tgs else None,
-    ]
-
     async with httpx.AsyncClient(timeout=6.0) as http:
-        for url in candidate_urls:
-            if not url:
-                continue
+        for tg in tgs:
+            url = f"https://api.brandmeister.network/v2/talkgroup/{tg}/"
             try:
                 r = await http.get(url, headers=headers)
-                short = url.split("brandmeister.network")[1][:50]
                 if r.status_code == 200:
                     data = r.json()
-                    logger.info(f"BM REST 200 {short}: {str(data)[:400]}")
-                    items = data if isinstance(data, list) else data.get("items", [])
-                    if not items:
-                        dbg_parts.append(f"{short}:200-empty")
-                        continue
-                    # Primer ítem: loguear todas las keys disponibles (solo 1 vez)
-                    if not dbg_parts:
-                        dbg_parts.append(f"keys={list(items[0].keys())[:8]}")
-                    for entry in items:
-                        dest_id = (entry.get("DestinationID") or entry.get("ToTalkgroupID") or 0)
-                        if tg_ints and dest_id not in tg_ints:
-                            continue
-                        stop_val = entry.get("Stop")
-                        if stop_val == 0 or stop_val is None:
-                            src_call = (entry.get("SourceCall") or entry.get("Callsign") or "")
-                            dest_name = (entry.get("DestinationName") or entry.get("ToTalkgroupName") or "")
-                            return {"active": True, "callsign": src_call, "tg": dest_id, "tg_name": dest_name}
-                    dbg_parts.append(f"{short}:200-idle")
-                    break  # endpoint encontrado, sin TX activa
+                    logger.info(f"BM TG {tg}: {str(data)[:500]}")
+                    if isinstance(data, dict):
+                        keys = list(data.keys())
+                        dbg_parts.append(f"TG{tg}:keys={keys}")
+                        # Buscar campos de actividad conocidos
+                        src = (data.get("SourceCall") or data.get("CurrentCall")
+                               or data.get("CurrentTX") or data.get("Active"))
+                        if src:
+                            return {
+                                "active": True,
+                                "callsign": str(src),
+                                "tg": int(tg),
+                                "tg_name": data.get("Name", ""),
+                            }
+                    else:
+                        dbg_parts.append(f"TG{tg}:type={type(data).__name__}")
                 else:
-                    dbg_parts.append(f"{short}:{r.status_code}")
+                    dbg_parts.append(f"TG{tg}:{r.status_code}")
             except Exception as exc:
-                logger.warning(f"BM REST {url}: {exc}")
-                dbg_parts.append(f"err:{exc!s:.40}")
+                logger.warning(f"BM REST TG {tg}: {exc}")
+                dbg_parts.append(f"TG{tg}:err")
 
-    return {"active": False, "callsign": "", "tg": 0, "tg_name": "", "dbg": " | ".join(str(x) for x in dbg_parts)}
+    return {"active": False, "callsign": "", "tg": 0, "tg_name": "", "dbg": " | ".join(dbg_parts)}
