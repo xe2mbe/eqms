@@ -7,6 +7,7 @@ import {
 import ReactECharts from 'echarts-for-react'
 import * as echarts from 'echarts'
 import axios from 'axios'
+import { io, Socket } from 'socket.io-client'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
 
@@ -18,6 +19,8 @@ const FMRE_BLUE   = '#1A569E'
 const FMRE_DARK   = '#0D2E5F'
 const FMRE_LIGHT  = '#E8F0FA'
 const FMRE_GOLD   = '#D4A017'
+
+const BM_TGS = [33450, 334]
 
 const SISTEMA_COLORS: Record<string, string> = {
   HF: '#1A569E', ASL: '#52c41a', IRLP: '#fa8c16',
@@ -173,6 +176,10 @@ export default function PublicFMREPage() {
     online: boolean; on_air: boolean; cos: boolean; ptt: boolean; connections: number;
     nodes: { node: string; name: string; url: string; warning?: boolean }[]
   } | null>(null)
+  const [dmrStatus, setDmrStatus] = useState<{
+    connected: boolean; active: boolean; callsign: string; tg: number; tgName: string;
+  }>({ connected: false, active: false, callsign: '', tg: 0, tgName: '' })
+  const dmrSocketRef = useRef<Socket | null>(null)
 
   // Búsqueda por indicativo
   const [busqueda, setBusqueda] = useState('')
@@ -358,6 +365,30 @@ export default function PublicFMREPage() {
     fetchIrlp()
     const t = setInterval(fetchIrlp, 5_000)
     return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    const socket = io('https://api.brandmeister.network', {
+      path: '/lh/socket.io',
+      transports: ['websocket'],
+      reconnectionDelay: 5000,
+    })
+    socket.on('connect', () => {
+      setDmrStatus(d => ({ ...d, connected: true }))
+      BM_TGS.forEach(tg => socket.emit('subscribe', `dst_${tg}`))
+    })
+    socket.on('disconnect', () => {
+      setDmrStatus(d => ({ ...d, connected: false, active: false }))
+    })
+    socket.on('mqtt', (p: { DestinationID: number; DestinationName: string; SourceCall: string; Stop: number }) => {
+      if (p.Stop === 0) {
+        setDmrStatus(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
+      } else {
+        setDmrStatus(d => ({ ...d, active: false }))
+      }
+    })
+    dmrSocketRef.current = socket
+    return () => { socket.disconnect() }
   }, [])
 
   const tendenciaOption = !stats ? {} : (() => {
@@ -743,6 +774,36 @@ export default function PublicFMREPage() {
                     </div>
                   ))
                 }
+              </div>
+            </div>
+
+            {/* Barra de estado DMR */}
+            <div style={{ marginTop: 10, marginBottom: 4 }}>
+              <span style={{ color: '#a78bfa', fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>RED DMR — BRANDMEISTER</span>
+            </div>
+            <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: 10, padding: '10px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
+                    background: dmrStatus.connected ? '#7c3aed' : '#555',
+                    boxShadow: dmrStatus.connected ? '0 0 0 3px rgba(124,58,237,0.25)' : 'none',
+                    animation: dmrStatus.connected ? 'pulse 2s infinite' : 'none',
+                  }} />
+                  <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>TG FMRE 33450 · TG México 334</span>
+                </div>
+                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {!dmrStatus.connected
+                    ? <span style={{ color: '#888', fontSize: 12 }}>Conectando…</span>
+                    : dmrStatus.active
+                      ? <>
+                          <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
+                          <span style={{ color: '#a78bfa', fontSize: 12, fontWeight: 700 }}>{dmrStatus.callsign}</span>
+                          <span style={{ color: '#8ab4e0', fontSize: 11 }}>TG {dmrStatus.tg}{dmrStatus.tgName ? ` · ${dmrStatus.tgName}` : ''}</span>
+                        </>
+                      : <span style={{ background: '#595959', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● IDLE</span>
+                  }
+                </div>
               </div>
             </div>
             </>}
@@ -1202,6 +1263,36 @@ export default function PublicFMREPage() {
                         </div>
                       ))
                     }
+                  </div>
+                </div>
+              </div>
+
+              {/* DMR / Brandmeister */}
+              <div>
+                <div style={{ color: '#a78bfa', fontSize: 10, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>RED DMR — BRANDMEISTER</div>
+                <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: 10, padding: '10px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
+                        background: dmrStatus.connected ? '#7c3aed' : '#555',
+                        boxShadow: dmrStatus.connected ? '0 0 0 3px rgba(124,58,237,0.25)' : 'none',
+                        animation: dmrStatus.connected ? 'pulse 2s infinite' : 'none',
+                      }} />
+                      <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>TG FMRE 33450 · TG México 334</span>
+                    </div>
+                    <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {!dmrStatus.connected
+                        ? <span style={{ color: '#888', fontSize: 12 }}>Conectando…</span>
+                        : dmrStatus.active
+                          ? <>
+                              <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
+                              <span style={{ color: '#a78bfa', fontSize: 12, fontWeight: 700 }}>{dmrStatus.callsign}</span>
+                              <span style={{ color: '#8ab4e0', fontSize: 11 }}>TG {dmrStatus.tg}{dmrStatus.tgName ? ` · ${dmrStatus.tgName}` : ''}</span>
+                            </>
+                          : <span style={{ background: '#595959', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● IDLE</span>
+                      }
+                    </div>
                   </div>
                 </div>
               </div>
