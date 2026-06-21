@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
 import axios from 'axios'
-import { io, Socket } from 'socket.io-client'
 
 // ── tipos ─────────────────────────────────────────────────────────────────────
 type RemoteNode = { node: string; name: string; keyed: boolean }
@@ -56,7 +55,7 @@ export default function SystemStatusWidget() {
   const [dmr, setDmr]   = useState<DmrState>({
     connected: false, active: false, callsign: '', tg: 0, tgName: '',
   })
-  const socketRef = useRef<Socket | null>(null)
+  const socketRef = useRef<WebSocket | null>(null)
 
   // ── AllStar + IRLP poll ───────────────────────────────────────────────────
   useEffect(() => {
@@ -69,37 +68,55 @@ export default function SystemStatusWidget() {
     return () => clearInterval(t)
   }, [])
 
-  // ── Brandmeister Socket.IO — TGs desde configuración ─────────────────────
+  // ── WebSocket nativo DMR / Brandmeister (EIO=3) ──────────────────────────
   useEffect(() => {
+    let tgs: string[] = ['33450', '334']
     axios.get('/api/public/node-config').then(r => {
       const raw: string = r.data?.bm_tgs ?? '33450,334'
-      const tgs = raw.split(',').map(s => s.trim()).filter(Boolean)
-
-      const socket = io('https://api.brandmeister.network', {
-        path: '/lh/socket.io',
-        transports: ['websocket'],
-        reconnectionDelay: 5000,
-      })
-
-      socket.on('connect', () => {
-        setDmr(d => ({ ...d, connected: true }))
-        tgs.forEach(tg => socket.emit('subscribe', `TGD_${tg}`))
-      })
-      socket.on('disconnect', () => {
-        setDmr(d => ({ ...d, connected: false, active: false }))
-      })
-      socket.on('mqtt', (p: { DestinationID: number; DestinationName: string; SourceCall: string; Stop: number }) => {
-        if (p.Stop == 0) {
-          setDmr(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
-        } else {
-          setDmr(d => ({ ...d, active: false }))
-        }
-      })
-
-      socketRef.current = socket
+      tgs = raw.split(',').map(s => s.trim()).filter(Boolean)
     }).catch(() => {})
 
-    return () => { socketRef.current?.disconnect() }
+    const connect = () => {
+      const ws = new WebSocket('wss://api.brandmeister.network/lh/socket.io/?EIO=3&transport=websocket')
+      socketRef.current = ws
+
+      ws.onmessage = (e: MessageEvent) => {
+        const raw = String(e.data)
+        if (raw === '2') { ws.send('3'); return }
+        if (raw.startsWith('0')) {
+          setDmr(d => ({ ...d, connected: true }))
+          tgs.forEach(tg => ws.send(`42["subscribe","TGD_${tg}"]`))
+          return
+        }
+        if (raw === '40') {
+          tgs.forEach(tg => ws.send(`42["subscribe","TGD_${tg}"]`))
+          return
+        }
+        if (raw.startsWith('42')) {
+          try {
+            const [event, p] = JSON.parse(raw.slice(2))
+            if (event === 'mqtt' && p) {
+              if (p.Stop == 0) {
+                setDmr(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
+              } else {
+                setDmr(d => ({ ...d, active: false }))
+              }
+            }
+          } catch (_) {}
+        }
+      }
+
+      ws.onclose = () => {
+        setDmr(d => ({ ...d, connected: false, active: false }))
+        if (socketRef.current === ws) setTimeout(connect, 5000)
+      }
+    }
+
+    connect()
+    return () => {
+      const ws = socketRef.current
+      if (ws) { socketRef.current = null; ws.close() }
+    }
   }, [])
 
   // ── estados derivados ─────────────────────────────────────────────────────

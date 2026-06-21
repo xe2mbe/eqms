@@ -24,7 +24,6 @@ import { useColPrefs } from '@/components/common/ColSettings'
 import type { Evento, Sistema, Estacion, Estado, Zona, Reporte } from '@/types'
 import { useResizableColumns } from '@/hooks/useResizableColumns'
 import SystemStatusWidget from '@/components/common/SystemStatusWidget'
-import { io as socketIo } from 'socket.io-client'
 
 const { Title, Text } = Typography
 const { Panel } = Collapse
@@ -330,46 +329,62 @@ export default function LibretaPage() {
     return () => clearInterval(t)
   }, [roipMonitorando])
 
-  // ── Socket.IO DMR / Brandmeister ─────────────────────────────────────────
+  // ── WebSocket nativo DMR / Brandmeister (EIO=3 / socket.io v3) ──────────
   useEffect(() => {
     if (!roipMonitorando) {
-      dmrSocketRef.current?.disconnect()
-      dmrSocketRef.current = null
+      const ws = dmrSocketRef.current as WebSocket | null
+      if (ws) { dmrSocketRef.current = null; ws.close() }
       setDmrStatus({ connected: false, active: false, callsign: '', tg: 0, tgName: '' })
       return
     }
-    const socket = socketIo('https://api.brandmeister.network', {
-      path: '/lh/socket.io',
-      transports: ['websocket'],
-      reconnectionDelay: 5000,
-    })
-    socket.on('connect', () => {
-      setDmrStatus(d => ({ ...d, connected: true }))
-      const tgs = (nodeCfg.bm_tgs || '33450,334').split(',').map((s: string) => s.trim()).filter(Boolean)
-      tgs.forEach((tg: string) => {
-        socket.emit('subscribe', `TGD_${tg}`)
-        socket.emit('subscribe', `dst_${tg}`)
-        socket.emit('subscribe', tg)
-      })
-      // capturar mensajes crudos del engine para diagnosticar protocolo
-      ;(socket.io as any).engine?.on('message', (raw: string) => {
-        setDmrDbg(`[RAW] ${String(raw).slice(0, 150)}`)
-      })
-    })
-    socket.on('disconnect', () => setDmrStatus(d => ({ ...d, connected: false, active: false })))
-    socket.onAny((event: string, ...args: unknown[]) => {
-      const preview = JSON.stringify(args[0] ?? '').slice(0, 120)
-      setDmrDbg(`[${event}] ${preview}`)
-    })
-    socket.on('mqtt', (p: { DestinationID: number; DestinationName: string; SourceCall: string; Stop: number }) => {
-      if (p.Stop == 0) {
-        setDmrStatus(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
-      } else {
-        setDmrStatus(d => ({ ...d, active: false }))
+    const tgs = (nodeCfg.bm_tgs || '33450,334').split(',').map((s: string) => s.trim()).filter(Boolean)
+
+    const connect = () => {
+      const ws = new WebSocket('wss://api.brandmeister.network/lh/socket.io/?EIO=3&transport=websocket')
+      dmrSocketRef.current = ws
+
+      ws.onmessage = (e: MessageEvent) => {
+        const raw = String(e.data)
+        setDmrDbg(raw.slice(0, 150))
+        // EIO=3: servidor hace ping (2), cliente responde pong (3)
+        if (raw === '2') { ws.send('3'); return }
+        // EIO=3 open packet — handshake completo: suscribir y marcar ONLINE
+        if (raw.startsWith('0')) {
+          setDmrStatus(d => ({ ...d, connected: true }))
+          tgs.forEach(tg => ws.send(`42["subscribe","TGD_${tg}"]`))
+          return
+        }
+        // socket.io connect namespace (40) — resuscribir por si acaso
+        if (raw === '40') {
+          tgs.forEach(tg => ws.send(`42["subscribe","TGD_${tg}"]`))
+          return
+        }
+        // socket.io event: 42["mqtt", {...}]
+        if (raw.startsWith('42')) {
+          try {
+            const [event, p] = JSON.parse(raw.slice(2))
+            if (event === 'mqtt' && p) {
+              if (p.Stop == 0) {
+                setDmrStatus(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
+              } else {
+                setDmrStatus(d => ({ ...d, active: false }))
+              }
+            }
+          } catch (_) {}
+        }
       }
-    })
-    dmrSocketRef.current = socket
-    return () => { socket.disconnect() }
+
+      ws.onclose = () => {
+        setDmrStatus(d => ({ ...d, connected: false, active: false }))
+        if (dmrSocketRef.current === ws) setTimeout(connect, 5000)
+      }
+    }
+
+    connect()
+    return () => {
+      const ws = dmrSocketRef.current as WebSocket | null
+      if (ws) { dmrSocketRef.current = null; ws.close() }
+    }
   }, [roipMonitorando, nodeCfg.bm_tgs])
 
   // ── Resumen de reportes guardados ────────────────────────────────────────
