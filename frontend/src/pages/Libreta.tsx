@@ -1164,7 +1164,7 @@ export default function LibretaPage() {
       {(!sesionActiva || configVisible) && (
         <Card className="card-shadow" style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
           <Form form={sesionForm} layout="vertical" initialValues={{ fecha_hora: dayjs() }}>
-            <Collapse defaultActiveKey={['evento', 'estaciones', 'recordatorio']} ghost style={{ marginBottom: 8 }}>
+            <Collapse defaultActiveKey={['evento', 'estaciones', 'recordatorio', 'nodos']} ghost style={{ marginBottom: 8 }}>
 
               <Panel header={<strong>Evento</strong>} key="evento">
                 <Row gutter={16}>

@@ -57,16 +57,18 @@ def save_libreta_config(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
+    _ensure_columns(db)
     cfg = (
         db.query(models.LibretaConfigUsuario)
         .filter(models.LibretaConfigUsuario.usuario_id == current_user.id)
         .first()
     )
+    updates = body.model_dump(exclude_unset=True)
     if cfg:
-        for k, v in body.model_dump().items():
+        for k, v in updates.items():
             setattr(cfg, k, v)
     else:
-        cfg = models.LibretaConfigUsuario(usuario_id=current_user.id, **body.model_dump())
+        cfg = models.LibretaConfigUsuario(usuario_id=current_user.id, **updates)
         db.add(cfg)
     db.commit()
     db.refresh(cfg)
