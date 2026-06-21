@@ -174,6 +174,10 @@ async def lifespan(app: FastAPI):
                 CONSTRAINT uq_plantilla_usuario_config UNIQUE (plantilla_id, usuario_id)
             )
         """))
+        # libreta_config_usuario: TalkGroups DMR por usuario
+        conn.execute(text(
+            "ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS bm_tgs VARCHAR(200)"
+        ))
         conn.commit()
 
     db = SessionLocal()

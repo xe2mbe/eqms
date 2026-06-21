@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, text
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -9,21 +9,6 @@ from app import models, schemas
 from app.auth import get_current_user
 
 router = APIRouter()
-
-_migrated = False
-
-def _ensure_columns(db: Session):
-    global _migrated
-    if _migrated:
-        return
-    try:
-        db.execute(text(
-            "ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS bm_tgs VARCHAR(200)"
-        ))
-        db.commit()
-    except Exception:
-        db.rollback()
-    _migrated = True
 
 RECORDATORIO_KEY = "dias_reaparicion"
 
@@ -42,7 +27,6 @@ def get_libreta_config(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    _ensure_columns(db)
     cfg = (
         db.query(models.LibretaConfigUsuario)
         .filter(models.LibretaConfigUsuario.usuario_id == current_user.id)
@@ -57,7 +41,6 @@ def save_libreta_config(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    _ensure_columns(db)
     cfg = (
         db.query(models.LibretaConfigUsuario)
         .filter(models.LibretaConfigUsuario.usuario_id == current_user.id)
