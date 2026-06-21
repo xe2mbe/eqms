@@ -351,6 +351,10 @@ export default function LibretaPage() {
         socket.emit('subscribe', `dst_${tg}`)
         socket.emit('subscribe', tg)
       })
+      // capturar mensajes crudos del engine para diagnosticar protocolo
+      ;(socket.io as any).engine?.on('message', (raw: string) => {
+        setDmrDbg(`[RAW] ${String(raw).slice(0, 150)}`)
+      })
     })
     socket.on('disconnect', () => setDmrStatus(d => ({ ...d, connected: false, active: false })))
     socket.onAny((event: string, ...args: unknown[]) => {
