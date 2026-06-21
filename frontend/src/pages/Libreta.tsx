@@ -408,11 +408,16 @@ export default function LibretaPage() {
         const { data } = await client.get('/libreta/dmr-lastheard')
         if (data.active) {
           setDmrStatus(d => ({ ...d, active: true, callsign: data.callsign, tg: data.tg, tgName: data.tg_name }))
-          setDmrDbg(`REST TX: ${data.callsign} · TG ${data.tg}`)
-        } else if (!data.error) {
+          setDmrDbg(`TX: ${data.callsign} · TG ${data.tg}`)
+        } else if (data.error === 'no_api_key') {
+          setDmrDbg('sin API key')
+        } else {
           setDmrStatus(d => ({ ...d, active: false, callsign: '', tg: 0, tgName: '' }))
+          setDmrDbg(data.dbg ? `IDLE [${data.dbg}]` : 'IDLE')
         }
-      } catch (_) {}
+      } catch (err: unknown) {
+        setDmrDbg(`poll err: ${String(err).slice(0, 60)}`)
+      }
     }
     poll()
     const t = setInterval(poll, 7_000)
@@ -1562,6 +1567,7 @@ export default function LibretaPage() {
                   <Form form={nodeConfigForm} layout="vertical" size="small"
                     onValuesChange={(changed) => {
                       if (changed.bm_tgs !== undefined) setNodeCfg(prev => ({ ...prev, bm_tgs: changed.bm_tgs }))
+                      if (changed.bm_api_key !== undefined) setNodeCfg(prev => ({ ...prev, bm_api_key: changed.bm_api_key }))
                       if (changed.asl_hub_id !== undefined) setNodeCfg(prev => ({ ...prev, asl_hub_id: changed.asl_hub_id }))
                       if (changed.asl_boletin_node !== undefined) setNodeCfg(prev => ({ ...prev, asl_boletin_node: changed.asl_boletin_node }))
                       if (changed.irlp_reflector_id !== undefined) setNodeCfg(prev => ({ ...prev, irlp_reflector_id: changed.irlp_reflector_id }))

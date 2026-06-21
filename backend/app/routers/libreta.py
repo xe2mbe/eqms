@@ -160,6 +160,7 @@ async def dmr_lastheard(
 
     headers = {"Authorization": f"Bearer {cfg.bm_api_key}"}
 
+    dbg_parts: list[str] = []
     async with httpx.AsyncClient(timeout=5.0) as http:
         for tg in tgs:
             try:
@@ -169,18 +170,41 @@ async def dmr_lastheard(
                 )
                 if r.status_code == 200:
                     data = r.json()
+                    logger.debug(f"BM lastheard TG {tg}: {str(data)[:300]}")
                     if isinstance(data, list) and data:
                         entry = data[0]
-                        if entry.get("Stop") == 0:
+                        stop_val = entry.get("Stop")
+                        dbg_parts.append(f"TG{tg}:OK stop={stop_val} cs={entry.get('SourceCall','?')}")
+                        # Stop==0 or Stop==None means active transmission
+                        if stop_val == 0 or stop_val is None:
+                            src_call = (
+                                entry.get("SourceCall")
+                                or entry.get("Callsign")
+                                or entry.get("callsign", "")
+                            )
+                            dest_id = (
+                                entry.get("DestinationID")
+                                or entry.get("ToTalkgroupID")
+                                or int(tg)
+                            )
+                            dest_name = (
+                                entry.get("DestinationName")
+                                or entry.get("ToTalkgroupName", "")
+                            )
                             return {
                                 "active": True,
-                                "callsign": entry.get("SourceCall", ""),
-                                "tg": entry.get("DestinationID", int(tg)),
-                                "tg_name": entry.get("DestinationName", ""),
+                                "callsign": src_call,
+                                "tg": dest_id,
+                                "tg_name": dest_name,
                             }
+                    else:
+                        dbg_parts.append(f"TG{tg}:OK empty")
                 else:
-                    logger.debug(f"BM lastheard TG {tg} status {r.status_code}: {r.text[:200]}")
+                    body = r.text[:80]
+                    logger.debug(f"BM lastheard TG {tg} status {r.status_code}: {body}")
+                    dbg_parts.append(f"TG{tg}:{r.status_code}")
             except Exception as exc:
                 logger.warning(f"BM REST error TG {tg}: {exc}")
+                dbg_parts.append(f"TG{tg}:err")
 
-    return {"active": False, "callsign": "", "tg": 0, "tg_name": ""}
+    return {"active": False, "callsign": "", "tg": 0, "tg_name": "", "dbg": " | ".join(dbg_parts)}
