@@ -337,7 +337,11 @@ export default function LibretaPage() {
       setDmrStatus({ connected: false, active: false, callsign: '', tg: 0, tgName: '' })
       return
     }
-    const tgs = (nodeCfg.bm_tgs || '33450,334').split(',').map((s: string) => s.trim()).filter(Boolean)
+    // aceptar coma o punto como separadores (el form a veces guarda con punto)
+    const tgs = (nodeCfg.bm_tgs || '33450,334')
+      .split(/[,.]/)
+      .map((s: string) => s.trim())
+      .filter((s: string) => /^\d+$/.test(s))
 
     const connect = () => {
       const ws = new WebSocket('wss://api.brandmeister.network/lh/socket.io/?EIO=3&transport=websocket')
@@ -347,31 +351,31 @@ export default function LibretaPage() {
         const raw = String(e.data)
         // EIO=3: servidor hace ping (2), cliente responde pong (3)
         if (raw === '2') { ws.send('3'); return }
-        // EIO=3 open packet — marcar ONLINE
-        if (raw.startsWith('0')) {
-          setDmrStatus(d => ({ ...d, connected: true }))
-          setDmrDbg('EIO:open — esperando 40...')
-          return
-        }
-        // socket.io namespace connect — suscribir con todos los formatos conocidos + namespace
+        // EIO=3 open — esperar el 40
+        if (raw.startsWith('0')) return
+        // Default namespace connect → unirse a namespace por TG: 40/TGD_33450,
         if (raw === '40') {
-          tgs.forEach(tg => {
-            ws.send(`42["subscribe","TGD_${tg}"]`)
-            ws.send(`42["subscribe","dst_${tg}"]`)
-            ws.send(`42["subscribe","${tg}"]`)
-            ws.send(`42["subscribe",${Number(tg)}]`)
-            // también intentar namespace específico por TG
-            ws.send(`40/TGD_${tg},`)
-          })
-          setDmrDbg(`40: suscritos ${tgs.join(',')} — esperando EVT...`)
+          tgs.forEach(tg => ws.send(`40/TGD_${tg},`))
+          setDmrDbg(`uniendo namespaces TGD: ${tgs.join(',')}...`)
           return
         }
-        // Cualquier paquete — mostrar en debug
-        if (raw.startsWith('42') || raw.startsWith('44')) {
+        // Namespace TG conectado correctamente → ONLINE
+        if (raw.startsWith('40/TGD_')) {
+          setDmrStatus(d => ({ ...d, connected: true }))
+          setDmrDbg(`namespace OK: ${raw.split(',')[0]}`)
+          return
+        }
+        // Error de namespace
+        if (raw.startsWith('44/')) {
+          setDmrDbg(`ns-err: ${raw.slice(0, 100)}`)
+          return
+        }
+        // Evento en namespace TG: 42/TGD_33450,["mqtt",{...}]
+        if (raw.startsWith('42/TGD_')) {
+          const ci = raw.indexOf(',')
+          if (ci === -1) return
           try {
-            const body = raw.startsWith('44') ? raw.slice(2) : raw.slice(2)
-            const parsed = JSON.parse(body)
-            const [eventName, p] = Array.isArray(parsed) ? parsed : [parsed, null]
+            const [eventName, p] = JSON.parse(raw.slice(ci + 1))
             setDmrDbg(`EVT[${eventName}] ${JSON.stringify(p).slice(0, 100)}`)
             if (eventName === 'mqtt' && p) {
               if (p.Stop == 0) {
@@ -380,12 +384,25 @@ export default function LibretaPage() {
                 setDmrStatus(d => ({ ...d, active: false }))
               }
             }
-          } catch (_) {
-            setDmrDbg(`RAW: ${raw.slice(0, 120)}`)
-          }
+          } catch (_) { setDmrDbg(`raw: ${raw.slice(0, 120)}`) }
           return
         }
-        setDmrDbg(`PKT: ${raw.slice(0, 120)}`)
+        // Evento en namespace raíz (fallback)
+        if (raw.startsWith('42')) {
+          try {
+            const [eventName, p] = JSON.parse(raw.slice(2))
+            setDmrDbg(`EVT/[${eventName}] ${JSON.stringify(p).slice(0, 100)}`)
+            if (eventName === 'mqtt' && p) {
+              if (p.Stop == 0) {
+                setDmrStatus(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
+              } else {
+                setDmrStatus(d => ({ ...d, active: false }))
+              }
+            }
+          } catch (_) { setDmrDbg(`raw42: ${raw.slice(0, 120)}`) }
+          return
+        }
+        setDmrDbg(`pkt: ${raw.slice(0, 80)}`)
       }
 
       ws.onclose = () => {

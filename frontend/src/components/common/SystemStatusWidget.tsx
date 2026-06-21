@@ -83,13 +83,28 @@ export default function SystemStatusWidget() {
       ws.onmessage = (e: MessageEvent) => {
         const raw = String(e.data)
         if (raw === '2') { ws.send('3'); return }
-        if (raw.startsWith('0')) {
-          setDmr(d => ({ ...d, connected: true }))
-          tgs.forEach(tg => ws.send(`42["subscribe","TGD_${tg}"]`))
+        if (raw.startsWith('0')) return
+        if (raw === '40') {
+          tgs.forEach(tg => ws.send(`40/TGD_${tg},`))
           return
         }
-        if (raw === '40') {
-          tgs.forEach(tg => ws.send(`42["subscribe","TGD_${tg}"]`))
+        if (raw.startsWith('40/TGD_')) {
+          setDmr(d => ({ ...d, connected: true }))
+          return
+        }
+        if (raw.startsWith('42/TGD_')) {
+          const ci = raw.indexOf(',')
+          if (ci === -1) return
+          try {
+            const [event, p] = JSON.parse(raw.slice(ci + 1))
+            if (event === 'mqtt' && p) {
+              if (p.Stop == 0) {
+                setDmr(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
+              } else {
+                setDmr(d => ({ ...d, active: false }))
+              }
+            }
+          } catch (_) {}
           return
         }
         if (raw.startsWith('42')) {
