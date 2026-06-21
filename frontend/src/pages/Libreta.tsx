@@ -1291,7 +1291,7 @@ export default function LibretaPage() {
                 extra={<SettingOutlined style={{ color: '#1677ff' }} />}>
 
                 {/* Toggle de monitoreo */}
-                <Space align="center" style={{ marginBottom: roipMonitorando ? 12 : 0 }}>
+                <Space align="center" style={{ marginBottom: 12 }}>
                   <Text strong style={{ fontSize: 13 }}>Monitoreo Sistemas RoIP</Text>
                   <Switch checked={roipMonitorando} onChange={v => { setRoipMonitorando(v); if (!v) setRoipAvanzado(false) }} />
                   {roipMonitorando && (
@@ -1302,6 +1302,31 @@ export default function LibretaPage() {
                     </>
                   )}
                 </Space>
+
+                {/* TalkGroups DMR — siempre visible para configurar */}
+                <div style={{ background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 8, padding: '10px 14px', marginBottom: 12 }}>
+                  <Text style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed' }}>DMR Brandmeister — TalkGroups a monitorear</Text>
+                  <Space.Compact style={{ marginTop: 6, width: '100%', maxWidth: 360 }}>
+                    <Input
+                      size="small"
+                      value={nodeCfg.bm_tgs}
+                      onChange={e => setNodeCfg(prev => ({ ...prev, bm_tgs: e.target.value }))}
+                      placeholder="33450,334"
+                      style={{ fontSize: 12 }}
+                    />
+                    <Button size="small" type="primary" icon={<SaveOutlined />}
+                      onClick={async () => {
+                        try {
+                          await libretaApi.saveConfig({ bm_tgs: nodeCfg.bm_tgs })
+                          message.success('TGs guardados')
+                        } catch { message.error('Error al guardar') }
+                      }}
+                    >Guardar</Button>
+                  </Space.Compact>
+                  <Text type="secondary" style={{ fontSize: 10, display: 'block', marginTop: 3 }}>
+                    Separados por coma — ej: 33450,334
+                  </Text>
+                </div>
 
                 {roipMonitorando && (<>
 
@@ -1443,30 +1468,6 @@ export default function LibretaPage() {
                             <span style={{ color: '#8c8c8c' }}>TG {dmrStatus.tg}{dmrStatus.tgName ? ` · ${dmrStatus.tgName}` : ''}</span>
                           </div>
                         )}
-                        {/* Configuración de TGs — siempre visible, guardado por usuario */}
-                        <div style={{ marginTop: 10, borderTop: '1px solid #ddd6fe', paddingTop: 8 }}>
-                          <Text style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600 }}>TalkGroups a monitorear</Text>
-                          <Space.Compact style={{ marginTop: 4, width: '100%' }}>
-                            <Input
-                              size="small"
-                              value={nodeCfg.bm_tgs}
-                              onChange={e => setNodeCfg(prev => ({ ...prev, bm_tgs: e.target.value }))}
-                              placeholder="33450,334"
-                              style={{ fontSize: 12 }}
-                            />
-                            <Button size="small" type="primary" icon={<SaveOutlined />}
-                              onClick={async () => {
-                                try {
-                                  await libretaApi.saveConfig({ bm_tgs: nodeCfg.bm_tgs })
-                                  message.success('TGs guardados')
-                                } catch { message.error('Error al guardar') }
-                              }}
-                            >Guardar</Button>
-                          </Space.Compact>
-                          <Text type="secondary" style={{ fontSize: 10, display: 'block', marginTop: 3 }}>
-                            Separados por coma — ej: 33450,334
-                          </Text>
-                        </div>
                       </div>
                     </Col>
 
