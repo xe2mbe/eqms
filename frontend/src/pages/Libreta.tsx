@@ -347,30 +347,33 @@ export default function LibretaPage() {
 
     const apiKey = nodeCfg.bm_api_key
     const connect = () => {
-      const wsUrl = apiKey
-        ? `wss://api.brandmeister.network/lh/socket.io/?EIO=3&transport=websocket&apiKey=${encodeURIComponent(apiKey)}`
-        : 'wss://api.brandmeister.network/lh/socket.io/?EIO=3&transport=websocket'
-      const ws = new WebSocket(wsUrl)
+      // Sin apiKey en la URL — auth va dentro del protocolo socket.io
+      const ws = new WebSocket('wss://api.brandmeister.network/lh/socket.io/?EIO=3&transport=websocket')
       dmrSocketRef.current = ws
 
       ws.onmessage = (e: MessageEvent) => {
         const raw = String(e.data)
-        // EIO=3: servidor hace ping (2), cliente responde pong (3)
         if (raw === '2') { ws.send('3'); return }
-        // EIO=3 open — esperar el 40
-        if (raw.startsWith('0')) return
-        // Default namespace connect → ONLINE + suscribir con formato TGD_
+        if (raw.startsWith('0')) {
+          // EIO open: conectar al namespace con auth si tenemos key
+          if (apiKey) {
+            ws.send(`40{"auth":{"token":"${apiKey}"}}`)
+          }
+          return
+        }
         if (raw === '40') {
           setDmrStatus(d => ({ ...d, connected: true }))
-          // Try all known BM subscription formats
           tgs.forEach(tg => {
             ws.send(`42["subscribe","TGD_${tg}"]`)
             ws.send(`42["subscribe",${tg}]`)
           })
-          setDmrDbg(`WS ONLINE — TGD: ${tgs.join(',')}`)
+          setDmrDbg(`WS OK${apiKey ? '+auth' : ''} — TGD: ${tgs.join(',')}`)
           return
         }
-        // Evento socket.io (cualquier namespace)
+        if (raw.startsWith('44')) {
+          setDmrDbg(`WS err: ${raw.slice(0, 80)}`)
+          return
+        }
         if (raw.startsWith('42')) {
           const ci = raw.startsWith('42/') ? raw.indexOf(',') : 1
           const payload = raw.startsWith('42/') ? raw.slice(ci + 1) : raw.slice(2)
@@ -388,7 +391,6 @@ export default function LibretaPage() {
           } catch (_) { setDmrDbg(`raw: ${raw.slice(0, 120)}`) }
           return
         }
-        if (!raw.startsWith('44')) setDmrDbg(`pkt: ${raw.slice(0, 80)}`)
       }
 
       ws.onclose = () => {

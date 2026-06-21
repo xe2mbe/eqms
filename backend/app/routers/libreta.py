@@ -160,58 +160,47 @@ async def dmr_lastheard(
 
     headers = {"Authorization": f"Bearer {cfg.bm_api_key}"}
 
-    # Candidate endpoints in priority order (tried until one returns 200)
+    tg_ints = {int(t) for t in tgs}
+    dbg_parts: list[str] = []
+
+    # Endpoints a intentar en orden
     candidate_urls = [
-        "https://api.brandmeister.network/v2/lastheard/?talkgroup={tg}&limit=5",
-        "https://api.brandmeister.network/v2/talkgroup/{tg}/lastheard/?limit=5",
+        f"https://api.brandmeister.network/v2/lastheard/?limit=25",                  # global — filtramos por TG localmente
+        f"https://api.brandmeister.network/v2/talkgroup/{tgs[0]}/lastheard/?limit=5" if tgs else None,
     ]
 
-    dbg_parts: list[str] = []
-    async with httpx.AsyncClient(timeout=5.0) as http:
-        for tg in tgs:
-            for url_tpl in candidate_urls:
-                url = url_tpl.format(tg=tg)
-                try:
-                    r = await http.get(url, headers=headers)
-                    path_short = url.split("brandmeister.network")[1][:40]
-                    if r.status_code == 200:
-                        data = r.json()
-                        logger.info(f"BM OK {path_short}: {str(data)[:300]}")
-                        items = data if isinstance(data, list) else data.get("items", [])
-                        if items:
-                            entry = items[0]
-                            stop_val = entry.get("Stop")
-                            dbg_parts.append(
-                                f"TG{tg}:OK stop={stop_val} cs={entry.get('SourceCall', entry.get('Callsign','?'))}"
-                            )
-                            if stop_val == 0 or stop_val is None:
-                                src_call = (
-                                    entry.get("SourceCall")
-                                    or entry.get("Callsign")
-                                    or entry.get("callsign", "")
-                                )
-                                dest_id = (
-                                    entry.get("DestinationID")
-                                    or entry.get("ToTalkgroupID")
-                                    or int(tg)
-                                )
-                                dest_name = (
-                                    entry.get("DestinationName")
-                                    or entry.get("ToTalkgroupName", "")
-                                )
-                                return {
-                                    "active": True,
-                                    "callsign": src_call,
-                                    "tg": dest_id,
-                                    "tg_name": dest_name,
-                                }
-                        else:
-                            dbg_parts.append(f"TG{tg}:OK-empty")
-                        break  # found a working endpoint for this TG
-                    else:
-                        dbg_parts.append(f"TG{tg}:{r.status_code}")
-                except Exception as exc:
-                    logger.warning(f"BM REST {url}: {exc}")
-                    dbg_parts.append(f"TG{tg}:err")
+    async with httpx.AsyncClient(timeout=6.0) as http:
+        for url in candidate_urls:
+            if not url:
+                continue
+            try:
+                r = await http.get(url, headers=headers)
+                short = url.split("brandmeister.network")[1][:50]
+                if r.status_code == 200:
+                    data = r.json()
+                    logger.info(f"BM REST 200 {short}: {str(data)[:400]}")
+                    items = data if isinstance(data, list) else data.get("items", [])
+                    if not items:
+                        dbg_parts.append(f"{short}:200-empty")
+                        continue
+                    # Primer ítem: loguear todas las keys disponibles (solo 1 vez)
+                    if not dbg_parts:
+                        dbg_parts.append(f"keys={list(items[0].keys())[:8]}")
+                    for entry in items:
+                        dest_id = (entry.get("DestinationID") or entry.get("ToTalkgroupID") or 0)
+                        if tg_ints and dest_id not in tg_ints:
+                            continue
+                        stop_val = entry.get("Stop")
+                        if stop_val == 0 or stop_val is None:
+                            src_call = (entry.get("SourceCall") or entry.get("Callsign") or "")
+                            dest_name = (entry.get("DestinationName") or entry.get("ToTalkgroupName") or "")
+                            return {"active": True, "callsign": src_call, "tg": dest_id, "tg_name": dest_name}
+                    dbg_parts.append(f"{short}:200-idle")
+                    break  # endpoint encontrado, sin TX activa
+                else:
+                    dbg_parts.append(f"{short}:{r.status_code}")
+            except Exception as exc:
+                logger.warning(f"BM REST {url}: {exc}")
+                dbg_parts.append(f"err:{exc!s:.40}")
 
-    return {"active": False, "callsign": "", "tg": 0, "tg_name": "", "dbg": " | ".join(dbg_parts)}
+    return {"active": False, "callsign": "", "tg": 0, "tg_name": "", "dbg": " | ".join(str(x) for x in dbg_parts)}
