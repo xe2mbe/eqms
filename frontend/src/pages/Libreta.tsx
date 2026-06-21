@@ -24,6 +24,7 @@ import { useColPrefs } from '@/components/common/ColSettings'
 import type { Evento, Sistema, Estacion, Estado, Zona, Reporte } from '@/types'
 import { useResizableColumns } from '@/hooks/useResizableColumns'
 import SystemStatusWidget from '@/components/common/SystemStatusWidget'
+import { io as socketIo } from 'socket.io-client'
 
 const { Title, Text } = Typography
 const { Panel } = Collapse
@@ -172,7 +173,9 @@ export default function LibretaPage() {
   const [roipAvanzado, setRoipAvanzado] = useState(false)
   const [aslStatus, setAslStatus] = useState<{ online: boolean; cos_keyed: boolean; tx_keyed: boolean; on_air: boolean; connections: number; nodes: { node: string; name: string; url?: string; link?: string; cos_keyed: boolean; tx_keyed: boolean }[] } | null>(null)
   const [irlpStatus, setIrlpStatus] = useState<{ online: boolean; on_air: boolean; cos: boolean; ptt: boolean; connections: number; nodes: { node: string; name: string; url?: string; warning: boolean }[] } | null>(null)
-  const [nodeCfg, setNodeCfg] = useState({ asl_hub_id: '', asl_boletin_node: '', irlp_reflector_id: '', irlp_boletin_node: '' })
+  const [nodeCfg, setNodeCfg] = useState({ asl_hub_id: '', asl_boletin_node: '', irlp_reflector_id: '', irlp_boletin_node: '', bm_tgs: '33450,334' })
+  const [dmrStatus, setDmrStatus] = useState<{ connected: boolean; active: boolean; callsign: string; tg: number; tgName: string }>({ connected: false, active: false, callsign: '', tg: 0, tgName: '' })
+  const dmrSocketRef = useRef<any>(null)
 
   const [inputRst, setInputRst] = useState('59')
   const [inputSistema, setInputSistema] = useState<string | undefined>()
@@ -293,7 +296,7 @@ export default function LibretaPage() {
         if (nodeCfgRes?.data) {
           nodeConfigForm.setFieldsValue(nodeCfgRes.data)
           const d = nodeCfgRes.data
-          setNodeCfg({ asl_hub_id: d.asl_hub_id ?? '', asl_boletin_node: d.asl_boletin_node ?? '', irlp_reflector_id: d.irlp_reflector_id ?? '', irlp_boletin_node: d.irlp_boletin_node ?? '' })
+          setNodeCfg({ asl_hub_id: d.asl_hub_id ?? '', asl_boletin_node: d.asl_boletin_node ?? '', irlp_reflector_id: d.irlp_reflector_id ?? '', irlp_boletin_node: d.irlp_boletin_node ?? '', bm_tgs: d.bm_tgs ?? '33450,334' })
         }
       }).finally(() => setLoadingConfig(false))
     })
@@ -310,6 +313,36 @@ export default function LibretaPage() {
     const t = setInterval(poll, 5_000)
     return () => clearInterval(t)
   }, [roipMonitorando])
+
+  // ── Socket.IO DMR / Brandmeister ─────────────────────────────────────────
+  useEffect(() => {
+    if (!roipMonitorando) {
+      dmrSocketRef.current?.disconnect()
+      dmrSocketRef.current = null
+      setDmrStatus({ connected: false, active: false, callsign: '', tg: 0, tgName: '' })
+      return
+    }
+    const socket = socketIo('https://api.brandmeister.network', {
+      path: '/lh/socket.io',
+      transports: ['websocket'],
+      reconnectionDelay: 5000,
+    })
+    socket.on('connect', () => {
+      setDmrStatus(d => ({ ...d, connected: true }))
+      const tgs = (nodeCfg.bm_tgs || '33450,334').split(',').map((s: string) => s.trim()).filter(Boolean)
+      tgs.forEach((tg: string) => socket.emit('subscribe', `dst_${tg}`))
+    })
+    socket.on('disconnect', () => setDmrStatus(d => ({ ...d, connected: false, active: false })))
+    socket.on('mqtt', (p: { DestinationID: number; DestinationName: string; SourceCall: string; Stop: number }) => {
+      if (p.Stop === 0) {
+        setDmrStatus(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
+      } else {
+        setDmrStatus(d => ({ ...d, active: false }))
+      }
+    })
+    dmrSocketRef.current = socket
+    return () => { socket.disconnect() }
+  }, [roipMonitorando, nodeCfg.bm_tgs])
 
   // ── Resumen de reportes guardados ────────────────────────────────────────
   const fetchResumen = useCallback(async (cfg: typeof sesionConfig) => {
@@ -1379,6 +1412,44 @@ export default function LibretaPage() {
                       </div>
                     </Col>
 
+                    {/* ── DMR / Brandmeister ── */}
+                    <Col xs={24} sm={12} style={{ marginBottom: 8 }}>
+                      <div style={{ background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 8, padding: '10px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed' }}>
+                            DMR Brandmeister
+                          </span>
+                          {!dmrStatus.connected
+                            ? <StatusPill label="Conectando…" color="#d9d9d9" />
+                            : <StatusPill label="ONLINE" color="#7c3aed" />
+                          }
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{
+                            width: 10, height: 10, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
+                            background: dmrStatus.active ? '#ff4d4f' : dmrStatus.connected ? '#7c3aed' : '#8c8c8c',
+                            boxShadow: dmrStatus.active ? '0 0 0 3px rgba(255,77,79,0.3)' : dmrStatus.connected ? '0 0 0 3px rgba(124,58,237,0.2)' : 'none',
+                            animation: dmrStatus.active ? 'pulse-red 0.8s ease-in-out infinite' : 'none',
+                          }} />
+                          <span style={{ fontSize: 11, color: '#595959', fontWeight: 600 }}>
+                            TGs: {nodeCfg.bm_tgs || '—'}
+                          </span>
+                          {dmrStatus.connected && (
+                            dmrStatus.active
+                              ? <StatusPill label="TX ACTIVO" color="#ff4d4f" pulse />
+                              : <StatusPill label="IDLE" color="#595959" />
+                          )}
+                        </div>
+                        {dmrStatus.active && dmrStatus.callsign && (
+                          <div style={{ marginTop: 8, borderTop: '1px solid #ddd6fe', paddingTop: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                            <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, display: 'inline-block', background: '#ff4d4f' }} />
+                            <span style={{ color: '#7c3aed', fontWeight: 700 }}>{dmrStatus.callsign}</span>
+                            <span style={{ color: '#8c8c8c' }}>TG {dmrStatus.tg}{dmrStatus.tgName ? ` · ${dmrStatus.tgName}` : ''}</span>
+                          </div>
+                        )}
+                      </div>
+                    </Col>
+
                   </Row>
 
                   <Divider style={{ margin: '4px 0 10px' }} />
@@ -1443,6 +1514,14 @@ export default function LibretaPage() {
                       <Col xs={8} sm={3}>
                         <Form.Item label="Puerto CGI" name="irlp_port">
                           <Input placeholder="8080" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Divider orientation="left" plain style={{ fontSize: 12, color: '#7c3aed', margin: '4px 0 8px' }}>DMR / Brandmeister</Divider>
+                    <Row gutter={12}>
+                      <Col xs={24} sm={16}>
+                        <Form.Item label="TalkGroups a monitorear (separados por coma)" name="bm_tgs">
+                          <Input placeholder="33450,334" />
                         </Form.Item>
                       </Col>
                     </Row>
@@ -1545,6 +1624,32 @@ export default function LibretaPage() {
                       {n.warning && <StatusPill label="!" color="#faad14" />}
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          </Col>
+          <Col xs={24} sm={12} style={{ marginBottom: 4 }}>
+            <div style={{ background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 6, padding: '4px 10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed' }}>DMR Brandmeister</span>
+                {!dmrStatus.connected
+                  ? <StatusPill label="Conectando…" color="#d9d9d9" />
+                  : <StatusPill label="ONLINE" color="#7c3aed" />}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
+                  background: dmrStatus.active ? '#ff4d4f' : dmrStatus.connected ? '#7c3aed' : '#8c8c8c',
+                  animation: dmrStatus.active ? 'pulse-red 0.8s ease-in-out infinite' : 'none' }} />
+                <span style={{ fontSize: 10, color: '#595959', fontWeight: 600 }}>TGs: {nodeCfg.bm_tgs || '—'}</span>
+                {dmrStatus.connected && (dmrStatus.active
+                  ? <StatusPill label="TX ACTIVO" color="#ff4d4f" pulse />
+                  : <StatusPill label="IDLE" color="#595959" />)}
+              </div>
+              {dmrStatus.active && dmrStatus.callsign && (
+                <div style={{ marginTop: 3, borderTop: '1px solid #ddd6fe', paddingTop: 3, display: 'flex', alignItems: 'center', gap: 5, fontSize: 10 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, display: 'inline-block', background: '#ff4d4f' }} />
+                  <span style={{ color: '#7c3aed', fontWeight: 700 }}>{dmrStatus.callsign}</span>
+                  <span style={{ color: '#8c8c8c' }}>TG {dmrStatus.tg}{dmrStatus.tgName ? ` · ${dmrStatus.tgName}` : ''}</span>
                 </div>
               )}
             </div>

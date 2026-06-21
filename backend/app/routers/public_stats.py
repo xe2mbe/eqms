@@ -25,6 +25,7 @@ _NODE_CONFIG_DEFAULTS = {
     "irlp_boletin_node": "",
     "irlp_host":         "stn8422.ip.irlp.net",
     "irlp_port":         "8080",
+    "bm_tgs":            "33450,334",
 }
 _node_config_cache: dict = {"cfg": None, "ts": datetime.min}
 
@@ -258,6 +259,18 @@ def registrar_visita(request: Request, db: Session = Depends(get_db)):
 
     total = db.execute(text("SELECT COUNT(*) FROM visitas")).scalar()
     return {"ip": ip, "pais": pais, "pais_codigo": pais_codigo, "total": int(total)}
+
+
+@router.get("/node-config")
+def public_node_config(db: Session = Depends(get_db)):
+    """Campos públicos de configuración de nodos — sin autenticación."""
+    cfg = _load_node_config(db)
+    return {
+        "asl_hub_id":       cfg.get("asl_hub_id", "299081"),
+        "asl_boletin_node": cfg.get("asl_boletin_node", "299080"),
+        "irlp_reflector_id":cfg.get("irlp_reflector_id", "0077"),
+        "bm_tgs":           cfg.get("bm_tgs", "33450,334"),
+    }
 
 
 @router.get("/stats")

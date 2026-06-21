@@ -36,6 +36,7 @@ export interface NodeConfig {
   irlp_boletin_node: string
   irlp_host: string
   irlp_port: string
+  bm_tgs: string
 }
 
 export const configuracionApi = {

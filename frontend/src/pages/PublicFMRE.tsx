@@ -20,8 +20,6 @@ const FMRE_DARK   = '#0D2E5F'
 const FMRE_LIGHT  = '#E8F0FA'
 const FMRE_GOLD   = '#D4A017'
 
-const BM_TGS = [33450, 334]
-
 const SISTEMA_COLORS: Record<string, string> = {
   HF: '#1A569E', ASL: '#52c41a', IRLP: '#fa8c16',
   DMR: '#7c3aed', FUSION: '#eb2f96', DSTAR: '#13c2c2',
@@ -375,7 +373,13 @@ export default function PublicFMREPage() {
     })
     socket.on('connect', () => {
       setDmrStatus(d => ({ ...d, connected: true }))
-      BM_TGS.forEach(tg => socket.emit('subscribe', `dst_${tg}`))
+      axios.get('/api/public/node-config').then(r => {
+        const raw: string = r.data?.bm_tgs ?? '33450,334'
+        raw.split(',').map(s => s.trim()).filter(Boolean)
+          .forEach(tg => socket.emit('subscribe', `dst_${tg}`))
+      }).catch(() => {
+        ['33450', '334'].forEach(tg => socket.emit('subscribe', `dst_${tg}`))
+      })
     })
     socket.on('disconnect', () => {
       setDmrStatus(d => ({ ...d, connected: false, active: false }))

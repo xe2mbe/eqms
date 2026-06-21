@@ -16,9 +16,6 @@ type DmrState = {
   tgName: string
 }
 
-// ── Brandmeister TGs a monitorear ─────────────────────────────────────────────
-const BM_TGS = [33450, 334]   // FMRE, Nacional México
-
 // ── badge dot ─────────────────────────────────────────────────────────────────
 const DOT: Record<DotState, { bg: string; label: string }> = {
   loading: { bg: '#d9d9d9', label: '...'       },
@@ -72,45 +69,37 @@ export default function SystemStatusWidget() {
     return () => clearInterval(t)
   }, [])
 
-  // ── Brandmeister Socket.IO ────────────────────────────────────────────────
+  // ── Brandmeister Socket.IO — TGs desde configuración ─────────────────────
   useEffect(() => {
-    const socket = io('https://api.brandmeister.network', {
-      path: '/lh/socket.io',
-      transports: ['websocket'],
-      reconnectionDelay: 5000,
-    })
+    axios.get('/api/public/node-config').then(r => {
+      const raw: string = r.data?.bm_tgs ?? '33450,334'
+      const tgs = raw.split(',').map(s => s.trim()).filter(Boolean)
 
-    socket.on('connect', () => {
-      setDmr(d => ({ ...d, connected: true }))
-      BM_TGS.forEach(tg => socket.emit('subscribe', `dst_${tg}`))
-    })
+      const socket = io('https://api.brandmeister.network', {
+        path: '/lh/socket.io',
+        transports: ['websocket'],
+        reconnectionDelay: 5000,
+      })
 
-    socket.on('disconnect', () => {
-      setDmr(d => ({ ...d, connected: false, active: false }))
-    })
+      socket.on('connect', () => {
+        setDmr(d => ({ ...d, connected: true }))
+        tgs.forEach(tg => socket.emit('subscribe', `dst_${tg}`))
+      })
+      socket.on('disconnect', () => {
+        setDmr(d => ({ ...d, connected: false, active: false }))
+      })
+      socket.on('mqtt', (p: { DestinationID: number; DestinationName: string; SourceCall: string; Stop: number }) => {
+        if (p.Stop === 0) {
+          setDmr(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
+        } else {
+          setDmr(d => ({ ...d, active: false }))
+        }
+      })
 
-    socket.on('mqtt', (payload: {
-      DestinationID: number
-      DestinationName: string
-      SourceCall: string
-      Stop: number
-    }) => {
-      if (payload.Stop === 0) {
-        // transmisión iniciada / en curso
-        setDmr(d => ({
-          ...d, active: true,
-          callsign: payload.SourceCall,
-          tg: payload.DestinationID,
-          tgName: payload.DestinationName,
-        }))
-      } else {
-        // transmisión terminada
-        setDmr(d => ({ ...d, active: false }))
-      }
-    })
+      socketRef.current = socket
+    }).catch(() => {})
 
-    socketRef.current = socket
-    return () => { socket.disconnect() }
+    return () => { socketRef.current?.disconnect() }
   }, [])
 
   // ── estados derivados ─────────────────────────────────────────────────────

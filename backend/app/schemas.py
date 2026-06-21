@@ -415,6 +415,8 @@ class NodeConfig(BaseModel):
     irlp_boletin_node: str = ""
     irlp_host: str = "stn8422.ip.irlp.net"
     irlp_port: str = "8080"
+    # DMR / Brandmeister
+    bm_tgs: str = "33450,334"
 
 class ReenviarCorreoRequest(BaseModel):
     password_inicial: str = ""
