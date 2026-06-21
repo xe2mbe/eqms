@@ -175,6 +175,7 @@ export default function LibretaPage() {
   const [irlpStatus, setIrlpStatus] = useState<{ online: boolean; on_air: boolean; cos: boolean; ptt: boolean; connections: number; nodes: { node: string; name: string; url?: string; warning: boolean }[] } | null>(null)
   const [nodeCfg, setNodeCfg] = useState({ asl_hub_id: '', asl_boletin_node: '', irlp_reflector_id: '', irlp_boletin_node: '', bm_tgs: '33450,334' })
   const [dmrStatus, setDmrStatus] = useState<{ connected: boolean; active: boolean; callsign: string; tg: number; tgName: string }>({ connected: false, active: false, callsign: '', tg: 0, tgName: '' })
+  const [dmrDbg, setDmrDbg] = useState<string>('')
   const dmrSocketRef = useRef<any>(null)
 
   const [inputRst, setInputRst] = useState('59')
@@ -345,9 +346,17 @@ export default function LibretaPage() {
     socket.on('connect', () => {
       setDmrStatus(d => ({ ...d, connected: true }))
       const tgs = (nodeCfg.bm_tgs || '33450,334').split(',').map((s: string) => s.trim()).filter(Boolean)
-      tgs.forEach((tg: string) => socket.emit('subscribe', `TGD_${tg}`))
+      tgs.forEach((tg: string) => {
+        socket.emit('subscribe', `TGD_${tg}`)
+        socket.emit('subscribe', `dst_${tg}`)
+        socket.emit('subscribe', tg)
+      })
     })
     socket.on('disconnect', () => setDmrStatus(d => ({ ...d, connected: false, active: false })))
+    socket.onAny((event: string, ...args: unknown[]) => {
+      const preview = JSON.stringify(args[0] ?? '').slice(0, 120)
+      setDmrDbg(`[${event}] ${preview}`)
+    })
     socket.on('mqtt', (p: { DestinationID: number; DestinationName: string; SourceCall: string; Stop: number }) => {
       if (p.Stop == 0) {
         setDmrStatus(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
@@ -1482,6 +1491,11 @@ export default function LibretaPage() {
                             <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, display: 'inline-block', background: '#ff4d4f' }} />
                             <span style={{ color: '#7c3aed', fontWeight: 700 }}>{dmrStatus.callsign}</span>
                             <span style={{ color: '#8c8c8c' }}>TG {dmrStatus.tg}{dmrStatus.tgName ? ` · ${dmrStatus.tgName}` : ''}</span>
+                          </div>
+                        )}
+                        {dmrDbg && (
+                          <div style={{ marginTop: 6, fontSize: 10, color: '#888', fontFamily: 'monospace', wordBreak: 'break-all', borderTop: '1px dashed #e9d5ff', paddingTop: 4 }}>
+                            {dmrDbg}
                           </div>
                         )}
                       </div>
