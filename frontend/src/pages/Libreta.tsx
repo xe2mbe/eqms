@@ -310,6 +310,7 @@ export default function LibretaPage() {
             irlp_boletin_node: cfg.irlp_boletin_node,
             irlp_host: cfg.irlp_host,
             irlp_port: cfg.irlp_port,
+            bm_tgs: cfg.bm_tgs ?? '33450,334',
           })
         }
       }).finally(() => setLoadingConfig(false))
@@ -584,7 +585,7 @@ export default function LibretaPage() {
         irlp_boletin_node: vals.irlp_boletin_node,
         irlp_host: vals.irlp_host,
         irlp_port: vals.irlp_port,
-        bm_tgs: nodeCfg.bm_tgs,
+        bm_tgs: vals.bm_tgs,
       })
       setNodeCfg(prev => ({
         ...prev,
@@ -592,6 +593,7 @@ export default function LibretaPage() {
         asl_boletin_node: vals.asl_boletin_node ?? '',
         irlp_reflector_id: vals.irlp_reflector_id ?? '',
         irlp_boletin_node: vals.irlp_boletin_node ?? '',
+        bm_tgs: vals.bm_tgs ?? '33450,334',
       }))
       message.success('Configuración de nodos guardada')
     } catch {
@@ -1342,31 +1344,6 @@ export default function LibretaPage() {
                   )}
                 </Space>
 
-                {/* TalkGroups DMR — siempre visible para configurar */}
-                <div style={{ background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 8, padding: '10px 14px', marginBottom: 12 }}>
-                  <Text style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed' }}>DMR Brandmeister — TalkGroups a monitorear</Text>
-                  <Space.Compact style={{ marginTop: 6, width: '100%', maxWidth: 360 }}>
-                    <Input
-                      size="small"
-                      value={nodeCfg.bm_tgs}
-                      onChange={e => setNodeCfg(prev => ({ ...prev, bm_tgs: e.target.value }))}
-                      placeholder="33450,334"
-                      style={{ fontSize: 12 }}
-                    />
-                    <Button size="small" type="primary" icon={<SaveOutlined />}
-                      onClick={async () => {
-                        try {
-                          await libretaApi.saveConfig({ bm_tgs: nodeCfg.bm_tgs })
-                          message.success('TGs guardados')
-                        } catch { message.error('Error al guardar') }
-                      }}
-                    >Guardar</Button>
-                  </Space.Compact>
-                  <Text type="secondary" style={{ fontSize: 10, display: 'block', marginTop: 3 }}>
-                    Separados por coma — ej: 33450,334
-                  </Text>
-                </div>
-
                 {roipMonitorando && (<>
 
                   {/* Indicadores de estado */}
@@ -1515,7 +1492,14 @@ export default function LibretaPage() {
                   <Divider style={{ margin: '4px 0 10px' }} />
 
                   {/* Parámetros de configuración */}
-                  <Form form={nodeConfigForm} layout="vertical" size="small">
+                  <Form form={nodeConfigForm} layout="vertical" size="small"
+                    onValuesChange={(changed) => {
+                      if (changed.bm_tgs !== undefined) setNodeCfg(prev => ({ ...prev, bm_tgs: changed.bm_tgs }))
+                      if (changed.asl_hub_id !== undefined) setNodeCfg(prev => ({ ...prev, asl_hub_id: changed.asl_hub_id }))
+                      if (changed.asl_boletin_node !== undefined) setNodeCfg(prev => ({ ...prev, asl_boletin_node: changed.asl_boletin_node }))
+                      if (changed.irlp_reflector_id !== undefined) setNodeCfg(prev => ({ ...prev, irlp_reflector_id: changed.irlp_reflector_id }))
+                      if (changed.irlp_boletin_node !== undefined) setNodeCfg(prev => ({ ...prev, irlp_boletin_node: changed.irlp_boletin_node }))
+                    }}>
                     <Divider orientation="left" plain style={{ fontSize: 12, color: '#389e0d', margin: '0 0 8px' }}>AllStarLink (AllScan)</Divider>
                     <Row gutter={12}>
                       <Col xs={8} sm={4}>
@@ -1574,6 +1558,14 @@ export default function LibretaPage() {
                       <Col xs={8} sm={3}>
                         <Form.Item label="Puerto CGI" name="irlp_port">
                           <Input placeholder="8080" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Divider orientation="left" plain style={{ fontSize: 12, color: '#7c3aed', margin: '4px 0 8px' }}>DMR / Brandmeister</Divider>
+                    <Row gutter={12}>
+                      <Col xs={24} sm={12}>
+                        <Form.Item label="TalkGroups a monitorear" name="bm_tgs" extra="Separados por coma — ej: 33450,334">
+                          <Input placeholder="33450,334" />
                         </Form.Item>
                       </Col>
                     </Row>
