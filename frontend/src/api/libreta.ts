@@ -25,6 +25,7 @@ export interface LibretaConfig {
   irlp_boletin_node?: string | null
   irlp_host?: string | null
   irlp_port?: string | null
+  bm_api_key?: string | null
 }
 
 export interface CheckIndicativoResult {

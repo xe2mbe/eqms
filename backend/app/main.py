@@ -189,6 +189,7 @@ async def lifespan(app: FastAPI):
         conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS irlp_boletin_node VARCHAR(20)"))
         conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS irlp_host VARCHAR(200)"))
         conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS irlp_port VARCHAR(10)"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS bm_api_key VARCHAR(600)"))
         conn.commit()
 
     db = SessionLocal()

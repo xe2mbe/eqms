@@ -354,6 +354,7 @@ class LibretaConfigOut(BaseModel):
     irlp_boletin_node: Optional[str] = None
     irlp_host: Optional[str] = None
     irlp_port: Optional[str] = None
+    bm_api_key: Optional[str] = None
     class Config:
         from_attributes = True
 
@@ -382,6 +383,7 @@ class LibretaConfigUpdate(BaseModel):
     irlp_boletin_node: Optional[str] = None
     irlp_host: Optional[str] = None
     irlp_port: Optional[str] = None
+    bm_api_key: Optional[str] = None
 
 class NuevoHamCreate(BaseModel):
     indicativo: str

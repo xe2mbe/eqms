@@ -73,7 +73,7 @@ export default function SystemStatusWidget() {
     let tgs: string[] = ['33450', '334']
     axios.get('/api/public/node-config').then(r => {
       const raw: string = r.data?.bm_tgs ?? '33450,334'
-      tgs = raw.split(',').map(s => s.trim()).filter(Boolean)
+      tgs = raw.split(/[,.]/).map(s => s.trim()).filter(s => /^\d+$/.test(s))
     }).catch(() => {})
 
     const connect = () => {
@@ -85,31 +85,16 @@ export default function SystemStatusWidget() {
         if (raw === '2') { ws.send('3'); return }
         if (raw.startsWith('0')) return
         if (raw === '40') {
-          tgs.forEach(tg => ws.send(`40/TGD_${tg},`))
-          return
-        }
-        if (raw.startsWith('40/TGD_')) {
           setDmr(d => ({ ...d, connected: true }))
-          return
-        }
-        if (raw.startsWith('42/TGD_')) {
-          const ci = raw.indexOf(',')
-          if (ci === -1) return
-          try {
-            const [event, p] = JSON.parse(raw.slice(ci + 1))
-            if (event === 'mqtt' && p) {
-              if (p.Stop == 0) {
-                setDmr(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
-              } else {
-                setDmr(d => ({ ...d, active: false }))
-              }
-            }
-          } catch (_) {}
+          tgs.forEach(tg => ws.send(`42["subscribe","TGD_${tg}"]`))
           return
         }
         if (raw.startsWith('42')) {
+          const ci = raw.startsWith('42/') ? raw.indexOf(',') : 1
+          const payload = raw.startsWith('42/') ? raw.slice(ci + 1) : raw.slice(2)
           try {
-            const [event, p] = JSON.parse(raw.slice(2))
+            const parsed = JSON.parse(payload)
+            const [event, p] = Array.isArray(parsed) ? parsed : [String(parsed), null]
             if (event === 'mqtt' && p) {
               if (p.Stop == 0) {
                 setDmr(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))

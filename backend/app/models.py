@@ -261,6 +261,7 @@ class LibretaConfigUsuario(Base):
     irlp_boletin_node = Column(String(20), nullable=True)
     irlp_host = Column(String(200), nullable=True)
     irlp_port = Column(String(10), nullable=True)
+    bm_api_key = Column(String(600), nullable=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     usuario = relationship("Usuario", backref="libreta_config")

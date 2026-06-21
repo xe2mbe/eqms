@@ -172,7 +172,7 @@ export default function LibretaPage() {
   const [roipAvanzado, setRoipAvanzado] = useState(false)
   const [aslStatus, setAslStatus] = useState<{ online: boolean; cos_keyed: boolean; tx_keyed: boolean; on_air: boolean; connections: number; nodes: { node: string; name: string; url?: string; link?: string; cos_keyed: boolean; tx_keyed: boolean }[] } | null>(null)
   const [irlpStatus, setIrlpStatus] = useState<{ online: boolean; on_air: boolean; cos: boolean; ptt: boolean; connections: number; nodes: { node: string; name: string; url?: string; warning: boolean }[] } | null>(null)
-  const [nodeCfg, setNodeCfg] = useState({ asl_hub_id: '', asl_boletin_node: '', irlp_reflector_id: '', irlp_boletin_node: '', bm_tgs: '33450,334' })
+  const [nodeCfg, setNodeCfg] = useState({ asl_hub_id: '', asl_boletin_node: '', irlp_reflector_id: '', irlp_boletin_node: '', bm_tgs: '33450,334', bm_api_key: '' })
   const [dmrStatus, setDmrStatus] = useState<{ connected: boolean; active: boolean; callsign: string; tg: number; tgName: string }>({ connected: false, active: false, callsign: '', tg: 0, tgName: '' })
   const [dmrDbg, setDmrDbg] = useState<string>('')
   const dmrSocketRef = useRef<any>(null)
@@ -295,6 +295,7 @@ export default function LibretaPage() {
             irlp_reflector_id: cfg.irlp_reflector_id ?? '',
             irlp_boletin_node: cfg.irlp_boletin_node ?? '',
             bm_tgs: cfg.bm_tgs ?? '33450,334',
+            bm_api_key: cfg.bm_api_key ?? '',
           })
           if (cfg.roip_monitorando) setRoipMonitorando(true)
           if (cfg.roip_avanzado) setRoipAvanzado(true)
@@ -311,6 +312,7 @@ export default function LibretaPage() {
             irlp_host: cfg.irlp_host,
             irlp_port: cfg.irlp_port,
             bm_tgs: cfg.bm_tgs ?? '33450,334',
+            bm_api_key: cfg.bm_api_key ?? '',
           })
         }
       }).finally(() => setLoadingConfig(false))
@@ -343,8 +345,12 @@ export default function LibretaPage() {
       .map((s: string) => s.trim())
       .filter((s: string) => /^\d+$/.test(s))
 
+    const apiKey = nodeCfg.bm_api_key
     const connect = () => {
-      const ws = new WebSocket('wss://api.brandmeister.network/lh/socket.io/?EIO=3&transport=websocket')
+      const wsUrl = apiKey
+        ? `wss://api.brandmeister.network/lh/socket.io/?EIO=3&transport=websocket&apiKey=${encodeURIComponent(apiKey)}`
+        : 'wss://api.brandmeister.network/lh/socket.io/?EIO=3&transport=websocket'
+      const ws = new WebSocket(wsUrl)
       dmrSocketRef.current = ws
 
       ws.onmessage = (e: MessageEvent) => {
@@ -392,7 +398,7 @@ export default function LibretaPage() {
       const ws = dmrSocketRef.current as WebSocket | null
       if (ws) { dmrSocketRef.current = null; ws.close() }
     }
-  }, [roipMonitorando, nodeCfg.bm_tgs])
+  }, [roipMonitorando, nodeCfg.bm_tgs, nodeCfg.bm_api_key])
 
   // ── Resumen de reportes guardados ────────────────────────────────────────
   const fetchResumen = useCallback(async (cfg: typeof sesionConfig) => {
@@ -621,6 +627,7 @@ export default function LibretaPage() {
         irlp_host: vals.irlp_host,
         irlp_port: vals.irlp_port,
         bm_tgs: vals.bm_tgs,
+        bm_api_key: vals.bm_api_key,
       })
       setNodeCfg(prev => ({
         ...prev,
@@ -629,6 +636,7 @@ export default function LibretaPage() {
         irlp_reflector_id: vals.irlp_reflector_id ?? '',
         irlp_boletin_node: vals.irlp_boletin_node ?? '',
         bm_tgs: vals.bm_tgs ?? '33450,334',
+        bm_api_key: vals.bm_api_key ?? '',
       }))
       message.success('Configuración de nodos guardada')
     } catch {
@@ -1603,9 +1611,14 @@ export default function LibretaPage() {
                     </Row>
                     <Divider orientation="left" plain style={{ fontSize: 12, color: '#7c3aed', margin: '4px 0 8px' }}>DMR / Brandmeister</Divider>
                     <Row gutter={12}>
-                      <Col xs={24} sm={12}>
+                      <Col xs={24} sm={8}>
                         <Form.Item label="TalkGroups a monitorear" name="bm_tgs" extra="Separados por coma — ej: 33450,334">
                           <Input placeholder="33450,334" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} sm={16}>
+                        <Form.Item label="BM API Key" name="bm_api_key" extra="JWT token de tu perfil en brandmeister.network">
+                          <Input.Password placeholder="eyJ0eXAi..." />
                         </Form.Item>
                       </Col>
                     </Row>
