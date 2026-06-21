@@ -362,8 +362,12 @@ export default function LibretaPage() {
         // Default namespace connect → ONLINE + suscribir con formato TGD_
         if (raw === '40') {
           setDmrStatus(d => ({ ...d, connected: true }))
-          tgs.forEach(tg => ws.send(`42["subscribe","TGD_${tg}"]`))
-          setDmrDbg(`ONLINE — suscritos TGD: ${tgs.join(',')}`)
+          // Try all known BM subscription formats
+          tgs.forEach(tg => {
+            ws.send(`42["subscribe","TGD_${tg}"]`)
+            ws.send(`42["subscribe",${tg}]`)
+          })
+          setDmrDbg(`WS ONLINE — TGD: ${tgs.join(',')}`)
           return
         }
         // Evento socket.io (cualquier namespace)

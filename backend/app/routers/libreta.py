@@ -160,51 +160,58 @@ async def dmr_lastheard(
 
     headers = {"Authorization": f"Bearer {cfg.bm_api_key}"}
 
+    # Candidate endpoints in priority order (tried until one returns 200)
+    candidate_urls = [
+        "https://api.brandmeister.network/v2/lastheard/?talkgroup={tg}&limit=5",
+        "https://api.brandmeister.network/v2/talkgroup/{tg}/lastheard/?limit=5",
+    ]
+
     dbg_parts: list[str] = []
     async with httpx.AsyncClient(timeout=5.0) as http:
         for tg in tgs:
-            try:
-                r = await http.get(
-                    f"https://api.brandmeister.network/v2/talkgroup/{tg}/lastheard/?limit=1",
-                    headers=headers,
-                )
-                if r.status_code == 200:
-                    data = r.json()
-                    logger.debug(f"BM lastheard TG {tg}: {str(data)[:300]}")
-                    if isinstance(data, list) and data:
-                        entry = data[0]
-                        stop_val = entry.get("Stop")
-                        dbg_parts.append(f"TG{tg}:OK stop={stop_val} cs={entry.get('SourceCall','?')}")
-                        # Stop==0 or Stop==None means active transmission
-                        if stop_val == 0 or stop_val is None:
-                            src_call = (
-                                entry.get("SourceCall")
-                                or entry.get("Callsign")
-                                or entry.get("callsign", "")
+            for url_tpl in candidate_urls:
+                url = url_tpl.format(tg=tg)
+                try:
+                    r = await http.get(url, headers=headers)
+                    path_short = url.split("brandmeister.network")[1][:40]
+                    if r.status_code == 200:
+                        data = r.json()
+                        logger.info(f"BM OK {path_short}: {str(data)[:300]}")
+                        items = data if isinstance(data, list) else data.get("items", [])
+                        if items:
+                            entry = items[0]
+                            stop_val = entry.get("Stop")
+                            dbg_parts.append(
+                                f"TG{tg}:OK stop={stop_val} cs={entry.get('SourceCall', entry.get('Callsign','?'))}"
                             )
-                            dest_id = (
-                                entry.get("DestinationID")
-                                or entry.get("ToTalkgroupID")
-                                or int(tg)
-                            )
-                            dest_name = (
-                                entry.get("DestinationName")
-                                or entry.get("ToTalkgroupName", "")
-                            )
-                            return {
-                                "active": True,
-                                "callsign": src_call,
-                                "tg": dest_id,
-                                "tg_name": dest_name,
-                            }
+                            if stop_val == 0 or stop_val is None:
+                                src_call = (
+                                    entry.get("SourceCall")
+                                    or entry.get("Callsign")
+                                    or entry.get("callsign", "")
+                                )
+                                dest_id = (
+                                    entry.get("DestinationID")
+                                    or entry.get("ToTalkgroupID")
+                                    or int(tg)
+                                )
+                                dest_name = (
+                                    entry.get("DestinationName")
+                                    or entry.get("ToTalkgroupName", "")
+                                )
+                                return {
+                                    "active": True,
+                                    "callsign": src_call,
+                                    "tg": dest_id,
+                                    "tg_name": dest_name,
+                                }
+                        else:
+                            dbg_parts.append(f"TG{tg}:OK-empty")
+                        break  # found a working endpoint for this TG
                     else:
-                        dbg_parts.append(f"TG{tg}:OK empty")
-                else:
-                    body = r.text[:80]
-                    logger.debug(f"BM lastheard TG {tg} status {r.status_code}: {body}")
-                    dbg_parts.append(f"TG{tg}:{r.status_code}")
-            except Exception as exc:
-                logger.warning(f"BM REST error TG {tg}: {exc}")
-                dbg_parts.append(f"TG{tg}:err")
+                        dbg_parts.append(f"TG{tg}:{r.status_code}")
+                except Exception as exc:
+                    logger.warning(f"BM REST {url}: {exc}")
+                    dbg_parts.append(f"TG{tg}:err")
 
     return {"active": False, "callsign": "", "tg": 0, "tg_name": "", "dbg": " | ".join(dbg_parts)}
