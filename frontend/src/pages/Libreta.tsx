@@ -345,33 +345,34 @@ export default function LibretaPage() {
 
       ws.onmessage = (e: MessageEvent) => {
         const raw = String(e.data)
-        setDmrDbg(raw.slice(0, 150))
         // EIO=3: servidor hace ping (2), cliente responde pong (3)
         if (raw === '2') { ws.send('3'); return }
-        // EIO=3 open packet — handshake completo: suscribir y marcar ONLINE
+        // EIO=3 open packet — marcar ONLINE (sin suscribir — test para ver si llegan eventos solos)
         if (raw.startsWith('0')) {
           setDmrStatus(d => ({ ...d, connected: true }))
-          tgs.forEach(tg => ws.send(`42["subscribe","TGD_${tg}"]`))
+          setDmrDbg('conectado, esperando eventos...')
           return
         }
-        // socket.io connect namespace (40) — resuscribir por si acaso
-        if (raw === '40') {
-          tgs.forEach(tg => ws.send(`42["subscribe","TGD_${tg}"]`))
-          return
-        }
-        // socket.io event: 42["mqtt", {...}]
+        // Cualquier otro paquete: mostrar en debug con prefijo del tipo
         if (raw.startsWith('42')) {
           try {
-            const [event, p] = JSON.parse(raw.slice(2))
-            if (event === 'mqtt' && p) {
+            const parsed = JSON.parse(raw.slice(2))
+            const eventName = parsed[0]
+            const p = parsed[1]
+            setDmrDbg(`EVT[${eventName}] ${JSON.stringify(p).slice(0, 100)}`)
+            if (eventName === 'mqtt' && p) {
               if (p.Stop == 0) {
                 setDmrStatus(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
               } else {
                 setDmrStatus(d => ({ ...d, active: false }))
               }
             }
-          } catch (_) {}
+          } catch (_) {
+            setDmrDbg(`RAW42: ${raw.slice(0, 120)}`)
+          }
+          return
         }
+        setDmrDbg(`PKT: ${raw.slice(0, 120)}`)
       }
 
       ws.onclose = () => {
