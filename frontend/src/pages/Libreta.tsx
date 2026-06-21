@@ -353,29 +353,20 @@ export default function LibretaPage() {
         if (raw === '2') { ws.send('3'); return }
         // EIO=3 open — esperar el 40
         if (raw.startsWith('0')) return
-        // Default namespace connect → unirse a namespace por TG: 40/TGD_33450,
+        // Default namespace connect → ONLINE + suscribir con formato TGD_
         if (raw === '40') {
-          tgs.forEach(tg => ws.send(`40/TGD_${tg},`))
-          setDmrDbg(`uniendo namespaces TGD: ${tgs.join(',')}...`)
-          return
-        }
-        // Namespace TG conectado correctamente → ONLINE
-        if (raw.startsWith('40/TGD_')) {
           setDmrStatus(d => ({ ...d, connected: true }))
-          setDmrDbg(`namespace OK: ${raw.split(',')[0]}`)
+          tgs.forEach(tg => ws.send(`42["subscribe","TGD_${tg}"]`))
+          setDmrDbg(`ONLINE — suscritos TGD: ${tgs.join(',')}`)
           return
         }
-        // Error de namespace
-        if (raw.startsWith('44/')) {
-          setDmrDbg(`ns-err: ${raw.slice(0, 100)}`)
-          return
-        }
-        // Evento en namespace TG: 42/TGD_33450,["mqtt",{...}]
-        if (raw.startsWith('42/TGD_')) {
-          const ci = raw.indexOf(',')
-          if (ci === -1) return
+        // Evento socket.io (cualquier namespace)
+        if (raw.startsWith('42')) {
+          const ci = raw.startsWith('42/') ? raw.indexOf(',') : 1
+          const payload = raw.startsWith('42/') ? raw.slice(ci + 1) : raw.slice(2)
           try {
-            const [eventName, p] = JSON.parse(raw.slice(ci + 1))
+            const parsed = JSON.parse(payload)
+            const [eventName, p] = Array.isArray(parsed) ? parsed : [String(parsed), null]
             setDmrDbg(`EVT[${eventName}] ${JSON.stringify(p).slice(0, 100)}`)
             if (eventName === 'mqtt' && p) {
               if (p.Stop == 0) {
@@ -387,22 +378,7 @@ export default function LibretaPage() {
           } catch (_) { setDmrDbg(`raw: ${raw.slice(0, 120)}`) }
           return
         }
-        // Evento en namespace raíz (fallback)
-        if (raw.startsWith('42')) {
-          try {
-            const [eventName, p] = JSON.parse(raw.slice(2))
-            setDmrDbg(`EVT/[${eventName}] ${JSON.stringify(p).slice(0, 100)}`)
-            if (eventName === 'mqtt' && p) {
-              if (p.Stop == 0) {
-                setDmrStatus(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
-              } else {
-                setDmrStatus(d => ({ ...d, active: false }))
-              }
-            }
-          } catch (_) { setDmrDbg(`raw42: ${raw.slice(0, 120)}`) }
-          return
-        }
-        setDmrDbg(`pkt: ${raw.slice(0, 80)}`)
+        if (!raw.startsWith('44')) setDmrDbg(`pkt: ${raw.slice(0, 80)}`)
       }
 
       ws.onclose = () => {
