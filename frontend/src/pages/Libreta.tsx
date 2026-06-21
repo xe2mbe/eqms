@@ -274,10 +274,7 @@ export default function LibretaPage() {
       catalogosApi.zonas().then(r => setZonas(r.data)),
       catalogosApi.listPaises().then(r => setPaises(r.data)),
     ]).then(() => {
-      Promise.all([
-        libretaApi.getConfig(),
-        configuracionApi.getNodeConfig().catch(() => null),
-      ]).then(([{ data: cfg }, nodeCfgRes]) => {
+      libretaApi.getConfig().then(({ data: cfg }) => {
         if (cfg) {
           sesionForm.setFieldsValue({
             tipo_evento: cfg.tipo_evento ?? undefined,
@@ -292,12 +289,28 @@ export default function LibretaPage() {
           if (cfg.anunciar_primera_vez) setAnunciarPrimeraVez(true)
           if (cfg.anunciar_reaparicion) setAnunciarReaparicion(true)
           if (cfg.zona_swl_default) setZonaSwlDefault(cfg.zona_swl_default)
-          if (cfg.bm_tgs) setNodeCfg(prev => ({ ...prev, bm_tgs: cfg.bm_tgs! }))
-        }
-        if (nodeCfgRes?.data) {
-          nodeConfigForm.setFieldsValue(nodeCfgRes.data)
-          const d = nodeCfgRes.data
-          setNodeCfg(prev => ({ ...prev, asl_hub_id: d.asl_hub_id ?? '', asl_boletin_node: d.asl_boletin_node ?? '', irlp_reflector_id: d.irlp_reflector_id ?? '', irlp_boletin_node: d.irlp_boletin_node ?? '' }))
+          setNodeCfg({
+            asl_hub_id: cfg.asl_hub_id ?? '',
+            asl_boletin_node: cfg.asl_boletin_node ?? '',
+            irlp_reflector_id: cfg.irlp_reflector_id ?? '',
+            irlp_boletin_node: cfg.irlp_boletin_node ?? '',
+            bm_tgs: cfg.bm_tgs ?? '33450,334',
+          })
+          if (cfg.roip_monitorando) setRoipMonitorando(true)
+          if (cfg.roip_avanzado) setRoipAvanzado(true)
+          nodeConfigForm.setFieldsValue({
+            asl_hub_id: cfg.asl_hub_id,
+            asl_host: cfg.asl_host,
+            asl_port: cfg.asl_port,
+            asl_boletin_node: cfg.asl_boletin_node,
+            irlp_reflector_id: cfg.irlp_reflector_id,
+            irlp_ref_url: cfg.irlp_ref_url,
+            irlp_user: cfg.irlp_user,
+            irlp_password: cfg.irlp_password,
+            irlp_boletin_node: cfg.irlp_boletin_node,
+            irlp_host: cfg.irlp_host,
+            irlp_port: cfg.irlp_port,
+          })
         }
       }).finally(() => setLoadingConfig(false))
     })
@@ -558,9 +571,28 @@ export default function LibretaPage() {
   const guardarNodeConfig = async () => {
     setSavingNodeConfig(true)
     try {
-      const vals = nodeConfigForm.getFieldsValue() as NodeConfig
-      await configuracionApi.saveNodeConfig(vals)
-      setNodeCfg({ asl_hub_id: vals.asl_hub_id ?? '', asl_boletin_node: vals.asl_boletin_node ?? '', irlp_reflector_id: vals.irlp_reflector_id ?? '', irlp_boletin_node: vals.irlp_boletin_node ?? '' })
+      const vals = nodeConfigForm.getFieldsValue()
+      await libretaApi.saveConfig({
+        asl_hub_id: vals.asl_hub_id,
+        asl_host: vals.asl_host,
+        asl_port: vals.asl_port,
+        asl_boletin_node: vals.asl_boletin_node,
+        irlp_reflector_id: vals.irlp_reflector_id,
+        irlp_ref_url: vals.irlp_ref_url,
+        irlp_user: vals.irlp_user,
+        irlp_password: vals.irlp_password,
+        irlp_boletin_node: vals.irlp_boletin_node,
+        irlp_host: vals.irlp_host,
+        irlp_port: vals.irlp_port,
+        bm_tgs: nodeCfg.bm_tgs,
+      })
+      setNodeCfg(prev => ({
+        ...prev,
+        asl_hub_id: vals.asl_hub_id ?? '',
+        asl_boletin_node: vals.asl_boletin_node ?? '',
+        irlp_reflector_id: vals.irlp_reflector_id ?? '',
+        irlp_boletin_node: vals.irlp_boletin_node ?? '',
+      }))
       message.success('Configuración de nodos guardada')
     } catch {
       message.error('Error al guardar configuración de nodos')
@@ -1293,12 +1325,19 @@ export default function LibretaPage() {
                 {/* Toggle de monitoreo */}
                 <Space align="center" style={{ marginBottom: 12 }}>
                   <Text strong style={{ fontSize: 13 }}>Monitoreo Sistemas RoIP</Text>
-                  <Switch checked={roipMonitorando} onChange={v => { setRoipMonitorando(v); if (!v) setRoipAvanzado(false) }} />
+                  <Switch checked={roipMonitorando} onChange={v => {
+                    setRoipMonitorando(v)
+                    if (!v) setRoipAvanzado(false)
+                    libretaApi.saveConfig({ roip_monitorando: v, roip_avanzado: v ? roipAvanzado : false })
+                  }} />
                   {roipMonitorando && (
                     <>
                       <Text type="secondary" style={{ fontSize: 11 }}>actualizando cada 5 s</Text>
                       <Text strong style={{ fontSize: 13, marginLeft: 8 }}>Avanzado</Text>
-                      <Switch checked={roipAvanzado} onChange={setRoipAvanzado} />
+                      <Switch checked={roipAvanzado} onChange={v => {
+                        setRoipAvanzado(v)
+                        libretaApi.saveConfig({ roip_avanzado: v })
+                      }} />
                     </>
                   )}
                 </Space>

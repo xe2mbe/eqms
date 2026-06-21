@@ -174,10 +174,21 @@ async def lifespan(app: FastAPI):
                 CONSTRAINT uq_plantilla_usuario_config UNIQUE (plantilla_id, usuario_id)
             )
         """))
-        # libreta_config_usuario: TalkGroups DMR por usuario
-        conn.execute(text(
-            "ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS bm_tgs VARCHAR(200)"
-        ))
+        # libreta_config_usuario: preferencias de monitoreo RoIP por usuario
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS bm_tgs VARCHAR(200)"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS roip_monitorando BOOLEAN DEFAULT FALSE"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS roip_avanzado BOOLEAN DEFAULT FALSE"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS asl_hub_id VARCHAR(20)"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS asl_host VARCHAR(200)"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS asl_port VARCHAR(10)"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS asl_boletin_node VARCHAR(20)"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS irlp_reflector_id VARCHAR(20)"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS irlp_ref_url VARCHAR(500)"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS irlp_user VARCHAR(80)"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS irlp_password VARCHAR(200)"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS irlp_boletin_node VARCHAR(20)"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS irlp_host VARCHAR(200)"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS irlp_port VARCHAR(10)"))
         conn.commit()
 
     db = SessionLocal()

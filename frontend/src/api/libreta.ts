@@ -12,6 +12,19 @@ export interface LibretaConfig {
   anunciar_reaparicion?: boolean
   zona_swl_default?: string | null
   bm_tgs?: string | null
+  roip_monitorando?: boolean
+  roip_avanzado?: boolean
+  asl_hub_id?: string | null
+  asl_host?: string | null
+  asl_port?: string | null
+  asl_boletin_node?: string | null
+  irlp_reflector_id?: string | null
+  irlp_ref_url?: string | null
+  irlp_user?: string | null
+  irlp_password?: string | null
+  irlp_boletin_node?: string | null
+  irlp_host?: string | null
+  irlp_port?: string | null
 }
 
 export interface CheckIndicativoResult {

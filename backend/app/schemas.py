@@ -341,6 +341,19 @@ class LibretaConfigOut(BaseModel):
     anunciar_reaparicion: bool = False
     zona_swl_default: Optional[str] = None
     bm_tgs: Optional[str] = None
+    roip_monitorando: bool = False
+    roip_avanzado: bool = False
+    asl_hub_id: Optional[str] = None
+    asl_host: Optional[str] = None
+    asl_port: Optional[str] = None
+    asl_boletin_node: Optional[str] = None
+    irlp_reflector_id: Optional[str] = None
+    irlp_ref_url: Optional[str] = None
+    irlp_user: Optional[str] = None
+    irlp_password: Optional[str] = None
+    irlp_boletin_node: Optional[str] = None
+    irlp_host: Optional[str] = None
+    irlp_port: Optional[str] = None
     class Config:
         from_attributes = True
 
@@ -348,14 +361,27 @@ class LibretaConfigUpdate(BaseModel):
     tipo_evento: Optional[str] = None
     estacion: Optional[str] = None
     sistema_default: Optional[str] = None
-    considerar_swl: bool = False
+    considerar_swl: Optional[bool] = None
     estado_default: Optional[str] = None
     ciudad_default: Optional[str] = None
-    rst_default: Optional[str] = "59"
-    anunciar_primera_vez: bool = False
-    anunciar_reaparicion: bool = False
+    rst_default: Optional[str] = None
+    anunciar_primera_vez: Optional[bool] = None
+    anunciar_reaparicion: Optional[bool] = None
     zona_swl_default: Optional[str] = None
     bm_tgs: Optional[str] = None
+    roip_monitorando: Optional[bool] = None
+    roip_avanzado: Optional[bool] = None
+    asl_hub_id: Optional[str] = None
+    asl_host: Optional[str] = None
+    asl_port: Optional[str] = None
+    asl_boletin_node: Optional[str] = None
+    irlp_reflector_id: Optional[str] = None
+    irlp_ref_url: Optional[str] = None
+    irlp_user: Optional[str] = None
+    irlp_password: Optional[str] = None
+    irlp_boletin_node: Optional[str] = None
+    irlp_host: Optional[str] = None
+    irlp_port: Optional[str] = None
 
 class NuevoHamCreate(BaseModel):
     indicativo: str
