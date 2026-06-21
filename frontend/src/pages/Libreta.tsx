@@ -17,7 +17,7 @@ import { estadisticasApi } from '@/api/estadisticas'
 import { catalogosApi } from '@/api/catalogos'
 import { operadoresApi, type Operador } from '@/api/operadores'
 import { libretaApi, type CheckIndicativoResult } from '@/api/libreta'
-import { configuracionApi, type NodeConfig } from '@/api/configuracion'
+
 import client from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
 import { useColPrefs } from '@/components/common/ColSettings'
