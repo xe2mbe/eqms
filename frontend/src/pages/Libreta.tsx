@@ -400,6 +400,25 @@ export default function LibretaPage() {
     }
   }, [roipMonitorando, nodeCfg.bm_tgs, nodeCfg.bm_api_key])
 
+  // ── REST polling DMR activity (BM API proxy) ──────────────────────────────
+  useEffect(() => {
+    if (!roipMonitorando || !nodeCfg.bm_api_key) return
+    const poll = async () => {
+      try {
+        const { data } = await client.get('/libreta/dmr-lastheard')
+        if (data.active) {
+          setDmrStatus(d => ({ ...d, active: true, callsign: data.callsign, tg: data.tg, tgName: data.tg_name }))
+          setDmrDbg(`REST TX: ${data.callsign} · TG ${data.tg}`)
+        } else if (!data.error) {
+          setDmrStatus(d => ({ ...d, active: false, callsign: '', tg: 0, tgName: '' }))
+        }
+      } catch (_) {}
+    }
+    poll()
+    const t = setInterval(poll, 7_000)
+    return () => clearInterval(t)
+  }, [roipMonitorando, nodeCfg.bm_api_key])
+
   // ── Resumen de reportes guardados ────────────────────────────────────────
   const fetchResumen = useCallback(async (cfg: typeof sesionConfig) => {
     if (!cfg) return

@@ -1,5 +1,8 @@
 from datetime import datetime, timezone
+import logging
+import re
 
+import httpx
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -9,6 +12,7 @@ from app import models, schemas
 from app.auth import get_current_user
 
 router = APIRouter()
+logger = logging.getLogger("qms")
 
 RECORDATORIO_KEY = "dias_reaparicion"
 
@@ -134,3 +138,49 @@ def nuevo_ham(
     db.commit()
     db.refresh(ham)
     return {"ok": True, "indicativo": ham.indicativo}
+
+
+# ─── Proxy REST → Brandmeister Last Heard ────────────────────────────────────
+
+@router.get("/dmr-lastheard")
+async def dmr_lastheard(
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    cfg = (
+        db.query(models.LibretaConfigUsuario)
+        .filter(models.LibretaConfigUsuario.usuario_id == current_user.id)
+        .first()
+    )
+    if not cfg or not cfg.bm_api_key:
+        return {"active": False, "callsign": "", "tg": 0, "tg_name": "", "error": "no_api_key"}
+
+    tgs_raw = cfg.bm_tgs or "33450,334"
+    tgs = [t.strip() for t in re.split(r'[,.]', tgs_raw) if t.strip().isdigit()]
+
+    headers = {"Authorization": f"Bearer {cfg.bm_api_key}"}
+
+    async with httpx.AsyncClient(timeout=5.0) as http:
+        for tg in tgs:
+            try:
+                r = await http.get(
+                    f"https://api.brandmeister.network/v2/talkgroup/{tg}/lastheard/?limit=1",
+                    headers=headers,
+                )
+                if r.status_code == 200:
+                    data = r.json()
+                    if isinstance(data, list) and data:
+                        entry = data[0]
+                        if entry.get("Stop") == 0:
+                            return {
+                                "active": True,
+                                "callsign": entry.get("SourceCall", ""),
+                                "tg": entry.get("DestinationID", int(tg)),
+                                "tg_name": entry.get("DestinationName", ""),
+                            }
+                else:
+                    logger.debug(f"BM lastheard TG {tg} status {r.status_code}: {r.text[:200]}")
+            except Exception as exc:
+                logger.warning(f"BM REST error TG {tg}: {exc}")
+
+    return {"active": False, "callsign": "", "tg": 0, "tg_name": ""}
