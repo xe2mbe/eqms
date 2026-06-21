@@ -11,6 +11,7 @@ export interface LibretaConfig {
   anunciar_primera_vez?: boolean
   anunciar_reaparicion?: boolean
   zona_swl_default?: string | null
+  bm_tgs?: string | null
 }
 
 export interface CheckIndicativoResult {

@@ -292,11 +292,12 @@ export default function LibretaPage() {
           if (cfg.anunciar_primera_vez) setAnunciarPrimeraVez(true)
           if (cfg.anunciar_reaparicion) setAnunciarReaparicion(true)
           if (cfg.zona_swl_default) setZonaSwlDefault(cfg.zona_swl_default)
+          if (cfg.bm_tgs) setNodeCfg(prev => ({ ...prev, bm_tgs: cfg.bm_tgs! }))
         }
         if (nodeCfgRes?.data) {
           nodeConfigForm.setFieldsValue(nodeCfgRes.data)
           const d = nodeCfgRes.data
-          setNodeCfg({ asl_hub_id: d.asl_hub_id ?? '', asl_boletin_node: d.asl_boletin_node ?? '', irlp_reflector_id: d.irlp_reflector_id ?? '', irlp_boletin_node: d.irlp_boletin_node ?? '', bm_tgs: d.bm_tgs ?? '33450,334' })
+          setNodeCfg(prev => ({ ...prev, asl_hub_id: d.asl_hub_id ?? '', asl_boletin_node: d.asl_boletin_node ?? '', irlp_reflector_id: d.irlp_reflector_id ?? '', irlp_boletin_node: d.irlp_boletin_node ?? '' }))
         }
       }).finally(() => setLoadingConfig(false))
     })
@@ -1416,9 +1417,7 @@ export default function LibretaPage() {
                     <Col xs={24} sm={12} style={{ marginBottom: 8 }}>
                       <div style={{ background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 8, padding: '10px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed' }}>
-                            DMR Brandmeister
-                          </span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed' }}>DMR Brandmeister</span>
                           {!dmrStatus.connected
                             ? <StatusPill label="Conectando…" color="#d9d9d9" />
                             : <StatusPill label="ONLINE" color="#7c3aed" />
@@ -1431,9 +1430,6 @@ export default function LibretaPage() {
                             boxShadow: dmrStatus.active ? '0 0 0 3px rgba(255,77,79,0.3)' : dmrStatus.connected ? '0 0 0 3px rgba(124,58,237,0.2)' : 'none',
                             animation: dmrStatus.active ? 'pulse-red 0.8s ease-in-out infinite' : 'none',
                           }} />
-                          <span style={{ fontSize: 11, color: '#595959', fontWeight: 600 }}>
-                            TGs: {nodeCfg.bm_tgs || '—'}
-                          </span>
                           {dmrStatus.connected && (
                             dmrStatus.active
                               ? <StatusPill label="TX ACTIVO" color="#ff4d4f" pulse />
@@ -1447,6 +1443,30 @@ export default function LibretaPage() {
                             <span style={{ color: '#8c8c8c' }}>TG {dmrStatus.tg}{dmrStatus.tgName ? ` · ${dmrStatus.tgName}` : ''}</span>
                           </div>
                         )}
+                        {/* Configuración de TGs — siempre visible, guardado por usuario */}
+                        <div style={{ marginTop: 10, borderTop: '1px solid #ddd6fe', paddingTop: 8 }}>
+                          <Text style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600 }}>TalkGroups a monitorear</Text>
+                          <Space.Compact style={{ marginTop: 4, width: '100%' }}>
+                            <Input
+                              size="small"
+                              value={nodeCfg.bm_tgs}
+                              onChange={e => setNodeCfg(prev => ({ ...prev, bm_tgs: e.target.value }))}
+                              placeholder="33450,334"
+                              style={{ fontSize: 12 }}
+                            />
+                            <Button size="small" type="primary" icon={<SaveOutlined />}
+                              onClick={async () => {
+                                try {
+                                  await libretaApi.saveConfig({ bm_tgs: nodeCfg.bm_tgs })
+                                  message.success('TGs guardados')
+                                } catch { message.error('Error al guardar') }
+                              }}
+                            >Guardar</Button>
+                          </Space.Compact>
+                          <Text type="secondary" style={{ fontSize: 10, display: 'block', marginTop: 3 }}>
+                            Separados por coma — ej: 33450,334
+                          </Text>
+                        </div>
                       </div>
                     </Col>
 
@@ -1514,14 +1534,6 @@ export default function LibretaPage() {
                       <Col xs={8} sm={3}>
                         <Form.Item label="Puerto CGI" name="irlp_port">
                           <Input placeholder="8080" />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Divider orientation="left" plain style={{ fontSize: 12, color: '#7c3aed', margin: '4px 0 8px' }}>DMR / Brandmeister</Divider>
-                    <Row gutter={12}>
-                      <Col xs={24} sm={16}>
-                        <Form.Item label="TalkGroups a monitorear (separados por coma)" name="bm_tgs">
-                          <Input placeholder="33450,334" />
                         </Form.Item>
                       </Col>
                     </Row>

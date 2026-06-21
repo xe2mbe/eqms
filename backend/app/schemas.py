@@ -340,6 +340,7 @@ class LibretaConfigOut(BaseModel):
     anunciar_primera_vez: bool = False
     anunciar_reaparicion: bool = False
     zona_swl_default: Optional[str] = None
+    bm_tgs: Optional[str] = None
     class Config:
         from_attributes = True
 
@@ -354,6 +355,7 @@ class LibretaConfigUpdate(BaseModel):
     anunciar_primera_vez: bool = False
     anunciar_reaparicion: bool = False
     zona_swl_default: Optional[str] = None
+    bm_tgs: Optional[str] = None
 
 class NuevoHamCreate(BaseModel):
     indicativo: str
