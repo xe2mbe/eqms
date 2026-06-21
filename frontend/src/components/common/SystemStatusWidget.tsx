@@ -86,7 +86,6 @@ export default function SystemStatusWidget() {
         if (raw.startsWith('0')) return
         if (raw === '40') {
           setDmr(d => ({ ...d, connected: true }))
-          tgs.forEach(tg => ws.send(`42["subscribe","TGD_${tg}"]`))
           return
         }
         if (raw.startsWith('42')) {
@@ -94,12 +93,16 @@ export default function SystemStatusWidget() {
           const payload = raw.startsWith('42/') ? raw.slice(ci + 1) : raw.slice(2)
           try {
             const parsed = JSON.parse(payload)
-            const [event, p] = Array.isArray(parsed) ? parsed : [String(parsed), null]
-            if (event === 'mqtt' && p) {
-              if (p.Stop == 0) {
-                setDmr(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
-              } else {
-                setDmr(d => ({ ...d, active: false }))
+            const [, p] = Array.isArray(parsed) ? parsed : [null, null]
+            if (p && typeof p === 'object') {
+              const srcCall = p.SourceCall || p.Callsign || ''
+              const destId  = p.DestinationID ?? p.ToTalkgroupID ?? 0
+              if (srcCall && (tgs.length === 0 || tgs.includes(String(destId)))) {
+                if (p.Stop == 0 || p.Stop == null) {
+                  setDmr(d => ({ ...d, active: true, callsign: srcCall, tg: destId, tgName: p.DestinationName || '' }))
+                } else {
+                  setDmr(d => ({ ...d, active: false }))
+                }
               }
             }
           } catch (_) {}

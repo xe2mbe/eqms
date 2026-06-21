@@ -364,11 +364,8 @@ export default function LibretaPage() {
         }
         if (raw === '40') {
           setDmrStatus(d => ({ ...d, connected: true }))
-          tgs.forEach(tg => {
-            ws.send(`42["subscribe","TGD_${tg}"]`)
-            ws.send(`42["subscribe",${tg}]`)
-          })
-          setDmrWsDbg(`OK${apiKey ? '+auth' : ''} TGD:${tgs.join(',')}`)
+          // Escucha pasiva — BM envía eventos a clientes auth sin suscripción explícita
+          setDmrWsDbg(`OK${apiKey ? '+auth' : ''} — escuchando`)
           return
         }
         if (raw.startsWith('44')) {
@@ -381,12 +378,22 @@ export default function LibretaPage() {
           try {
             const parsed = JSON.parse(payload)
             const [eventName, p] = Array.isArray(parsed) ? parsed : [String(parsed), null]
-            setDmrWsDbg(`EVT[${eventName}] ${JSON.stringify(p).slice(0, 100)}`)
-            if (eventName === 'mqtt' && p) {
-              if (p.Stop == 0) {
-                setDmrStatus(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
-              } else {
-                setDmrStatus(d => ({ ...d, active: false }))
+            setDmrWsDbg(`EVT[${eventName}] ${JSON.stringify(p).slice(0, 80)}`)
+            // Aceptar cualquier evento con datos de transmisión DMR
+            if (p && typeof p === 'object') {
+              const srcCall = p.SourceCall || p.Callsign || ''
+              const destId  = p.DestinationID ?? p.ToTalkgroupID ?? 0
+              const destName = p.DestinationName || p.ToTalkgroupName || ''
+              if (srcCall) {
+                const tgNums = tgs.map((t: string) => parseInt(t))
+                const isMonitored = tgNums.length === 0 || tgNums.includes(destId)
+                if (isMonitored) {
+                  if (p.Stop == 0 || p.Stop == null) {
+                    setDmrStatus(d => ({ ...d, active: true, callsign: srcCall, tg: destId, tgName: destName }))
+                  } else {
+                    setDmrStatus(d => ({ ...d, active: false, callsign: '', tg: 0, tgName: '' }))
+                  }
+                }
               }
             }
           } catch (_) { setDmrWsDbg(`raw: ${raw.slice(0, 120)}`) }
