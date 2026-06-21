@@ -1350,7 +1350,7 @@ export default function LibretaPage() {
                   <Row gutter={12} style={{ marginBottom: 12 }}>
 
                     {/* ── Hub ASL ── */}
-                    <Col xs={24} sm={12} style={{ marginBottom: 8 }}>
+                    <Col xs={24} sm={8} style={{ marginBottom: 8 }}>
                       <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8, padding: '10px 14px' }}>
                         {/* Fila 1: título + ONLINE/OFFLINE */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -1403,7 +1403,7 @@ export default function LibretaPage() {
                     </Col>
 
                     {/* ── Reflector IRLP ── */}
-                    <Col xs={24} sm={12} style={{ marginBottom: 8 }}>
+                    <Col xs={24} sm={8} style={{ marginBottom: 8 }}>
                       <div style={{ background: '#e6f7ff', border: '1px solid #91caff', borderRadius: 8, padding: '10px 14px' }}>
                         {/* Fila 1: título + ONLINE/OFFLINE */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -1455,7 +1455,7 @@ export default function LibretaPage() {
                     </Col>
 
                     {/* ── DMR / Brandmeister ── */}
-                    <Col xs={24} sm={12} style={{ marginBottom: 8 }}>
+                    <Col xs={24} sm={8} style={{ marginBottom: 8 }}>
                       <div style={{ background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 8, padding: '10px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed' }}>DMR Brandmeister</span>
@@ -1605,7 +1605,7 @@ export default function LibretaPage() {
       {/* Widgets RoIP */}
       {roipMonitorando && (
         <Row gutter={8} style={{ marginBottom: 8 }}>
-          <Col xs={24} sm={12} style={{ marginBottom: 4 }}>
+          <Col xs={24} sm={8} style={{ marginBottom: 4 }}>
             <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6, padding: '4px 10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#389e0d' }}>Hub ASL: #{nodeCfg.asl_hub_id || '—'}</span>
@@ -1639,7 +1639,7 @@ export default function LibretaPage() {
               )}
             </div>
           </Col>
-          <Col xs={24} sm={12} style={{ marginBottom: 4 }}>
+          <Col xs={24} sm={8} style={{ marginBottom: 4 }}>
             <div style={{ background: '#e6f7ff', border: '1px solid #91caff', borderRadius: 6, padding: '4px 10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#0891b2' }}>Reflector IRLP: #{nodeCfg.irlp_reflector_id || '—'}</span>
@@ -1672,7 +1672,7 @@ export default function LibretaPage() {
               )}
             </div>
           </Col>
-          <Col xs={24} sm={12} style={{ marginBottom: 4 }}>
+          <Col xs={24} sm={8} style={{ marginBottom: 4 }}>
             <div style={{ background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 6, padding: '4px 10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed' }}>DMR Brandmeister</span>
