@@ -345,11 +345,11 @@ export default function LibretaPage() {
     socket.on('connect', () => {
       setDmrStatus(d => ({ ...d, connected: true }))
       const tgs = (nodeCfg.bm_tgs || '33450,334').split(',').map((s: string) => s.trim()).filter(Boolean)
-      tgs.forEach((tg: string) => socket.emit('subscribe', `dst_${tg}`))
+      tgs.forEach((tg: string) => socket.emit('subscribe', `TGD_${tg}`))
     })
     socket.on('disconnect', () => setDmrStatus(d => ({ ...d, connected: false, active: false })))
     socket.on('mqtt', (p: { DestinationID: number; DestinationName: string; SourceCall: string; Stop: number }) => {
-      if (p.Stop === 0) {
+      if (p.Stop == 0) {
         setDmrStatus(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
       } else {
         setDmrStatus(d => ({ ...d, active: false }))

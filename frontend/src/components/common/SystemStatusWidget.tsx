@@ -83,13 +83,13 @@ export default function SystemStatusWidget() {
 
       socket.on('connect', () => {
         setDmr(d => ({ ...d, connected: true }))
-        tgs.forEach(tg => socket.emit('subscribe', `dst_${tg}`))
+        tgs.forEach(tg => socket.emit('subscribe', `TGD_${tg}`))
       })
       socket.on('disconnect', () => {
         setDmr(d => ({ ...d, connected: false, active: false }))
       })
       socket.on('mqtt', (p: { DestinationID: number; DestinationName: string; SourceCall: string; Stop: number }) => {
-        if (p.Stop === 0) {
+        if (p.Stop == 0) {
           setDmr(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
         } else {
           setDmr(d => ({ ...d, active: false }))
