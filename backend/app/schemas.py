@@ -166,6 +166,14 @@ class ReporteCreate(BaseModel):
     fecha_reporte: datetime
     observaciones: Optional[str] = None
 
+
+    @field_validator('operador', mode='before')
+    @classmethod
+    def _title_operador(cls, v):
+        if isinstance(v, str) and v.strip():
+            return v.strip().title()
+        return v
+
 class ReporteUpdate(BaseModel):
     indicativo: Optional[str] = None
     operador: Optional[str] = None
@@ -179,6 +187,14 @@ class ReporteUpdate(BaseModel):
     estacion_id: Optional[int] = None
     fecha_reporte: Optional[datetime] = None
     observaciones: Optional[str] = None
+
+
+    @field_validator('operador', mode='before')
+    @classmethod
+    def _title_operador(cls, v):
+        if isinstance(v, str) and v.strip():
+            return v.strip().title()
+        return v
 
 class ReporteOut(BaseModel):
     id: int
@@ -279,6 +295,14 @@ class ReporteRSCreate(BaseModel):
     url_publicacion: Optional[str] = None
     fecha_reporte: datetime
     observaciones: Optional[str] = None
+
+
+    @field_validator('operador', mode='before')
+    @classmethod
+    def _title_operador(cls, v):
+        if isinstance(v, str) and v.strip():
+            return v.strip().title()
+        return v
 
 class ReporteRSOut(BaseModel):
     id: int
@@ -390,6 +414,14 @@ class NuevoHamCreate(BaseModel):
     nombre_completo: Optional[str] = None
     municipio: Optional[str] = None
     estado: Optional[str] = None
+
+
+    @field_validator('nombre_completo', mode='before')
+    @classmethod
+    def _title_nombre(cls, v):
+        if isinstance(v, str) and v.strip():
+            return v.strip().title()
+        return v
 
 class RecordatorioConfig(BaseModel):
     dias_reaparicion: int = 30

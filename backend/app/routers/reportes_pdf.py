@@ -534,23 +534,29 @@ def _gather_rf(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
     """), {**base, **evp}).fetchall()
 
     top_ests = db.execute(text(f"""
-        SELECT r.indicativo, COALESCE(rx.nombre_completo,''), COALESCE(r.estado,''), COUNT(*) AS total
+        SELECT r.indicativo, COALESCE(rx.nombre_completo, r.operador, ''), COALESCE(r.estado,''), COUNT(*) AS total
         FROM reportes r
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
         WHERE r.fecha_reporte <= :ff {evf}
-        GROUP BY r.indicativo, rx.nombre_completo, r.estado
+        GROUP BY r.indicativo, rx.nombre_completo, r.operador, r.estado
         ORDER BY total DESC LIMIT 50
     """), {"ff": ff, **evp}).fetchall()
 
     por_estado = db.execute(text(f"""
         SELECT estado, COUNT(*) AS total FROM reportes
-        WHERE estado IS NOT NULL
+        WHERE estado IS NOT NULL AND estado <> ''
           AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
         GROUP BY estado ORDER BY total DESC LIMIT 32
     """), {**base, **evp_bare}).fetchall()
 
+    sin_estado = db.execute(text(f"""
+        SELECT COUNT(*) FROM reportes
+        WHERE (estado IS NULL OR estado = '')
+          AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+    """), {**base, **evp_bare}).scalar() or 0
+
     primera_vez = db.execute(text(f"""
-        SELECT r.indicativo, COALESCE(rx.nombre_completo,''), COALESCE(r.estado,'')
+        SELECT r.indicativo, COALESCE(rx.nombre_completo, r.operador, ''), COALESCE(r.estado,'')
         FROM reportes r
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
         WHERE r.fecha_reporte >= :fi AND r.fecha_reporte <= :ff {evf}
@@ -559,12 +565,12 @@ def _gather_rf(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
               WHERE r2.indicativo = r.indicativo {evf.replace('r.', 'r2.')}
                 AND r2.fecha_reporte < :fi
           )
-        GROUP BY r.indicativo, rx.nombre_completo, r.estado
+        GROUP BY r.indicativo, rx.nombre_completo, r.operador, r.estado
         ORDER BY r.indicativo
     """), {**base, **evp}).fetchall()
 
     detalle = db.execute(text(f"""
-        SELECT r.indicativo, COALESCE(rx.nombre_completo,''), r.senal,
+        SELECT r.indicativo, COALESCE(rx.nombre_completo, r.operador, ''), r.senal,
                COALESCE(r.estado,''), COALESCE(s.codigo,''), COALESCE(z.codigo,''),
                r.fecha_reporte
         FROM reportes r
@@ -592,6 +598,7 @@ def _gather_rf(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
         "por_sistema": [{"sistema": r[0], "total": r[1]} for r in por_sistema],
         "top_ests": [{"ind": r[0], "nombre": r[1], "estado": r[2], "total": r[3]} for r in top_ests],
         "por_estado": [{"estado": r[0], "total": r[1]} for r in por_estado],
+        "sin_estado": int(sin_estado),
         "primera_vez": [{"ind": r[0], "nombre": r[1], "estado": r[2]} for r in primera_vez],
         "detalle": [{"ind": r[0], "nombre": r[1], "senal": r[2], "estado": r[3], "sistema": r[4], "zona": r[5], "fecha": r[6]} for r in detalle],
     }
@@ -634,11 +641,11 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
     """), {**base, **evp}).fetchall()
 
     top_ests = db.execute(text(f"""
-        SELECT r.indicativo, COALESCE(rx.nombre_completo,''), COUNT(*) AS total
+        SELECT r.indicativo, COALESCE(rx.nombre_completo, r.operador, ''), COUNT(*) AS total
         FROM reportes_rs r
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
         WHERE r.fecha_reporte <= :ff {evf}
-        GROUP BY r.indicativo, rx.nombre_completo
+        GROUP BY r.indicativo, rx.nombre_completo, r.operador
         ORDER BY total DESC LIMIT 50
     """), {"ff": ff, **evp}).fetchall()
 
@@ -665,8 +672,14 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
         GROUP BY estado ORDER BY total DESC LIMIT 32
     """), {**base, **evp_bare}).fetchall()
 
+    sin_estado_rs = db.execute(text(f"""
+        SELECT COUNT(*) FROM reportes_rs
+        WHERE (estado IS NULL OR estado = '')
+          AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+    """), {**base, **evp_bare}).scalar() or 0
+
     detalle_rs = db.execute(text(f"""
-        SELECT r.indicativo, COALESCE(rx.nombre_completo,''), pl.nombre,
+        SELECT r.indicativo, COALESCE(rx.nombre_completo, r.operador, ''), pl.nombre,
                COALESCE(r.estado,''), COALESCE(z.codigo,''), r.fecha_reporte,
                COALESCE(r.url_publicacion,'')
         FROM reportes_rs r
@@ -701,11 +714,11 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
         """), {**pp_base, **evp_bare}).scalar() or 0
 
         pl_top_ests = db.execute(text(f"""
-            SELECT r.indicativo, COALESCE(rx.nombre_completo,''), COUNT(*) AS total
+            SELECT r.indicativo, COALESCE(rx.nombre_completo, r.operador, ''), COUNT(*) AS total
             FROM reportes_rs r
             LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
             WHERE r.plataforma_id = :pl AND r.fecha_reporte <= :ff {evf}
-            GROUP BY r.indicativo, rx.nombre_completo
+            GROUP BY r.indicativo, rx.nombre_completo, r.operador
             ORDER BY total DESC LIMIT 50
         """), {"ff": ff, "pl": pl_id, **evp}).fetchall()
 
@@ -740,8 +753,14 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
             GROUP BY estado ORDER BY total DESC LIMIT 32
         """), {**pp_base, **evp_bare}).fetchall()
 
+        pl_sin_estado = db.execute(text(f"""
+            SELECT COUNT(*) FROM reportes_rs
+            WHERE plataforma_id = :pl AND (estado IS NULL OR estado = '')
+              AND fecha_reporte >= :fi AND fecha_reporte <= :ff {evf_bare}
+        """), {**pp_base, **evp_bare}).scalar() or 0
+
         pl_detalle = db.execute(text(f"""
-            SELECT r.indicativo, COALESCE(rx.nombre_completo,''),
+            SELECT r.indicativo, COALESCE(rx.nombre_completo, r.operador, ''),
                    COALESCE(r.estado,''), COALESCE(z.codigo,''), r.fecha_reporte
             FROM reportes_rs r
             LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
@@ -758,6 +777,7 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
             "metricas":     pl_metricas,
             "metricas_defs": [{"slug": r[0], "nombre": r[1]} for r in pl_metricas_defs],
             "por_estado":   [{"estado": r[0], "total": r[1]} for r in pl_por_estado],
+            "sin_estado":   int(pl_sin_estado),
             "detalle":      [{"ind": r[0], "nombre": r[1], "estado": r[2], "zona": r[3], "fecha": r[4]} for r in pl_detalle],
         }
 
@@ -783,6 +803,7 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
         "metricas": metricas,
         "metricas_defs_by_platform": metricas_defs_by_platform,
         "por_estado_rs": [{"estado": r[0], "total": r[1]} for r in por_estado_rs],
+        "sin_estado_rs": int(sin_estado_rs),
         "detalle_rs": [{"ind": r[0], "nombre": r[1], "plataforma": r[2], "estado": r[3], "zona": r[4], "fecha": r[5], "url": r[6]} for r in detalle_rs],
         "por_plataforma_data": por_plataforma_data,
     }
@@ -1029,6 +1050,11 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                 ('LINEAFTER', (2, 0), (2, -1), 0.8, FMRE_BLUE),
             ]))
             story.append(t)
+            if rf.get("sin_estado", 0) > 0:
+                story.append(Paragraph(
+                    f'* Estaciones sin estado capturado: {rf["sin_estado"]}',
+                    ParagraphStyle("RF_SIN_EST", parent=styles["Normal"],
+                                   fontSize=8, textColor=colors.grey, spaceBefore=3)))
 
         if sec.get('primera_vez', False) and rf.get('primera_vez'):
             story.append(Paragraph(
@@ -1177,6 +1203,11 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                         ('LINEAFTER', (2, 0), (2, -1), 0.8, pl_bg),
                     ]))
                     story.append(t)
+                    if pl_d.get("sin_estado", 0) > 0:
+                        story.append(Paragraph(
+                            f'* Estaciones sin estado capturado: {pl_d["sin_estado"]}',
+                            ParagraphStyle("PL_SIN_EST", parent=styles["Normal"],
+                                           fontSize=8, textColor=colors.grey, spaceBefore=3)))
 
                 # Detalle de esta plataforma → va al final del reporte
                 if sec.get('detalle_rs', False) and pl_d.get('detalle'):
@@ -1247,6 +1278,11 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                     ('LINEAFTER', (2, 0), (2, -1), 0.8, RS_TEAL),
                 ]))
                 story.append(t)
+                if rs.get("sin_estado_rs", 0) > 0:
+                    story.append(Paragraph(
+                        f'* Estaciones sin estado capturado: {rs["sin_estado_rs"]}',
+                        ParagraphStyle("RS_SIN_EST", parent=styles["Normal"],
+                                       fontSize=8, textColor=colors.grey, spaceBefore=3)))
 
             top_n_rs = int(sec.get('top_estaciones_rs', 10))
             if top_n_rs > 0 and rs.get('top_ests_rs'):
