@@ -346,26 +346,17 @@ export default function LibretaPage() {
       .map((s: string) => s.trim())
       .filter((s: string) => /^\d+$/.test(s))
 
-    const apiKey = nodeCfg.bm_api_key
     const connect = () => {
-      // Sin apiKey en la URL — auth va dentro del protocolo socket.io
       const ws = new WebSocket('wss://api.brandmeister.network/lh/socket.io/?EIO=3&transport=websocket')
       dmrSocketRef.current = ws
 
       ws.onmessage = (e: MessageEvent) => {
         const raw = String(e.data)
         if (raw === '2') { ws.send('3'); return }
-        if (raw.startsWith('0')) {
-          // EIO open: conectar al namespace con auth si tenemos key
-          if (apiKey) {
-            ws.send(`40{"auth":{"token":"${apiKey}"}}`)
-          }
-          return
-        }
+        if (raw.startsWith('0')) return
         if (raw === '40') {
           setDmrStatus(d => ({ ...d, connected: true }))
-          // Escucha pasiva — BM envía eventos a clientes auth sin suscripción explícita
-          setDmrWsDbg(`OK${apiKey ? '+auth' : ''} — escuchando`)
+          setDmrWsDbg('OK — escuchando')
           return
         }
         if (raw.startsWith('44')) {
@@ -412,7 +403,7 @@ export default function LibretaPage() {
       const ws = dmrSocketRef.current as WebSocket | null
       if (ws) { dmrSocketRef.current = null; ws.close() }
     }
-  }, [roipMonitorando, nodeCfg.bm_tgs, nodeCfg.bm_api_key])
+  }, [roipMonitorando, nodeCfg.bm_tgs])
 
   // ── REST polling DMR activity (BM API proxy) ──────────────────────────────
   useEffect(() => {
