@@ -324,7 +324,7 @@ def public_stats(db: Session = Depends(get_db)):
     top_rf = db.execute(text("""
         SELECT r.indicativo,
                COALESCE(MAX(r.operador), MAX(re.nombre_completo)) as nombre,
-               COUNT(*) as total
+               COUNT(DISTINCT r.fecha_reporte::date) as total
         FROM reportes r
         LEFT JOIN radioexperimentadores re ON UPPER(re.indicativo) = UPPER(r.indicativo)
         WHERE r.evento_id = :ev_id AND UPPER(r.indicativo) NOT LIKE '%SWL%'
@@ -356,7 +356,7 @@ def public_stats(db: Session = Depends(get_db)):
     top_rs = db.execute(text("""
         SELECT r.indicativo,
                COALESCE(MAX(r.operador), MAX(re.nombre_completo)) as nombre,
-               COUNT(*) as total
+               COUNT(DISTINCT r.fecha_reporte::date) as total
         FROM reportes_rs r
         LEFT JOIN radioexperimentadores re ON UPPER(re.indicativo) = UPPER(r.indicativo)
         GROUP BY r.indicativo ORDER BY total DESC LIMIT 10
