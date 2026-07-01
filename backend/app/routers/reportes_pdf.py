@@ -534,7 +534,7 @@ def _gather_rf(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
     """), {**base, **evp}).fetchall()
 
     top_ests = db.execute(text(f"""
-        SELECT r.indicativo, COALESCE(rx.nombre_completo, r.operador, ''), COALESCE(r.estado,''), COUNT(*) AS total
+        SELECT r.indicativo, COALESCE(rx.nombre_completo, r.operador, ''), COALESCE(r.estado,''), COUNT(DISTINCT r.fecha_reporte::date) AS total
         FROM reportes r
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
         WHERE r.fecha_reporte <= :ff {evf}
@@ -641,7 +641,7 @@ def _gather_rs(db: Session, ev_ids: List[int], fi: datetime, ff: datetime) -> di
     """), {**base, **evp}).fetchall()
 
     top_ests = db.execute(text(f"""
-        SELECT r.indicativo, COALESCE(rx.nombre_completo, r.operador, ''), COUNT(*) AS total
+        SELECT r.indicativo, COALESCE(rx.nombre_completo, r.operador, ''), COUNT(DISTINCT r.fecha_reporte::date) AS total
         FROM reportes_rs r
         LEFT JOIN radioexperimentadores rx ON rx.indicativo = r.indicativo
         WHERE r.fecha_reporte <= :ff {evf}
@@ -999,7 +999,7 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
             story.append(Paragraph(f"Top {top_n} Estaciones — Acumulado hasta {ff.strftime('%d/%m/%Y')}", s_section))
             regular = [r for r in rf['top_ests'] if not r['ind'].upper().startswith('SWL')]
             swl_ests = [r for r in rf['top_ests'] if r['ind'].upper().startswith('SWL')]
-            rows = [['#', 'Indicativo', 'Operador', 'Estado', 'QSOs']]
+            rows = [['#', 'Indicativo', 'Operador', 'Estado', 'Días']]
             for i, r in enumerate(regular[:top_n], 1):
                 rows.append([str(i), r['ind'], r['nombre'], r['estado'], str(r['total'])])
             sep_idx = None
@@ -1025,6 +1025,9 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                     ('BOTTOMPADDING', (0, sep_idx), (-1, sep_idx), 4),
                 ]))
             story.append(t)
+            story.append(Paragraph(
+                'ℹ️ El número indica días únicos con actividad. Si una estación se reportó en varios sistemas el mismo día, cuenta como uno solo.',
+                ParagraphStyle("nota_dias", parent=styles["Normal"], fontSize=7, textColor=colors.grey, spaceBefore=2, spaceAfter=4)))
 
         if sec.get('por_estado', True) and rf.get('por_estado'):
             story.append(Paragraph("Actividad por Estado", s_section))
@@ -1287,7 +1290,7 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
             top_n_rs = int(sec.get('top_estaciones_rs', 10))
             if top_n_rs > 0 and rs.get('top_ests_rs'):
                 story.append(Paragraph(f"Top {top_n_rs} Estaciones RS — Acumulado hasta {ff.strftime('%d/%m/%Y')}", s_sec_rs))
-                rows = [['#', 'Indicativo', 'Operador', 'Reportes']]
+                rows = [['#', 'Indicativo', 'Operador', 'Días']]
                 for i, r in enumerate(rs['top_ests_rs'][:top_n_rs], 1):
                     rows.append([str(i), r['ind'], r['nombre'], str(r['total'])])
                 t = Table(rows, colWidths=[1 * cm, 3 * cm, 9.5 * cm, 3.5 * cm])
@@ -1297,6 +1300,9 @@ def _build_pdf(p: models.ReportePlantilla, data: dict, fi: datetime, ff: datetim
                     ('ALIGN', (3, 0), (3, -1), 'CENTER'),
                 ]))
                 story.append(t)
+                story.append(Paragraph(
+                    'ℹ️ El número indica días únicos con actividad. Si una estación se reportó en varios sistemas el mismo día, cuenta como uno solo.',
+                    ParagraphStyle("nota_dias", parent=styles["Normal"], fontSize=7, textColor=colors.grey, spaceBefore=2, spaceAfter=4)))
 
             if sec.get('detalle_rs', False) and rs.get('detalle_rs'):
                 details_story.append(Paragraph(

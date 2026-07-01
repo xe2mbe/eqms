@@ -266,7 +266,7 @@ def rs_top_indicativos(
 ):
     rows = db.execute(text("""
         SELECT p.nombre AS plataforma, r.indicativo,
-               COUNT(*) AS total,
+               COUNT(DISTINCT r.fecha_reporte::date) AS total,
                COUNT(DISTINCT r.estado) AS estados,
                COUNT(DISTINCT r.zona_id) AS zonas,
                MAX(r.fecha_reporte)     AS ultimo,
@@ -457,7 +457,7 @@ def top_indicativos(
     """Top operadores por número de contactos con estado y zona."""
     rows = db.execute(text("""
         SELECT r.indicativo,
-               COUNT(*) AS total,
+               COUNT(DISTINCT r.fecha_reporte::date) AS total,
                COUNT(DISTINCT r.estado) AS estados,
                COUNT(DISTINCT r.zona_id) AS zonas,
                MAX(r.fecha_reporte)     AS ultimo,
