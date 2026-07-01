@@ -1573,12 +1573,12 @@ export default function PublicFMREPage() {
                           {op.nombre ?? '—'}
                         </span>
                         <Tag color={FMRE_BLUE} style={{ fontWeight: 700, minWidth: 48, textAlign: 'center' }}>
-                          {op.total} días
+                          {op.total} QSOs
                         </Tag>
                       </div>
                     ))}
                     <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 8, paddingTop: 6, fontSize: 11, color: "#888", lineHeight: 1.4 }}>
-                      <span style={{ marginRight: 4 }}>&#9432;</span> El número indica <strong>días únicos</strong> con actividad. Si una estación se reportó en varios sistemas el mismo día, cuenta como uno solo.
+                      <span style={{ marginRight: 4 }}>&#9432;</span> El número indica <strong>QSO o reportes únicos</strong>. Si una estación se reportó en varios sistemas el mismo día, cuenta como uno solo.
                     </div>
                   </div>
                 )}
@@ -1775,12 +1775,12 @@ export default function PublicFMREPage() {
                           {op.nombre ?? '—'}
                         </span>
                         <Tag color="cyan" style={{ fontWeight: 700, minWidth: 48, textAlign: 'center' }}>
-                          {op.total} días
+                          {op.total} QSOs
                         </Tag>
                       </div>
                     ))}
                     <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 8, paddingTop: 6, fontSize: 11, color: "#888", lineHeight: 1.4 }}>
-                      <span style={{ marginRight: 4 }}>&#9432;</span> El número indica <strong>días únicos</strong> con actividad. Si una estación se reportó en varios sistemas el mismo día, cuenta como uno solo.
+                      <span style={{ marginRight: 4 }}>&#9432;</span> El número indica <strong>QSO o reportes únicos</strong>. Si una estación se reportó en varios sistemas el mismo día, cuenta como uno solo.
                     </div>
                   </div>
                 )}
