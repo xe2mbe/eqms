@@ -1576,10 +1576,10 @@ export default function PublicFMREPage() {
                           {op.total} días
                         </Tag>
                       </div>
-                    <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 8, paddingTop: 6, fontSize: 11, color: "#888", lineHeight: 1.4 }}>
-                      ℹ️ El número indica <strong>días únicos</strong> con actividad. Si una estación se reportó en varios sistemas el mismo día, cuenta como uno solo.
-                    </div>
                     ))}
+                    <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 8, paddingTop: 6, fontSize: 11, color: "#888", lineHeight: 1.4 }}>
+                      <span style={{ marginRight: 4 }}>&#9432;</span> El número indica <strong>días únicos</strong> con actividad. Si una estación se reportó en varios sistemas el mismo día, cuenta como uno solo.
+                    </div>
                   </div>
                 )}
               </Card>
@@ -1778,10 +1778,10 @@ export default function PublicFMREPage() {
                           {op.total} días
                         </Tag>
                       </div>
-                    <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 8, paddingTop: 6, fontSize: 11, color: "#888", lineHeight: 1.4 }}>
-                      ℹ️ El número indica <strong>días únicos</strong> con actividad. Si una estación se reportó en varios sistemas el mismo día, cuenta como uno solo.
-                    </div>
                     ))}
+                    <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 8, paddingTop: 6, fontSize: 11, color: "#888", lineHeight: 1.4 }}>
+                      <span style={{ marginRight: 4 }}>&#9432;</span> El número indica <strong>días únicos</strong> con actividad. Si una estación se reportó en varios sistemas el mismo día, cuenta como uno solo.
+                    </div>
                   </div>
                 )}
               </Card>
