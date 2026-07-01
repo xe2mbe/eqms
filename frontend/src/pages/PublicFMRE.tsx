@@ -536,7 +536,7 @@ export default function PublicFMREPage() {
       },
       visualMap: {
         min: 0, max: Math.max(...stats.rf.por_estado.map(e => e.total), 1),
-        inRange: { color: [FMRE_LIGHT, FMRE_BLUE] },
+        inRange: { color: ['#FFF8E1', FMRE_GOLD] },
         show: false,
       },
       series: [{
