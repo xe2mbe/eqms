@@ -1550,23 +1550,27 @@ export default function PublicFMREPage() {
                     size="small" className="card-shadow" style={{ flex: 1 }}>
                 {isLoading ? <Spin /> : (
                   <div>
-                    {stats!.rf.top_indicativos.map((op, i) => (
+                    {(() => {
+                      const rfRanks = [...new Set(stats!.rf.top_indicativos.map(o => o.total))].sort((a, b) => b - a);
+                      return stats!.rf.top_indicativos.map((op, i) => {
+                        const rank = rfRanks.indexOf(op.total);
+                        return (
                       <div key={op.indicativo} style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '6px 0', borderBottom: i < 9 ? '1px solid #f0f0f0' : undefined,
                       }}>
-                        {i === 0 ? (
+                        {rank === 0 ? (
                           <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥇</span>
-                        ) : i === 1 ? (
+                        ) : rank === 1 ? (
                           <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥈</span>
-                        ) : i === 2 ? (
+                        ) : rank === 2 ? (
                           <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥉</span>
                         ) : (
                           <span style={{
                             width: 24, height: 24, borderRadius: '50%', background: FMRE_LIGHT,
                             color: '#666', fontWeight: 700, fontSize: 12,
                             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                          }}>{i + 1}</span>
+                          }}>{rank + 1}</span>
                         )}
                         <span style={{ minWidth: 70 }}>{callSign(op.indicativo)}</span>
                         <span style={{ color: '#666', fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1576,7 +1580,9 @@ export default function PublicFMREPage() {
                           {op.total} QSOs
                         </Tag>
                       </div>
-                    ))}
+                        );
+                      });
+                    })()}
                     <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 8, paddingTop: 6, fontSize: 11, color: "#888", lineHeight: 1.4 }}>
                       <span style={{ marginRight: 4 }}>&#9432;</span> El número indica <strong>QSO o reportes únicos</strong>. Si una estación se reportó en varios sistemas el mismo día, cuenta como uno solo.
                     </div>
@@ -1752,23 +1758,27 @@ export default function PublicFMREPage() {
                     size="small" className="card-shadow" style={{ flex: 1 }}>
                 {isLoading ? <Spin /> : (
                   <div>
-                    {stats!.rs.top_indicativos.map((op, i) => (
+                    {(() => {
+                      const rsRanks = [...new Set(stats!.rs.top_indicativos.map(o => o.total))].sort((a, b) => b - a);
+                      return stats!.rs.top_indicativos.map((op, i) => {
+                        const rank = rsRanks.indexOf(op.total);
+                        return (
                       <div key={op.indicativo} style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '6px 0', borderBottom: i < 9 ? '1px solid #f0f0f0' : undefined,
                       }}>
-                        {i === 0 ? (
+                        {rank === 0 ? (
                           <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥇</span>
-                        ) : i === 1 ? (
+                        ) : rank === 1 ? (
                           <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥈</span>
-                        ) : i === 2 ? (
+                        ) : rank === 2 ? (
                           <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥉</span>
                         ) : (
                           <span style={{
                             width: 24, height: 24, borderRadius: '50%', background: '#e0f7fa',
                             color: '#666', fontWeight: 700, fontSize: 12,
                             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                          }}>{i + 1}</span>
+                          }}>{rank + 1}</span>
                         )}
                         <span style={{ minWidth: 70 }}>{callSign(op.indicativo, '#0891b2')}</span>
                         <span style={{ color: '#666', fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1778,7 +1788,9 @@ export default function PublicFMREPage() {
                           {op.total} QSOs
                         </Tag>
                       </div>
-                    ))}
+                        );
+                      });
+                    })()}
                     <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 8, paddingTop: 6, fontSize: 11, color: "#888", lineHeight: 1.4 }}>
                       <span style={{ marginRight: 4 }}>&#9432;</span> El número indica <strong>QSO o reportes únicos</strong>. Si una estación se reportó en varios sistemas el mismo día, cuenta como uno solo.
                     </div>
