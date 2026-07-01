@@ -322,13 +322,17 @@ def public_stats(db: Session = Depends(get_db)):
     """), {"ev_id": ev_id}).fetchall()
 
     top_rf = db.execute(text("""
-        SELECT r.indicativo,
-               COALESCE(MAX(r.operador), MAX(re.nombre_completo)) as nombre,
-               COUNT(DISTINCT r.fecha_reporte::date) as total
-        FROM reportes r
-        LEFT JOIN radioexperimentadores re ON UPPER(re.indicativo) = UPPER(r.indicativo)
-        WHERE r.evento_id = :ev_id AND UPPER(r.indicativo) NOT LIKE '%SWL%'
-        GROUP BY r.indicativo ORDER BY total DESC LIMIT 10
+        SELECT indicativo, nombre, total FROM (
+            SELECT r.indicativo,
+                   COALESCE(MAX(r.operador), MAX(re.nombre_completo)) as nombre,
+                   COUNT(DISTINCT r.fecha_reporte::date) as total,
+                   DENSE_RANK() OVER (ORDER BY COUNT(DISTINCT r.fecha_reporte::date) DESC) as dr
+            FROM reportes r
+            LEFT JOIN radioexperimentadores re ON UPPER(re.indicativo) = UPPER(r.indicativo)
+            WHERE r.evento_id = :ev_id AND UPPER(r.indicativo) NOT LIKE '%SWL%'
+            GROUP BY r.indicativo
+        ) t WHERE dr <= 10
+        ORDER BY total DESC
     """), {"ev_id": ev_id}).fetchall()
 
     por_plataforma = db.execute(text("""
@@ -354,12 +358,16 @@ def public_stats(db: Session = Depends(get_db)):
     """)).fetchall()
 
     top_rs = db.execute(text("""
-        SELECT r.indicativo,
-               COALESCE(MAX(r.operador), MAX(re.nombre_completo)) as nombre,
-               COUNT(DISTINCT r.fecha_reporte::date) as total
-        FROM reportes_rs r
-        LEFT JOIN radioexperimentadores re ON UPPER(re.indicativo) = UPPER(r.indicativo)
-        GROUP BY r.indicativo ORDER BY total DESC LIMIT 10
+        SELECT indicativo, nombre, total FROM (
+            SELECT r.indicativo,
+                   COALESCE(MAX(r.operador), MAX(re.nombre_completo)) as nombre,
+                   COUNT(DISTINCT r.fecha_reporte::date) as total,
+                   DENSE_RANK() OVER (ORDER BY COUNT(DISTINCT r.fecha_reporte::date) DESC) as dr
+            FROM reportes_rs r
+            LEFT JOIN radioexperimentadores re ON UPPER(re.indicativo) = UPPER(r.indicativo)
+            GROUP BY r.indicativo
+        ) t WHERE dr <= 10
+        ORDER BY total DESC
     """)).fetchall()
 
     ultimo_rf = db.execute(text("""

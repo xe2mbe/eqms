@@ -1557,7 +1557,7 @@ export default function PublicFMREPage() {
                         return (
                       <div key={op.indicativo} style={{
                         display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '6px 0', borderBottom: i < 9 ? '1px solid #f0f0f0' : undefined,
+                        padding: '6px 0', borderBottom: i < stats!.rf.top_indicativos.length - 1 ? '1px solid #f0f0f0' : undefined,
                       }}>
                         {rank === 0 ? (
                           <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥇</span>
@@ -1765,7 +1765,7 @@ export default function PublicFMREPage() {
                         return (
                       <div key={op.indicativo} style={{
                         display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '6px 0', borderBottom: i < 9 ? '1px solid #f0f0f0' : undefined,
+                        padding: '6px 0', borderBottom: i < stats!.rs.top_indicativos.length - 1 ? '1px solid #f0f0f0' : undefined,
                       }}>
                         {rank === 0 ? (
                           <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥇</span>
