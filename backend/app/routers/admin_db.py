@@ -5,16 +5,35 @@ from sqlalchemy import text
 from app.database import get_db
 from app.auth import get_current_user
 from app import models
-import json, io, gzip
+import json, io, gzip, logging
 from datetime import datetime
 
 router = APIRouter()
+logger = logging.getLogger("qms")
+
+# Columnas que nunca deben salir en claro en un backup descargable.
+_SENSITIVE_COLUMNS = {"password_hash", "irlp_password", "bm_api_key", "irlp_user"}
 
 
 def require_admin(current_user: models.Usuario = Depends(get_current_user)):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Acceso solo para administradores")
     return current_user
+
+
+def _tabla_existe(db: Session, table: str) -> bool:
+    return db.execute(
+        text("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = :n"),
+        {"n": table},
+    ).fetchone() is not None
+
+
+def _columnas_de_tabla(db: Session, table: str) -> set:
+    rows = db.execute(
+        text("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = :n"),
+        {"n": table},
+    ).fetchall()
+    return {r[0] for r in rows}
 
 
 def _serialize_row(row: dict) -> dict:
@@ -77,6 +96,10 @@ def get_table_data(
     )
     cols = list(result.keys())
     rows = [_serialize_row(dict(zip(cols, row))) for row in result]
+    for row in rows:
+        for col in _SENSITIVE_COLUMNS:
+            if col in row and row[col] is not None:
+                row[col] = "••••••••"
 
     # Column types
     col_info = db.execute(text("""
@@ -113,6 +136,10 @@ def backup(db: Session = Depends(get_db), _=Depends(require_admin)):
         result = db.execute(text(f'SELECT * FROM "{table}"'))
         cols = list(result.keys())
         rows = [_serialize_row(dict(zip(cols, row))) for row in result]
+        for row in rows:
+            for col in _SENSITIVE_COLUMNS:
+                if col in row and row[col] is not None:
+                    row[col] = None
         backup_data[table] = {"columns": cols, "rows": rows}
 
     json_bytes = json.dumps(backup_data, ensure_ascii=False, indent=2).encode("utf-8")
@@ -143,10 +170,23 @@ async def restore(
             raw = gzip.decompress(raw)
         backup_data: dict = json.loads(raw.decode("utf-8"))
     except Exception as e:
-        raise HTTPException(400, f"Archivo inválido: {e}")
+        logger.error(f"Restore: archivo inválido: {e}")
+        raise HTTPException(400, "Archivo inválido o corrupto")
 
     meta = backup_data.pop("_meta", {})
     tables = list(backup_data.keys())
+
+    # Validar cada tabla y columna contra el catálogo real ANTES de interpolar nada en SQL.
+    # Los nombres vienen de un archivo subido por el cliente: no son un identificador de confianza.
+    for table in tables:
+        if not _tabla_existe(db, table):
+            raise HTTPException(400, f"Tabla desconocida en el backup: {table}")
+        td = backup_data[table]
+        cols = td.get("columns") or []
+        columnas_validas = _columnas_de_tabla(db, table)
+        cols_desconocidas = set(cols) - columnas_validas
+        if cols_desconocidas:
+            raise HTTPException(400, f"Columnas desconocidas en tabla {table}: {sorted(cols_desconocidas)}")
 
     try:
         # Disable FK triggers temporarily
@@ -156,9 +196,10 @@ async def restore(
             td = backup_data[table]
             cols = td["columns"]
             rows = td["rows"]
-            # Truncate
+            # Truncate — table ya validada contra information_schema arriba.
             db.execute(text(f'TRUNCATE TABLE "{table}" RESTART IDENTITY CASCADE'))
-            # Re-insert
+            # Re-insert — cols ya validadas contra information_schema arriba; solo los
+            # valores (parametrizados) vienen del archivo subido.
             if rows and cols:
                 col_list = ", ".join(f'"{c}"' for c in cols)
                 placeholders = ", ".join(f":{c}" for c in cols)
@@ -171,7 +212,8 @@ async def restore(
     except Exception as e:
         db.rollback()
         db.execute(text("SET session_replication_role = 'DEFAULT'"))
-        raise HTTPException(500, f"Error al restaurar: {e}")
+        logger.error(f"Restore: error al restaurar: {e}")
+        raise HTTPException(500, "Error al restaurar el backup. Revisa los logs del servidor.")
 
     return {"ok": True, "tables_restored": len(tables), "backup_date": meta.get("created_at")}
 
@@ -236,7 +278,8 @@ def set_param(
         return {"ok": True, "name": name, "new_value": new_val, "permanent": permanent}
     except Exception as e:
         db.rollback()
-        raise HTTPException(400, f"Error al aplicar: {e}")
+        logger.error(f"set_param: error al aplicar '{name}': {e}")
+        raise HTTPException(400, "Error al aplicar el parámetro")
 
 
 @router.post("/params/reset")
@@ -248,6 +291,14 @@ def reset_param(
     name = body.get("name", "").strip()
     if not name:
         raise HTTPException(400, "name requerido")
+
+    # Validar contra pg_settings (mismo patrón que set_param) antes de interpolar en el SQL.
+    row = db.execute(text("SELECT context FROM pg_settings WHERE name = :n"), {"n": name}).fetchone()
+    if not row:
+        raise HTTPException(404, "Parámetro no encontrado")
+    if row[0] not in EDITABLE_CONTEXTS:
+        raise HTTPException(400, f"'{name}' requiere reinicio del servidor para cambiar")
+
     try:
         db.execute(text(f"ALTER SYSTEM RESET {name}"))
         db.execute(text("SELECT pg_reload_conf()"))
@@ -255,4 +306,5 @@ def reset_param(
         return {"ok": True}
     except Exception as e:
         db.rollback()
-        raise HTTPException(400, str(e))
+        logger.error(f"reset_param: error al resetear '{name}': {e}")
+        raise HTTPException(400, "Error al resetear el parámetro")

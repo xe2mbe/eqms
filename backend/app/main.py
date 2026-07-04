@@ -8,8 +8,13 @@ from datetime import datetime, timedelta
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
 from app.config import settings
 from app.database import Base, engine
+from app.rate_limit import limiter
 from app.routers import auth, reportes, usuarios, catalogos, estadisticas, operadores, configuracion, libreta, admin_db, premios, libreta_rs, reportes_pdf, public_stats
 from app.seeds import seed_prefijos, seed_metricas_rs_default
 from app.database import SessionLocal
@@ -265,6 +270,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # Routers
 app.include_router(auth.router,         prefix="/api/auth",         tags=["Autenticación"])

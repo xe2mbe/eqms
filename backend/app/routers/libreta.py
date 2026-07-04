@@ -169,7 +169,7 @@ async def dmr_lastheard(
                 r = await http.get(url, headers=headers)
                 if r.status_code == 200:
                     data = r.json()
-                    logger.info(f"BM TG {tg}: {str(data)[:500]}")
+                    logger.debug(f"BM TG {tg}: {str(data)[:500]}")
                     if isinstance(data, dict):
                         keys = list(data.keys())
                         dbg_parts.append(f"TG{tg}:keys={keys}")
@@ -191,4 +191,5 @@ async def dmr_lastheard(
                 logger.warning(f"BM REST TG {tg}: {exc}")
                 dbg_parts.append(f"TG{tg}:err")
 
-    return {"active": False, "callsign": "", "tg": 0, "tg_name": "", "dbg": " | ".join(dbg_parts)}
+    logger.debug(f"BM lastheard sin actividad: {' | '.join(dbg_parts)}")
+    return {"active": False, "callsign": "", "tg": 0, "tg_name": ""}

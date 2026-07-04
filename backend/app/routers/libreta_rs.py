@@ -7,9 +7,15 @@ import math
 
 from app.database import get_db
 from app import models, schemas
-from app.auth import get_current_user, require_admin
+from app.auth import get_current_user
 
 router = APIRouter()
+
+
+def _require_owner_or_admin(registro, current_user: models.Usuario):
+    """Mismo criterio que reportes.py: un operador solo modifica/borra lo que capturó; admin, todo."""
+    if current_user.role != "admin" and registro.capturado_por != current_user.id:
+        raise HTTPException(status_code=403, detail="Solo puedes modificar registros que tú capturaste")
 
 
 # ─── Estadísticas RS (métricas agregadas por plataforma) ─────────────────────
@@ -92,11 +98,12 @@ def update_estadistica_rs(
     eid: int,
     body: schemas.EstadisticaRSCreate,
     db: Session = Depends(get_db),
-    _: models.Usuario = Depends(get_current_user),
+    current_user: models.Usuario = Depends(get_current_user),
 ):
     e = db.query(models.EstadisticaRS).filter(models.EstadisticaRS.id == eid).first()
     if not e:
         raise HTTPException(404, "Registro no encontrado")
+    _require_owner_or_admin(e, current_user)
     e.plataforma_id = body.plataforma_id
     e.valores = body.valores
     e.fecha_reporte = body.fecha_reporte
@@ -110,11 +117,12 @@ def update_estadistica_rs(
 def delete_estadistica_rs(
     eid: int,
     db: Session = Depends(get_db),
-    _: models.Usuario = Depends(get_current_user),
+    current_user: models.Usuario = Depends(get_current_user),
 ):
     e = db.query(models.EstadisticaRS).filter(models.EstadisticaRS.id == eid).first()
     if not e:
         raise HTTPException(404, "Registro no encontrado")
+    _require_owner_or_admin(e, current_user)
     db.delete(e)
     db.commit()
 
@@ -208,11 +216,12 @@ def update_reporte_rs(
     rid: int,
     body: schemas.ReporteRSCreate,
     db: Session = Depends(get_db),
-    _: models.Usuario = Depends(get_current_user),
+    current_user: models.Usuario = Depends(get_current_user),
 ):
     r = db.query(models.ReporteRS).filter(models.ReporteRS.id == rid).first()
     if not r:
         raise HTTPException(404, "Reporte no encontrado")
+    _require_owner_or_admin(r, current_user)
     for k, v in body.model_dump().items():
         setattr(r, k, v)
     db.commit()
@@ -224,10 +233,11 @@ def update_reporte_rs(
 def delete_reporte_rs(
     rid: int,
     db: Session = Depends(get_db),
-    _: models.Usuario = Depends(get_current_user),
+    current_user: models.Usuario = Depends(get_current_user),
 ):
     r = db.query(models.ReporteRS).filter(models.ReporteRS.id == rid).first()
     if not r:
         raise HTTPException(404, "Reporte no encontrado")
+    _require_owner_or_admin(r, current_user)
     db.delete(r)
     db.commit()

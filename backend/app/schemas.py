@@ -16,6 +16,7 @@ class TokenResponse(BaseModel):
     user: "UsuarioOut"
 
 class ChangePasswordRequest(BaseModel):
+    current_password: Optional[str] = None
     new_password: str
     confirm_password: str
 

@@ -12,6 +12,12 @@ from app.auth import get_current_user
 router = APIRouter()
 
 
+def _require_owner_or_admin(reporte: models.Reporte, current_user: models.Usuario):
+    """Un operador solo puede modificar/borrar lo que él mismo capturó; un admin, todo."""
+    if current_user.role != "admin" and reporte.capturado_por != current_user.id:
+        raise HTTPException(status_code=403, detail="Solo puedes modificar reportes que tú capturaste")
+
+
 @router.get("", response_model=schemas.PaginatedReportes)
 def list_reportes(
     page: int = Query(1, ge=1),
@@ -140,6 +146,7 @@ def update_reporte(
     r = db.query(models.Reporte).filter(models.Reporte.id == reporte_id).first()
     if not r:
         raise HTTPException(status_code=404, detail="Reporte no encontrado")
+    _require_owner_or_admin(r, current_user)
 
     updates = body.model_dump(exclude_unset=True)
     for field, value in updates.items():
@@ -159,6 +166,7 @@ def delete_reporte(
     r = db.query(models.Reporte).filter(models.Reporte.id == reporte_id).first()
     if not r:
         raise HTTPException(status_code=404, detail="Reporte no encontrado")
+    _require_owner_or_admin(r, current_user)
 
     _audit(db, current_user.id, "DELETE", "reportes", r.id, f"Reporte eliminado: {r.indicativo}")
     db.delete(r)
