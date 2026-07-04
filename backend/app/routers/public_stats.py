@@ -3,12 +3,14 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.database import get_db
 from app import models
+from app.rate_limit import limiter
 import urllib.request
+import ipaddress
 import json as _json
 import httpx
 import asyncio
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 router = APIRouter()
 
@@ -221,6 +223,7 @@ _visitas_ready = False
 
 
 @router.post("/visita")
+@limiter.limit("10/minute")
 def registrar_visita(request: Request, db: Session = Depends(get_db)):
     global _visitas_ready
     if not _visitas_ready:
@@ -241,18 +244,29 @@ def registrar_visita(request: Request, db: Session = Depends(get_db)):
           (request.client.host if request.client else ""))
     ip = ip.split(",")[0].strip()
 
+    # Validar que sea una IP real antes de usarla en la llamada saliente a ip-api.com:
+    # el header lo controla el cliente, así que sin esto cualquier cadena arbitraria
+    # terminaría interpolada en la URL. Las IPs privadas/loopback tampoco tienen geolocalización útil.
+    ip_valida = False
+    try:
+        parsed_ip = ipaddress.ip_address(ip)
+        ip_valida = not (parsed_ip.is_private or parsed_ip.is_loopback or parsed_ip.is_reserved)
+    except ValueError:
+        ip_valida = False
+
     # Consultar país vía ip-api.com (libre, sin key)
     pais = "Desconocido"
     pais_codigo = ""
-    try:
-        with urllib.request.urlopen(
-            f"http://ip-api.com/json/{ip}?fields=country,countryCode&lang=es", timeout=3
-        ) as resp:
-            data = _json.loads(resp.read())
-            pais = data.get("country") or "Desconocido"
-            pais_codigo = data.get("countryCode") or ""
-    except Exception:
-        pass
+    if ip_valida:
+        try:
+            with urllib.request.urlopen(
+                f"http://ip-api.com/json/{ip}?fields=country,countryCode&lang=es", timeout=3
+            ) as resp:
+                data = _json.loads(resp.read())
+                pais = data.get("country") or "Desconocido"
+                pais_codigo = data.get("countryCode") or ""
+        except Exception:
+            pass
 
     db.execute(text("INSERT INTO visitas (ip, pais) VALUES (:ip, :pais)"), {"ip": ip, "pais": pais})
     db.commit()
@@ -273,9 +287,21 @@ def public_node_config(db: Session = Depends(get_db)):
     }
 
 
+_stats_cache: dict = {"data": None, "ts": datetime.min}
+_STATS_CACHE_TTL = timedelta(seconds=60)
+
+
 @router.get("/stats")
-def public_stats(db: Session = Depends(get_db)):
-    """Estadísticas públicas del sistema — sin autenticación."""
+@limiter.limit("30/minute")
+def public_stats(request: Request, db: Session = Depends(get_db)):
+    """Estadísticas públicas del sistema — sin autenticación.
+
+    Es una agregación pesada (~15 queries) idéntica para todos los visitantes,
+    así que se cachea en memoria por un minuto en vez de recalcularla en cada request.
+    """
+    now = datetime.utcnow()
+    if _stats_cache["data"] is not None and now - _stats_cache["ts"] < _STATS_CACHE_TTL:
+        return _stats_cache["data"]
 
     # Obtener el ID del Boletín Dominical
     boletin = db.execute(text(
@@ -414,7 +440,7 @@ def public_stats(db: Session = Depends(get_db)):
         GROUP BY pais ORDER BY indicativos DESC LIMIT 8
     """), {"ev_id": ev_id}).fetchall()
 
-    return {
+    result = {
         "rf": {
             "total": int(rf_total),
             "indicativos": int(rf_indicativos),
@@ -445,6 +471,9 @@ def public_stats(db: Session = Depends(get_db)):
             "total_qsos": int(ultimo_rs[3]),
         } if ultimo_rs else None,
     }
+    _stats_cache["data"] = result
+    _stats_cache["ts"] = now
+    return result
 
 
 @router.get("/estaciones-rf")

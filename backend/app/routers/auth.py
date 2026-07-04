@@ -105,6 +105,13 @@ def change_password(
     db: Session = Depends(get_db),
 ):
     from app.utils.validators import validate_password
+
+    # Se exige la contraseña actual, salvo en el cambio forzado del primer login
+    # (en ese flujo el usuario todavía no la "conoce" como propia).
+    if not current_user.must_change_password:
+        if not body.current_password or not verify_password(body.current_password, current_user.password_hash):
+            raise HTTPException(status_code=400, detail="Contraseña actual incorrecta")
+
     ok, msg = validate_password(body.new_password)
     if not ok:
         raise HTTPException(status_code=422, detail=msg)
