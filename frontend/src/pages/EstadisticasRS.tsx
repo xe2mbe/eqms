@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Card, Row, Col, Typography, Spin, Tabs, Table, Tag, Tooltip, Select, Empty, Progress } from 'antd'
+import type { TableColumnsType } from 'antd'
 import DateRangeBar from '@/components/common/DateRangeBar'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
@@ -30,6 +31,14 @@ type NuevoRow      = { mes: string; plataforma: string; nuevos: number }
 type ResumenRow    = { plataforma: string; color: string; slug: string; total: number }
 type MetricaTend   = { periodo: string; plataforma: string; slug: string; total: number }
 type CoberturaRS   = { abreviatura: string; nombre: string; zona: string; total: number; indicativos: number }
+
+// Shim angosto sobre el tipado suelto de los formatters de echarts-for-react
+// (el paquete no exporta un tipo utilizable para el shape real de `params`).
+type EChartsFormatterParam = {
+  name: string
+  value: number | string | (number | string)[]
+  dataIndex: number
+}
 
 export default function EstadisticasRSPage() {
   const [loading, setLoading]             = useState(false)
@@ -66,7 +75,7 @@ export default function EstadisticasRSPage() {
       estadisticasApi.rsOperadoresPeriodo(p),
     ])
     const ok = <T,>(i: number): T[] =>
-      results[i].status === 'fulfilled' ? (results[i] as PromiseFulfilledResult<any>).value.data : []
+      results[i].status === 'fulfilled' ? (results[i] as unknown as PromiseFulfilledResult<{ data: T[] }>).value.data : []
     setTendencia(ok(0)); setPorEstadoPlat(ok(1)); setTopOps(ok(2))
     setZonaAct(ok(3));   setNuevos(ok(4));        setResumen(ok(5))
     setCoberturaRS(ok(6)); setRankingOpsRS(ok(7))
@@ -161,8 +170,8 @@ export default function EstadisticasRSPage() {
 
   // ── Tab 2: Operadores — por plataforma ───────────────────────────────────────
 
-  const topColumns = [
-    { title: '#', width: 36, render: (_: any, _r: any, i: number) =>
+  const topColumns: TableColumnsType<TopOp> = [
+    { title: '#', width: 36, render: (_, _r, i) =>
         <Text type="secondary" style={{ fontSize: 12 }}>{i + 1}</Text> },
     { title: 'Indicativo', dataIndex: 'indicativo',
       render: (v: string) => <Text strong style={{ color: '#1A569E', fontFamily: 'monospace', letterSpacing: 1 }}>{v}</Text> },
@@ -173,7 +182,7 @@ export default function EstadisticasRSPage() {
     { title: 'Zonas', dataIndex: 'zonas', width: 65,
       render: (v: number) => <Tag color="purple">{v}/5</Tag> },
     { title: 'Nombre', dataIndex: 'nombre', ellipsis: true,
-      render: (v: string) => <Text type="secondary" style={{ fontSize: 11 }}>{v ?? '—'}</Text> },
+      render: (v: string | null) => <Text type="secondary" style={{ fontSize: 11 }}>{v ?? '—'}</Text> },
   ]
 
   const plataformasOps = [...new Set(topOps.map(r => r.plataforma))]
@@ -308,7 +317,7 @@ export default function EstadisticasRSPage() {
 
   const coberturaEstadoBarOption = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-      formatter: (p: any) => `${p[0].name}: ${p[0].value} reportes` },
+      formatter: (p: EChartsFormatterParam[]) => `${p[0].name}: ${p[0].value} reportes` },
     grid: { left: 140, right: 16, top: 8, bottom: 8, containLabel: false },
     xAxis: { type: 'value' },
     yAxis: {
@@ -436,7 +445,7 @@ export default function EstadisticasRSPage() {
                             🏆 Top indicativos — {pl}
                           </span>}
                           styles={{ header: { borderLeft: `4px solid ${CHART_COLORS[i % CHART_COLORS.length]}` } }}>
-                          <Table
+                          <Table<TopOp>
                             dataSource={topOps.filter(r => r.plataforma === pl)}
                             rowKey="indicativo" size="small"
                             pagination={false} scroll={{ y: 300 }}
@@ -578,7 +587,7 @@ export default function EstadisticasRSPage() {
 
                 {/* Cards de zonas con cobertura de estados */}
                 {coberturaByZona.length > 0 && coberturaByZona.map(z => (
-                  <Col key={z.zona} xs={24} sm={12} lg={Math.floor(24 / Math.max(coberturaByZona.length, 1)) as any}>
+                  <Col key={z.zona} xs={24} sm={12} lg={Math.floor(24 / Math.max(coberturaByZona.length, 1))}>
                     <Card size="small" className="card-shadow"
                       style={{ borderTop: `4px solid ${ZONA_COLORS[z.zona] ?? '#1677ff'}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

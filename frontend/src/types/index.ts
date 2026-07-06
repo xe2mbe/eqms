@@ -176,3 +176,39 @@ export interface EstadisticaResumen {
   sistemas: { sistema: string; total: number }[]
   eventos: { evento: string; total: number }[]
 }
+
+// ─── Analítica avanzada (pestaña "Estadísticas") ─────────────────────────────
+
+export interface TopIndicativo {
+  indicativo: string
+  total: number
+  estados: number
+  zonas: number
+  ultimo: string | null
+  nombre: string | null
+}
+
+export interface ZonaActividad {
+  zona: string
+  total: number
+  indicativos: number
+  senal_promedio: number
+}
+
+export interface RstPorZona {
+  zona: string
+  senal: number
+  total: number
+}
+
+export interface SistemaPorZona {
+  zona: string
+  sistema: string
+  total: number
+}
+
+export interface TendenciaEvento {
+  mes: string
+  tipo: string
+  total: number
+}

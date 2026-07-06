@@ -3,6 +3,7 @@ import {
   Table, Button, Space, DatePicker, Input, Select,
   Typography, Card, Tag, Popconfirm, message, Tooltip, Badge,
 } from 'antd'
+import type { TableColumnType } from 'antd'
 import {
   SearchOutlined, ClearOutlined,
   EditOutlined, DeleteOutlined,
@@ -121,17 +122,17 @@ export default function ReportesPage() {
 
   // ─── Column defs ─────────────────────────────────────────────────────────────
 
-  const colDefs: Record<ColKey, object> = {
+  const colDefs: Record<ColKey, TableColumnType<Reporte>> = {
     id: { title: 'ID', dataIndex: 'id', width: 65 },
     indicativo: {
       title: 'Indicativo', dataIndex: 'indicativo', width: 110, fixed: 'left' as const,
       render: (v: string) => <strong style={{ color: '#1A569E' }}>{v}</strong>,
-      ...textFilterProps('indicativo'),
+      ...textFilterProps<Reporte>('indicativo'),
     },
     operador: {
       title: 'Operador', dataIndex: 'operador', width: 160,
       render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
-      ...textFilterProps('operador'),
+      ...textFilterProps<Reporte>('operador'),
     },
     senal: {
       title: 'RST', dataIndex: 'senal', width: 70,
@@ -140,21 +141,21 @@ export default function ReportesPage() {
     ciudad: {
       title: 'Ciudad', dataIndex: 'ciudad', width: 130,
       render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
-      ...textFilterProps('ciudad'),
+      ...textFilterProps<Reporte>('ciudad'),
     },
     pais: {
       title: 'País', dataIndex: 'pais', width: 140,
       render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
-      ...selectFilterProps(
-        uniqueFilterOptions(data as any, r => (r).pais ?? undefined),
-        (value, record) => (record).pais === value,
+      ...selectFilterProps<Reporte>(
+        uniqueFilterOptions(data, r => r.pais ?? undefined),
+        (value, record) => record.pais === value,
       ),
     },
     estado: {
       title: 'Estado', dataIndex: 'estado', width: 130,
-      ...selectFilterProps(
-        uniqueFilterOptions(data as any, r => (r).estado ?? undefined),
-        (value, record) => (record).estado === value,
+      ...selectFilterProps<Reporte>(
+        uniqueFilterOptions(data, r => r.estado ?? undefined),
+        (value, record) => record.estado === value,
       ),
     },
     zona: {
@@ -165,9 +166,9 @@ export default function ReportesPage() {
         const c = record.zona?.color ?? '#1677ff'
         return <Tag color={c} style={{ fontWeight: 600 }}>{codigo}</Tag>
       },
-      ...selectFilterProps(
+      ...selectFilterProps<Reporte>(
         zonas.map(z => ({ text: z.codigo, value: z.codigo })),
-        (value, record) => (record).zona?.codigo === value,
+        (value, record) => record.zona?.codigo === value,
       ),
     },
     sistema: {
@@ -177,9 +178,9 @@ export default function ReportesPage() {
         const c = record.sistema.color ?? '#1677ff'
         return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{record.sistema.codigo}</Tag>
       },
-      ...selectFilterProps(
+      ...selectFilterProps<Reporte>(
         sistemas.map(s => ({ text: s.codigo, value: s.codigo })),
-        (value, record) => (record).sistema?.codigo === value,
+        (value, record) => record.sistema?.codigo === value,
       ),
     },
     evento: {
@@ -189,9 +190,9 @@ export default function ReportesPage() {
         const c = record.evento.color ?? '#1677ff'
         return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{record.evento.tipo}</Tag>
       },
-      ...selectFilterProps(
+      ...selectFilterProps<Reporte>(
         eventos.map(e => ({ text: e.tipo, value: e.tipo })),
-        (value, record) => (record).evento?.tipo === value,
+        (value, record) => record.evento?.tipo === value,
       ),
     },
     estacion: {
@@ -201,9 +202,9 @@ export default function ReportesPage() {
         const c = record.estacion.color ?? '#1677ff'
         return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{record.estacion.qrz}</Tag>
       },
-      ...selectFilterProps(
-        uniqueFilterOptions(data as any, r => (r).estacion?.qrz ?? undefined),
-        (value, record) => (record).estacion?.qrz === value,
+      ...selectFilterProps<Reporte>(
+        uniqueFilterOptions(data, r => r.estacion?.qrz ?? undefined),
+        (value, record) => record.estacion?.qrz === value,
       ),
     },
     fecha_reporte: {
@@ -219,14 +220,14 @@ export default function ReportesPage() {
     capturado_por_nombre: {
       title: 'Capturado por', dataIndex: 'capturado_por_nombre', width: 140,
       render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
-      ...selectFilterProps(
-        uniqueFilterOptions(data as any, r => (r).capturado_por_nombre ?? undefined),
-        (value, record) => (record).capturado_por_nombre === value,
+      ...selectFilterProps<Reporte>(
+        uniqueFilterOptions(data, r => r.capturado_por_nombre ?? undefined),
+        (value, record) => record.capturado_por_nombre === value,
       ),
     },
   }
 
-  const actionCol = {
+  const actionCol: TableColumnType<Reporte> = {
     title: '', width: 90, fixed: 'right' as const,
     render: (_: unknown, record: Reporte) => (
       <Space>
@@ -326,9 +327,9 @@ export default function ReportesPage() {
       )}
 
       <Card className="card-shadow">
-        <Table
+        <Table<Reporte>
           dataSource={data}
-          columns={columns as any}
+          columns={columns}
           rowKey="id"
           loading={loading}
           scroll={{ x: 'max-content' }}
