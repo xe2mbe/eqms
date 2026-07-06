@@ -213,11 +213,11 @@ async def restore(
                 for row in rows:
                     db.execute(stmt, row)
 
-        db.execute(text("SET session_replication_role = 'DEFAULT'"))
+        db.execute(text("SET session_replication_role = 'origin'"))
         db.commit()
     except Exception as e:
         db.rollback()
-        db.execute(text("SET session_replication_role = 'DEFAULT'"))
+        db.execute(text("SET session_replication_role = 'origin'"))
         logger.error(f"Restore: error al restaurar: {e}")
         raise HTTPException(500, "Error al restaurar el backup. Revisa los logs del servidor.")
 

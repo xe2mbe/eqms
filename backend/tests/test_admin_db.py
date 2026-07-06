@@ -74,6 +74,47 @@ def test_backup_redacta_password_hash(client, admin_user):
     assert all(f.get("password_hash") is None for f in filas)
 
 
+def test_restore_valido_completa_sin_error(client, admin_user, db_session):
+    """
+    Regresion del bug real: SET session_replication_role = 'DEFAULT' no es un
+    valor valido para Postgres (solo origin/replica/local), asi que un restore
+    valido siempre fallaba en el ultimo paso -- justo despues de truncar e
+    insertar todo, y antes del commit -- deshaciendo el restore entero.
+    Usa radioexperimentadores porque ningun otro test toca esa tabla.
+    """
+    adm, pw = admin_user
+    token = login(client, adm.username, pw)
+
+    payload = json.dumps({
+        "_meta": {},
+        "radioexperimentadores": {
+            "columns": ["indicativo", "nombre_completo", "estado"],
+            "rows": [
+                {"indicativo": "XE1RESTORETEST", "nombre_completo": "Prueba Uno", "estado": "Jalisco"},
+                {"indicativo": "XE2RESTORETEST", "nombre_completo": "Prueba Dos", "estado": "Sonora"},
+            ],
+        },
+    }).encode("utf-8")
+
+    resp = client.post(
+        "/api/admin/db/restore",
+        headers=auth_headers(token),
+        files={"file": ("valid.json", io.BytesIO(payload), "application/json")},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["ok"] is True
+
+    restaurados = (
+        db_session.query(models.Radioexperimentador)
+        .filter(models.Radioexperimentador.indicativo.in_(["XE1RESTORETEST", "XE2RESTORETEST"]))
+        .all()
+    )
+    assert len(restaurados) == 2
+    for r in restaurados:
+        db_session.delete(r)
+    db_session.commit()
+
+
 def test_backup_restore_columna_jsonb_sobrevive_el_viaje(client, admin_user, db_session):
     """
     Regresion de un bug real: _serialize_row convertia columnas JSONB (dict/list,
