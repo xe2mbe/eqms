@@ -1,0 +1,9 @@
+version: 2
+secret:
+  # backend/tests/ contiene unicamente fixtures sinteticas (usuarios y
+  # contrasenas de prueba creados y borrados contra una BD de test
+  # descartable, nunca contra desarrollo/produccion). GitGuardian las marca
+  # como "Generic Password" por patron, pero no son credenciales reales:
+  # no hay nada que rotar ni revocar.
+  ignored_paths:
+    - "backend/tests/**"

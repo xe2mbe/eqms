@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     APP_VERSION: str = "3.0.0"
     DEBUG: bool = False
     ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+    UPLOADS_DIR: str = "/app/uploads"
 
     # SMTP
     SMTP_HOST: str = ""
