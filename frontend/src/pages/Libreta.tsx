@@ -24,6 +24,10 @@ import { useColPrefs } from '@/components/common/ColSettings'
 import type { Evento, Sistema, Estacion, Estado, Zona, Reporte } from '@/types'
 import { useResizableColumns } from '@/hooks/useResizableColumns'
 import SystemStatusWidget from '@/components/common/SystemStatusWidget'
+import { validarIndicativo, normalizarRST, NOMBRES_DIA } from '@/utils/libretaShared'
+import IndicativoCell from '@/components/libreta/IndicativoCell'
+import FechaNoPermitidaModal from '@/components/libreta/FechaNoPermitidaModal'
+import StatsCardsRow from '@/components/libreta/StatsCardsRow'
 
 const { Title, Text } = Typography
 const { Panel } = Collapse
@@ -38,16 +42,6 @@ function StatusPill({ label, color, pulse }: { label: string; color: string; pul
   )
 }
 
-// ─── Validación de indicativo (ITU) ──────────────────────────────────────────
-// Formato: prefijo (1-3 alfanuméricos, al menos una letra) + 1 dígito + sufijo (1-3 letras)
-// Ej válidos: XE2MBE, W1AW, EA8EE, XF2MC, K0RCA, JA1ABC
-// Ej inválidos: XE2EEEE (sufijo 4 letras), 123ABC (sin letra en prefijo), XE (sin dígito+sufijo)
-// SWL válidos: SWL, SWL001, SWL-XE2-001, SWL/XE2MBE, XE2-SWL-1234
-const INDICATIVO_RE = /^[A-Z0-9]{1,3}[0-9][A-Z]{1,3}$/
-function validarIndicativo(ind: string): boolean {
-  const cs = ind.trim().toUpperCase()
-  return cs === 'SWL' || INDICATIVO_RE.test(cs)
-}
 function esSWL(ind: string): boolean {
   return ind.trim().toUpperCase() === 'SWL'
 }
@@ -58,30 +52,6 @@ function validarRST(val: string): boolean {
   if (v.length === 2) return parseInt(v[0]) >= 1 && parseInt(v[0]) <= 5 && parseInt(v[1]) >= 1 && parseInt(v[1]) <= 9
   if (v.length === 3) return parseInt(v[0]) >= 1 && parseInt(v[0]) <= 5 && parseInt(v[1]) >= 1 && parseInt(v[1]) <= 9 && parseInt(v[2]) >= 1 && parseInt(v[2]) <= 9
   return false
-}
-const normalizarRST = (val: string) => val.replace(/[^0-9]/g, '').slice(0, 3)
-
-const NOMBRES_DIA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
-
-// ── Celda editable de indicativo (estado local — no re-renderiza al padre durante tipeo) ──
-function IndicativoCell({ value, rowKey, onCommit }: {
-  value: string
-  rowKey: string
-  onCommit: (key: string, nuevo: string, anterior: string) => void
-}) {
-  const [local, setLocal] = useState(value)
-  const originalRef = useRef(value)
-  useEffect(() => { setLocal(value); originalRef.current = value }, [value])
-  return (
-    <Input
-      size="small"
-      value={local}
-      variant="borderless"
-      onChange={e => setLocal(e.target.value.toUpperCase())}
-      onBlur={() => onCommit(rowKey, local.trim().toUpperCase(), originalRef.current)}
-      style={{ fontWeight: 700, color: '#1A569E', fontSize: 14 }}
-    />
-  )
 }
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -1958,195 +1928,47 @@ export default function LibretaPage() {
           styles={{ header: { fontWeight: 700 } }}
         >
           {/* ── Estadísticas de sesión ── */}
-          {(statsActuales.totalQSOs > 0 || statsActuales.posicion !== null) && (
-            <Row gutter={[6, 6]} style={{ marginBottom: 16, alignItems: 'stretch' }}>
-              <Col xs={12} sm={8} md={4} style={{ display: 'flex' }}>
-                <div style={{
-                  background: statsActuales.esRecordQSOs
-                    ? 'linear-gradient(135deg, #faad14 0%, #fa8c16 100%)'
-                    : 'linear-gradient(135deg, #1A569E 0%, #1677ff 100%)',
-                  borderRadius: 8, padding: '8px 10px', color: '#fff',
-                  boxShadow: statsActuales.esRecordQSOs
-                    ? '0 4px 16px rgba(250,173,20,0.55)'
-                    : '0 4px 12px rgba(22,119,255,0.3)',
-                  transition: 'all 0.4s ease', height: '100%',
-                }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 }}>
-                    {statsActuales.esRecordQSOs ? '🏆 Récord QSOs' : '📡 QSOs guardados'}
-                  </div>
-                  <div style={{ fontSize: 26, fontWeight: 900, lineHeight: 1.1 }}>
-                    {statsActuales.totalQSOs}
-                  </div>
-                  {statsActuales.esRecordQSOs && rankingEvento.length > 1 && (
-                    <div style={{ fontSize: 11, marginTop: 4, opacity: 0.95, fontWeight: 700, letterSpacing: 0.3 }}>
-                      ¡Mejor sesión del evento!
-                    </div>
-                  )}
-                </div>
-              </Col>
-              <Col xs={12} sm={8} md={4} style={{ display: 'flex' }}>
-                <div style={{
-                  background: statsActuales.esRecordEstaciones
-                    ? 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)'
-                    : 'linear-gradient(135deg, #13c2c2 0%, #08979c 100%)',
-                  borderRadius: 8, padding: '8px 10px', color: '#fff',
-                  boxShadow: statsActuales.esRecordEstaciones
-                    ? '0 4px 16px rgba(82,196,26,0.45)'
-                    : '0 4px 12px rgba(19,194,194,0.3)',
-                  transition: 'all 0.4s ease', height: '100%',
-                }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 }}>
-                    {statsActuales.esRecordEstaciones ? '🏆 Récord Estaciones' : '👥 Estaciones únicas'}
-                  </div>
-                  <div style={{ fontSize: 26, fontWeight: 900, lineHeight: 1.1 }}>
-                    {statsActuales.estacionesUnicas}
-                  </div>
-                  {statsActuales.esRecordEstaciones && rankingEvento.length > 1 && (
-                    <div style={{ fontSize: 11, marginTop: 4, opacity: 0.95, fontWeight: 700, letterSpacing: 0.3 }}>
-                      ¡Más estaciones del evento!
-                    </div>
-                  )}
-                </div>
-              </Col>
-              {statsActuales.posicion !== null && (
-                <Col xs={12} sm={8} md={4} style={{ display: 'flex' }}>
-                  <div style={{
-                    background: statsActuales.posicion === 1
-                      ? 'linear-gradient(135deg, #faad14 0%, #d48806 100%)'
-                      : statsActuales.posicion <= 3
-                        ? 'linear-gradient(135deg, #722ed1 0%, #531dab 100%)'
-                        : 'linear-gradient(135deg, #595959 0%, #434343 100%)',
-                    borderRadius: 8, padding: '8px 10px', color: '#fff',
-                    boxShadow: statsActuales.posicion === 1
-                      ? '0 4px 16px rgba(250,173,20,0.55)'
-                      : '0 4px 12px rgba(0,0,0,0.2)',
-                    transition: 'all 0.4s ease', height: '100%',
-                  }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 }}>
-                      📊 Posición del evento
-                    </div>
-                    <div style={{ fontSize: 26, fontWeight: 900, lineHeight: 1.1 }}>
-                      {statsActuales.posicion === 1 ? '🥇' : statsActuales.posicion === 2 ? '🥈' : statsActuales.posicion === 3 ? '🥉' : `#${statsActuales.posicion}`}
-                    </div>
-                    <div style={{ fontSize: 10, marginTop: 2, opacity: 0.85, fontWeight: 600 }}>
-                      {rankingEvento.length === 1
-                        ? 'Primera sesión del evento'
-                        : statsActuales.posicion === 1
-                          ? `de ${statsActuales.totalSesiones} sesiones — ¡la mejor!`
-                          : `de ${statsActuales.totalSesiones} sesiones`}
-                    </div>
-                  </div>
-                </Col>
-              )}
-              {/* Tarjeta 4: récord personal del operador en este evento */}
-              {miRankingPersonal.length > 0 && (() => {
-                const hoy = miRankingPersonal.find(r => r.fecha === fechaActual)
-                if (!hoy || hoy.total === 0) return null
-                const esPrimero = hoy.posicion === 1
-                const esTop3 = hoy.posicion <= 3
-                const mejor = miRankingPersonal[0]
-                return (
-                  <Col xs={12} sm={8} md={4} style={{ display: 'flex' }}>
-                    <div style={{
-                      background: esPrimero
-                        ? 'linear-gradient(135deg, #ff7a45 0%, #d4380d 100%)'
-                        : esTop3
-                          ? 'linear-gradient(135deg, #fa8c16 0%, #d46b08 100%)'
-                          : 'linear-gradient(135deg, #531dab 0%, #391085 100%)',
-                      borderRadius: 8, padding: '8px 10px', color: '#fff',
-                      boxShadow: esPrimero
-                        ? '0 4px 16px rgba(212,56,13,0.45)'
-                        : '0 4px 12px rgba(83,29,171,0.3)',
-                      transition: 'all 0.4s ease', height: '100%',
-                    }}>
-                      <div style={{ fontSize: 9, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 }}>
-                        🏅 Mi récord personal
-                      </div>
-                      <div style={{ fontSize: 26, fontWeight: 900, lineHeight: 1.1 }}>
-                        {hoy.posicion === 1 ? '🥇' : hoy.posicion === 2 ? '🥈' : hoy.posicion === 3 ? '🥉' : `#${hoy.posicion}`}
-                      </div>
-                      <div style={{ fontSize: 10, marginTop: 2, opacity: 0.85, fontWeight: 600 }}>
-                        {`de ${miRankingPersonal.length} ses. · ${hoy.total} QSOs hoy`}
-                      </div>
-                      {!esPrimero && (
-                        <div style={{ fontSize: 11, marginTop: 2, opacity: 0.75, fontWeight: 500 }}>
-                          {`Récord: ${dayjs(mejor.fecha).format('DD/MM/YY')} · ${mejor.total} QSOs`}
-                        </div>
-                      )}
-                    </div>
-                  </Col>
-                )
-              })()}
-              {/* Tarjeta 5: ranking de operadores en esta fecha+evento */}
-              {rankingOpSesion.length > 0 && (() => {
-                const miOp = rankingOpSesion.find(r => r.usuario_id === user?.id)
-                const totalOps = rankingOpSesion.length + (miOp ? 0 : 1)
-                const posicion = miOp?.posicion ?? totalOps
-                const total = miOp?.total ?? 0
-                const esPrimero = posicion === 1
-                const esTop3 = posicion <= 3
-                return (
-                  <Col xs={12} sm={8} md={4} style={{ display: 'flex' }}>
-                    <div style={{
-                      background: esPrimero
-                        ? 'linear-gradient(135deg, #096dd9 0%, #0050b3 100%)'
-                        : esTop3
-                          ? 'linear-gradient(135deg, #13c2c2 0%, #006d75 100%)'
-                          : 'linear-gradient(135deg, #434343 0%, #262626 100%)',
-                      borderRadius: 8, padding: '8px 10px', color: '#fff',
-                      boxShadow: esPrimero
-                        ? '0 4px 16px rgba(9,109,217,0.45)'
-                        : '0 4px 12px rgba(0,0,0,0.25)',
-                      transition: 'all 0.4s ease', height: '100%',
-                    }}>
-                      <div style={{ fontSize: 9, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 }}>
-                        👥 Ops en esta fecha
-                      </div>
-                      <div style={{ fontSize: 26, fontWeight: 900, lineHeight: 1.1 }}>
-                        {posicion === 1 ? '🥇' : posicion === 2 ? '🥈' : posicion === 3 ? '🥉' : `#${posicion}`}
-                      </div>
-                      <div style={{ fontSize: 10, marginTop: 2, opacity: 0.85, fontWeight: 600 }}>
-                        {`de ${totalOps} ops · ${total} QSOs hoy`}
-                      </div>
-                    </div>
-                  </Col>
-                )
-              })()}
-              {/* Tarjeta 6: ranking histórico de operadores del evento */}
-              {rankingOpHistorico.length > 0 && (() => {
-                const miOp = rankingOpHistorico.find(r => r.usuario_id === user?.id)
-                if (!miOp) return null
-                const esPrimero = miOp.posicion === 1
-                const esTop3 = miOp.posicion <= 3
-                return (
-                  <Col xs={12} sm={8} md={4} style={{ display: 'flex' }}>
-                    <div style={{
-                      background: esPrimero
-                        ? 'linear-gradient(135deg, #389e0d 0%, #237804 100%)'
-                        : esTop3
-                          ? 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)'
-                          : 'linear-gradient(135deg, #595959 0%, #3d3d3d 100%)',
-                      borderRadius: 8, padding: '8px 10px', color: '#fff',
-                      boxShadow: esPrimero
-                        ? '0 4px 16px rgba(56,158,13,0.45)'
-                        : '0 4px 12px rgba(0,0,0,0.2)',
-                      transition: 'all 0.4s ease', height: '100%',
-                    }}>
-                      <div style={{ fontSize: 9, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 }}>
-                        📈 Ranking histórico ops
-                      </div>
-                      <div style={{ fontSize: 26, fontWeight: 900, lineHeight: 1.1 }}>
-                        {miOp.posicion === 1 ? '🥇' : miOp.posicion === 2 ? '🥈' : miOp.posicion === 3 ? '🥉' : `#${miOp.posicion}`}
-                      </div>
-                      <div style={{ fontSize: 10, marginTop: 2, opacity: 0.85, fontWeight: 600 }}>
-                        {`de ${rankingOpHistorico.length} ops · ${miOp.total} QSOs totales`}
-                      </div>
-                    </div>
-                  </Col>
-                )
-              })()}
-            </Row>
-          )}
+          <StatsCardsRow
+            totalQSOs={statsActuales.totalQSOs}
+            estacionesUnicas={statsActuales.estacionesUnicas}
+            posicion={statsActuales.posicion}
+            totalSesiones={statsActuales.totalSesiones}
+            esRecordQSOs={statsActuales.esRecordQSOs}
+            esRecordEstaciones={statsActuales.esRecordEstaciones}
+            totalSesionesHistoricas={rankingEvento.length}
+            miRecordPersonal={(() => {
+              const hoy = miRankingPersonal.find(r => r.fecha === fechaActual)
+              if (!hoy || hoy.total === 0) return undefined
+              const mejor = miRankingPersonal[0]
+              return {
+                posicion: hoy.posicion,
+                totalSesiones: miRankingPersonal.length,
+                totalHoy: hoy.total,
+                esPrimero: hoy.posicion === 1,
+                mejorFecha: dayjs(mejor.fecha).format('DD/MM/YY'),
+                mejorTotal: mejor.total,
+              }
+            })()}
+            opsEnFecha={(() => {
+              if (rankingOpSesion.length === 0) return undefined
+              const miOp = rankingOpSesion.find(r => r.usuario_id === user?.id)
+              const totalOps = rankingOpSesion.length + (miOp ? 0 : 1)
+              return {
+                posicion: miOp?.posicion ?? totalOps,
+                totalOps,
+                totalHoy: miOp?.total ?? 0,
+              }
+            })()}
+            rankingHistorico={(() => {
+              const miOp = rankingOpHistorico.find(r => r.usuario_id === user?.id)
+              if (!miOp) return undefined
+              return {
+                posicion: miOp.posicion,
+                totalOps: rankingOpHistorico.length,
+                totalGeneral: miOp.total,
+              }
+            })()}
+          />
 
           {resumenSelectedKeys.length > 0 && (
             <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2402,113 +2224,7 @@ export default function LibretaPage() {
         </Spin>
       </Modal>
 
-      {/* ── Modal: Fecha no permitida para evento recurrente ── */}
-      {diaEventoModal && (
-        <Modal
-          open
-          footer={null}
-          onCancel={() => setDiaEventoModal(null)}
-          width={460}
-          styles={{ body: { padding: 0 }, content: { overflow: 'hidden', borderRadius: 12, padding: 0 } }}
-          closable={false}
-          centered
-        >
-          {/* Cabecera con gradiente */}
-          <div style={{
-            background: 'linear-gradient(135deg, #cf1322 0%, #ff4d4f 55%, #ff7a45 100%)',
-            borderRadius: '12px 12px 0 0',
-            padding: '28px 28px 20px',
-            textAlign: 'center',
-            color: '#fff',
-          }}>
-            <div style={{
-              width: 68, height: 68, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 14px',
-              fontSize: 36,
-              border: '3px solid rgba(255,255,255,0.4)',
-            }}>
-              📅
-            </div>
-            <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: 1, marginBottom: 8 }}>
-              Fecha no permitida
-            </div>
-            <div style={{
-              background: 'rgba(255,255,255,0.22)', borderRadius: 20,
-              padding: '4px 18px', display: 'inline-block',
-              fontSize: 13, fontWeight: 700, letterSpacing: 0.5,
-            }}>
-              {diaEventoModal.tipoEvento}
-            </div>
-          </div>
-
-          {/* Fecha intentada */}
-          <div style={{
-            background: '#fff2e8', borderBottom: '1px solid #ffbb96',
-            padding: '12px 22px', display: 'flex', alignItems: 'center', gap: 12,
-          }}>
-            <span style={{ fontSize: 26 }}>🗓️</span>
-            <div>
-              <div style={{ fontSize: 11, color: '#874d00', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-                Fecha intentada
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#d4380d', marginTop: 2 }}>
-                {NOMBRES_DIA[diaEventoModal.fecha.day()]} — {diaEventoModal.fecha.format('DD/MM/YYYY')}
-              </div>
-            </div>
-          </div>
-
-          {/* Días de la semana */}
-          <div style={{ padding: '16px 22px 14px' }}>
-            <div style={{ fontSize: 11, color: '#595959', marginBottom: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-              Días configurados para este evento
-            </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {NOMBRES_DIA.map((nombre, idx) => {
-                const esConfig = diaEventoModal.diasConfig.includes(idx)
-                const esIntentado = idx === diaEventoModal.fecha.day()
-                return (
-                  <div key={idx} style={{
-                    padding: '5px 11px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-                    background: esIntentado && !esConfig ? '#ff4d4f' : esConfig ? '#52c41a' : '#f5f5f5',
-                    color: esIntentado && !esConfig ? '#fff' : esConfig ? '#fff' : '#bfbfbf',
-                    border: `2px solid ${esIntentado && !esConfig ? '#cf1322' : esConfig ? '#389e0d' : '#e0e0e0'}`,
-                    transition: 'all 0.2s',
-                  }}>
-                    {esConfig && '✓ '}{esIntentado && !esConfig && '✗ '}{nombre.slice(0, 3)}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Aviso administrador */}
-          <div style={{
-            background: '#fffbe6', borderTop: '1px solid #ffe58f',
-            padding: '12px 22px', display: 'flex', alignItems: 'flex-start', gap: 10,
-          }}>
-            <span style={{ fontSize: 18, lineHeight: 1.6 }}>⚠️</span>
-            <span style={{ fontSize: 13, color: '#614700', lineHeight: 1.6 }}>
-              Cambia la fecha seleccionada para que coincida con un día configurado en este evento,
-              o para habilitar capturas en{' '}
-              <strong>{NOMBRES_DIA[diaEventoModal.fecha.day()]}</strong>,
-              contacta a un administrador para agregar este día al evento.
-            </span>
-          </div>
-
-          {/* Footer */}
-          <div style={{ padding: '14px 22px 18px', display: 'flex', justifyContent: 'center' }}>
-            <Button
-              type="primary" danger size="large"
-              onClick={() => setDiaEventoModal(null)}
-              style={{ minWidth: 140, fontWeight: 700, borderRadius: 8 }}
-            >
-              Entendido
-            </Button>
-          </div>
-        </Modal>
-      )}
+      <FechaNoPermitidaModal diaEventoModal={diaEventoModal} onClose={() => setDiaEventoModal(null)} />
     </div>
   )
 }
