@@ -198,12 +198,21 @@ async def restore(
         # Disable FK triggers temporarily
         db.execute(text("SET session_replication_role = 'replica'"))
 
+        # Truncar TODAS las tablas primero, antes de insertar nada. Si se trunca
+        # e inserta tabla por tabla, el CASCADE de truncar una tabla "catalogo"
+        # (ej. zonas) mas tarde en la lista borra en cadena los datos ya
+        # restaurados en tablas que la referencian (ej. reportes.zona_id), sin
+        # volver a insertarlos. Con session_replication_role='replica' los
+        # triggers de FK estan desactivados, asi que el orden de los INSERT
+        # despues no importa.
+        for table in tables:
+            # Truncate — table ya validada contra information_schema arriba.
+            db.execute(text(f'TRUNCATE TABLE "{table}" RESTART IDENTITY CASCADE'))
+
         for table in tables:
             td = backup_data[table]
             cols = td["columns"]
             rows = td["rows"]
-            # Truncate — table ya validada contra information_schema arriba.
-            db.execute(text(f'TRUNCATE TABLE "{table}" RESTART IDENTITY CASCADE'))
             # Re-insert — cols ya validadas contra information_schema arriba; solo los
             # valores (parametrizados) vienen del archivo subido.
             if rows and cols:
