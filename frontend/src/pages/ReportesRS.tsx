@@ -12,7 +12,8 @@ import { libretaRSApi, type ReporteRSPayload } from '@/api/libretaRS'
 import { catalogosApi } from '@/api/catalogos'
 import { useAuthStore } from '@/store/authStore'
 import { useColPrefs } from '@/components/common/ColSettings'
-import { textFilterProps, selectFilterProps, uniqueFilterOptions } from '@/utils/tableFilters'
+import { selectFilterProps } from '@/utils/tableFilters'
+import { buildReporteColumnasComunes } from '@/utils/reporteColumns'
 import type { ReporteRS, Evento, PlataformaRS, Zona, Estacion, Estado } from '@/types'
 
 const { Title } = Typography
@@ -153,21 +154,7 @@ export default function ReportesRSPage() {
   }
 
   const colDefs: Record<ColKey, TableColumnType<ReporteRS>> = {
-    id: { title: 'ID', dataIndex: 'id', width: 65 },
-    indicativo: {
-      title: 'Indicativo', dataIndex: 'indicativo', width: 110, fixed: 'left' as const,
-      render: (v: string) => <strong style={{ color: '#1A569E' }}>{v}</strong>,
-      ...textFilterProps<ReporteRS>('indicativo'),
-    },
-    operador: {
-      title: 'Operador', dataIndex: 'operador', width: 160,
-      render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
-      ...textFilterProps<ReporteRS>('operador'),
-    },
-    senal: {
-      title: 'RST', dataIndex: 'senal', width: 70,
-      render: (v: number) => <strong>{v}</strong>,
-    },
+    ...buildReporteColumnasComunes<ReporteRS>({ data, zonas, eventos }),
     plataforma: {
       title: 'Red Social', dataIndex: 'plataforma', width: 130,
       render: (p: PlataformaRS) => {
@@ -178,81 +165,6 @@ export default function ReportesRSPage() {
       ...selectFilterProps<ReporteRS>(
         plataformas.map(p => ({ text: p.nombre, value: p.nombre })),
         (value, record) => record.plataforma?.nombre === value,
-      ),
-    },
-    ciudad: {
-      title: 'Ciudad', dataIndex: 'ciudad', width: 130,
-      render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
-      ...textFilterProps<ReporteRS>('ciudad'),
-    },
-    pais: {
-      title: 'País', dataIndex: 'pais', width: 140,
-      render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
-      ...selectFilterProps<ReporteRS>(
-        uniqueFilterOptions(data, r => r.pais ?? undefined),
-        (value, record) => record.pais === value,
-      ),
-    },
-    estado: {
-      title: 'Estado', dataIndex: 'estado', width: 130,
-      ...selectFilterProps<ReporteRS>(
-        uniqueFilterOptions(data, r => r.estado ?? undefined),
-        (value, record) => record.estado === value,
-      ),
-    },
-    zona: {
-      title: 'Zona', dataIndex: 'zona', width: 80, align: 'center' as const,
-      render: (_: unknown, record: ReporteRS) => {
-        const codigo = record.zona?.codigo
-        if (!codigo) return null
-        const c = record.zona?.color ?? '#1677ff'
-        return <Tag color={c} style={{ fontWeight: 600 }}>{codigo}</Tag>
-      },
-      ...selectFilterProps<ReporteRS>(
-        zonas.map(z => ({ text: z.codigo, value: z.codigo })),
-        (value, record) => record.zona?.codigo === value,
-      ),
-    },
-    evento: {
-      title: 'Tipo', dataIndex: 'evento', width: 160,
-      render: (_: unknown, record: ReporteRS) => {
-        if (!record.evento) return null
-        const c = record.evento.color ?? '#1677ff'
-        return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{record.evento.tipo}</Tag>
-      },
-      ...selectFilterProps<ReporteRS>(
-        eventos.map(e => ({ text: e.tipo, value: e.tipo })),
-        (value, record) => record.evento?.tipo === value,
-      ),
-    },
-    estacion: {
-      title: 'Estación', dataIndex: 'estacion', width: 120,
-      render: (_: unknown, record: ReporteRS) => {
-        if (!record.estacion) return null
-        const c = record.estacion.color ?? '#1677ff'
-        return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600 }}>{record.estacion.qrz}</Tag>
-      },
-      ...selectFilterProps<ReporteRS>(
-        uniqueFilterOptions(data, r => r.estacion?.qrz ?? undefined),
-        (value, record) => record.estacion?.qrz === value,
-      ),
-    },
-    fecha_reporte: {
-      title: 'Fecha Evento', dataIndex: 'fecha_reporte', width: 140,
-      render: (v: string) => dayjs(v).format('DD/MM/YYYY HH:mm'),
-    },
-    created_at: {
-      title: 'Fecha Captura', dataIndex: 'created_at', width: 140,
-      render: (v: string) => v
-        ? <span style={{ color: '#8c8c8c' }}>{dayjs(v).format('DD/MM/YYYY HH:mm')}</span>
-        : <span style={{ color: '#ccc' }}>—</span>,
-    },
-    capturado_por_nombre: {
-      title: 'Capturado por', dataIndex: 'capturado_por_nombre', width: 140,
-      render: (v: string) => v ?? <span style={{ color: '#ccc' }}>—</span>,
-      ...selectFilterProps<ReporteRS>(
-        uniqueFilterOptions(data, r => r.capturado_por_nombre ?? undefined),
-        (value, record) => record.capturado_por_nombre === value,
       ),
     },
   }
