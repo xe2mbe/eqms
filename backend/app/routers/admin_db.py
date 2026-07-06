@@ -44,6 +44,12 @@ def _serialize_row(row: dict) -> dict:
             out[k] = v.isoformat()
         elif v is None or isinstance(v, (str, int, float, bool)):
             out[k] = v
+        elif isinstance(v, (dict, list)):
+            # Columnas JSONB (ya vienen deserializadas como dict/list desde psycopg2):
+            # se guardan como texto JSON valido (comillas dobles) para que el INSERT
+            # del restore las pueda castear de vuelta a jsonb. str(v) produciria el
+            # repr de Python (comillas simples), que Postgres rechaza como JSON invalido.
+            out[k] = json.dumps(v)
         else:
             out[k] = str(v)
     return out
@@ -216,11 +222,11 @@ async def restore(
                 for row in rows:
                     db.execute(stmt, row)
 
-        db.execute(text("SET session_replication_role = 'DEFAULT'"))
+        db.execute(text("SET session_replication_role = 'origin'"))
         db.commit()
     except Exception as e:
         db.rollback()
-        db.execute(text("SET session_replication_role = 'DEFAULT'"))
+        db.execute(text("SET session_replication_role = 'origin'"))
         logger.error(f"Restore: error al restaurar: {e}")
         raise HTTPException(500, "Error al restaurar el backup. Revisa los logs del servidor.")
 
