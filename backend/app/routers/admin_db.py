@@ -44,6 +44,12 @@ def _serialize_row(row: dict) -> dict:
             out[k] = v.isoformat()
         elif v is None or isinstance(v, (str, int, float, bool)):
             out[k] = v
+        elif isinstance(v, (dict, list)):
+            # Columnas JSONB (ya vienen deserializadas como dict/list desde psycopg2):
+            # se guardan como texto JSON valido (comillas dobles) para que el INSERT
+            # del restore las pueda castear de vuelta a jsonb. str(v) produciria el
+            # repr de Python (comillas simples), que Postgres rechaza como JSON invalido.
+            out[k] = json.dumps(v)
         else:
             out[k] = str(v)
     return out
