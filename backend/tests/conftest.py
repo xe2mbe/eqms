@@ -9,10 +9,16 @@ cuando DEBUG=false).
 """
 import os
 
+import tempfile
+
 os.environ.setdefault("DATABASE_URL", "postgresql://quser:qpassword@localhost:5432/qmsdb_test")
 os.environ.setdefault("SECRET_KEY", "clave-de-pruebas-solo-para-testing-1234567890")
 os.environ.setdefault("DEBUG", "true")
 os.environ.setdefault("ALLOWED_ORIGINS", "http://localhost:5173")
+# main.py crea este directorio a nivel de modulo (os.makedirs) para montar /uploads;
+# fuera del contenedor Docker "/app" no existe ni es escribible, asi que se apunta a
+# un directorio temporal propio de la corrida de tests.
+os.environ.setdefault("UPLOADS_DIR", os.path.join(tempfile.gettempdir(), "eqms_test_uploads"))
 
 import uuid  # noqa: E402
 

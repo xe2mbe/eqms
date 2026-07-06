@@ -38,6 +38,7 @@ jobs:
           SECRET_KEY: clave-de-pruebas-solo-para-ci-1234567890abcdef
           DEBUG: "true"
           ALLOWED_ORIGINS: http://localhost:5173
+          UPLOADS_DIR: /tmp/eqms_ci_uploads
         run: pytest tests -v
 
   test-frontend:

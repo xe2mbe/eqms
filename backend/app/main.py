@@ -291,7 +291,7 @@ app.include_router(reportes_pdf.router, prefix="/api/reportes-pdf",  tags=["Repo
 app.include_router(public_stats.router, prefix="/api/public",         tags=["Público"])
 
 
-uploads_path = "/app/uploads"
+uploads_path = settings.UPLOADS_DIR
 os.makedirs(uploads_path, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=uploads_path), name="uploads")
 
