@@ -1,5 +1,5 @@
 import client from './client'
-import type { EstadisticaResumen } from '@/types'
+import type { EstadisticaResumen, TopIndicativo, ZonaActividad, RstPorZona, SistemaPorZona, TendenciaEvento } from '@/types'
 
 export const estadisticasApi = {
   resumen: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number }) =>
@@ -13,6 +13,27 @@ export const estadisticasApi = {
 
   tendencia: (params?: { fecha_inicio?: string; fecha_fin?: string; granularidad?: string; evento_id?: number }) =>
     client.get<{ periodo: string; total: number }[]>('/estadisticas/tendencia', { params }),
+
+  horario: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number }) =>
+    client.get<{ hora: number; total: number }[]>('/estadisticas/horario', { params }),
+
+  topIndicativos: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number; limite?: number }) =>
+    client.get<TopIndicativo[]>('/estadisticas/top-indicativos', { params }),
+
+  zonaActividad: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number }) =>
+    client.get<ZonaActividad[]>('/estadisticas/zona-actividad', { params }),
+
+  rstPorZona: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number }) =>
+    client.get<RstPorZona[]>('/estadisticas/rst-por-zona', { params }),
+
+  sistemasPorZona: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number }) =>
+    client.get<SistemaPorZona[]>('/estadisticas/sistemas-por-zona', { params }),
+
+  tendenciaEventos: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number }) =>
+    client.get<TendenciaEvento[]>('/estadisticas/tendencia-eventos', { params }),
+
+  sistemasPorEvento: (params?: { fecha_inicio?: string; fecha_fin?: string; evento_id?: number }) =>
+    client.get<{ tipo: string; sistema: string; total: number }[]>('/estadisticas/sistemas-por-evento', { params }),
 
   // ── RS ────────────────────────────────────────────────────────────────────
 

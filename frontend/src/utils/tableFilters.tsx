@@ -9,7 +9,7 @@ type FilterDropdownProps = {
 }
 
 /** Filtro de texto con caja de búsqueda — para columnas de texto libre */
-export function textFilterProps(dataIndex: string) {
+export function textFilterProps<T>(dataIndex: keyof T & string) {
   return {
     filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: FilterDropdownProps) => (
       <div style={{ padding: 8 }} onKeyDown={e => e.stopPropagation()}>
@@ -34,16 +34,15 @@ export function textFilterProps(dataIndex: string) {
     filterIcon: (filtered: boolean) => (
       <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
     ),
-    onFilter: (value: unknown, record: Record<string, unknown>) =>
+    onFilter: (value: unknown, record: T) =>
       record[dataIndex]?.toString().toLowerCase().includes(String(value).toLowerCase()) ?? false,
   }
 }
 
 /** Filtro de selección con checklist — para columnas categóricas */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function selectFilterProps(
+export function selectFilterProps<T>(
   options: { text: string; value: string }[],
-  onFilter: (value: unknown, record: any) => boolean,
+  onFilter: (value: unknown, record: T) => boolean,
 ) {
   return {
     filters: options,
@@ -56,10 +55,9 @@ export function selectFilterProps(
 }
 
 /** Extrae valores únicos de un array de objetos para usar como opciones de filtro */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function uniqueFilterOptions(
-  data: any[],
-  getValue: (r: any) => string | null | undefined,
+export function uniqueFilterOptions<T>(
+  data: readonly T[],
+  getValue: (r: T) => string | null | undefined,
 ): { text: string; value: string }[] {
   const seen = new Set<string>()
   const opts: { text: string; value: string }[] = []

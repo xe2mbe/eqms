@@ -9,6 +9,7 @@ import {
   FileWordOutlined, MailOutlined, SendOutlined, SettingOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import axios from 'axios'
 import {
   reportesPdfApi,
   type PlantillaOut,
@@ -29,6 +30,11 @@ const DIAS_SEMANA = [
   { value: 4, label: 'Viernes' }, { value: 5, label: 'Sábado' },
   { value: 6, label: 'Domingo' },
 ]
+
+/** Extrae el detalle de error del backend de un catch, si viene de una llamada axios. */
+function getErrorDetail(e: unknown): string | undefined {
+  return axios.isAxiosError(e) ? e.response?.data?.detail : undefined
+}
 
 type DateMode = 'ultimo' | 'rango'
 
@@ -203,8 +209,8 @@ export default function EstadisticasReportesPage() {
       setPlantillas(prev => prev.map(p => p.id === data.id ? data : p))
       message.success('Configuración guardada')
       setDrawerOpen(false)
-    } catch (e: any) {
-      message.error(e?.response?.data?.detail ?? 'Error al guardar')
+    } catch (e: unknown) {
+      message.error(getErrorDetail(e) ?? 'Error al guardar')
     }
   }
 
@@ -219,8 +225,8 @@ export default function EstadisticasReportesPage() {
     try {
       await reportesPdfApi.enviar(p.id, fi, ff)
       message.success(`Reporte enviado a ${p.destinatarios.join(', ')}`)
-    } catch (e: any) {
-      message.error(e?.response?.data?.detail ?? 'Error al enviar')
+    } catch (e: unknown) {
+      message.error(getErrorDetail(e) ?? 'Error al enviar')
     } finally {
       setSending(null)
     }

@@ -4,7 +4,7 @@ import DateRangeBar from '@/components/common/DateRangeBar'
 import ReactECharts from 'echarts-for-react'
 import dayjs from 'dayjs'
 import { estadisticasApi } from '@/api/estadisticas'
-import client from '@/api/client'
+import type { TopIndicativo, ZonaActividad, RstPorZona, SistemaPorZona, TendenciaEvento } from '@/types'
 
 const { Title, Text } = Typography
 
@@ -21,6 +21,14 @@ type CoberturaEstado = {
   total: number; indicativos: number; senal_promedio: number
 }
 
+// Shim angosto sobre el tipado suelto de los formatters de echarts-for-react
+// (el paquete no exporta un tipo utilizable para el shape real de `params`).
+type EChartsFormatterParam = {
+  name: string
+  value: number | string | (number | string)[]
+  dataIndex: number
+}
+
 export default function EstadisticasPage() {
   const [loading, setLoading]           = useState(false)
   const [tendencia, setTendencia]       = useState<{ periodo: string; total: number }[]>([])
@@ -34,14 +42,14 @@ export default function EstadisticasPage() {
 
   // Advanced stats
   const [horario, setHorario]           = useState<{ hora: number; total: number }[]>([])
-  const [topOps, setTopOps]             = useState<any[]>([])
+  const [topOps, setTopOps]             = useState<TopIndicativo[]>([])
   const [rankingOps, setRankingOps]     = useState<{ usuario_id: number; nombre: string; total: number; posicion: number }[]>([])
-  const [zonaAct, setZonaAct]           = useState<any[]>([])
+  const [zonaAct, setZonaAct]           = useState<ZonaActividad[]>([])
   const [nuevos, setNuevos]             = useState<{ mes: string; nuevos: number }[]>([])
   const [retencion, setRetencion]       = useState<{ mes: string; activos: number; retenidos: number; tasa: number }[]>([])
-  const [rstZona, setRstZona]           = useState<any[]>([])
-  const [sistZona, setSistZona]         = useState<any[]>([])
-  const [tendEv, setTendEv]             = useState<any[]>([])
+  const [rstZona, setRstZona]           = useState<RstPorZona[]>([])
+  const [sistZona, setSistZona]         = useState<SistemaPorZona[]>([])
+  const [tendEv, setTendEv]             = useState<TendenciaEvento[]>([])
   const [eventosFiltro, setEventosFiltro] = useState<string[]>([])
   const [sistPorEv, setSistPorEv]       = useState<{ tipo: string; sistema: string; total: number }[]>([])
   const [sistEvFiltro, setSistEvFiltro] = useState<string[]>([])
@@ -65,20 +73,20 @@ export default function EstadisticasPage() {
       estadisticasApi.tendencia({ ...p, granularidad: 'mes' }),
       estadisticasApi.porSistema(p),
       estadisticasApi.porEstado(p),
-      client.get('/estadisticas/horario', { params: p }),
-      client.get('/estadisticas/top-indicativos', { params: { ...p, limite: 20 } }),
-      client.get('/estadisticas/zona-actividad', { params: p }),
+      estadisticasApi.horario(p),
+      estadisticasApi.topIndicativos({ ...p, limite: 20 }),
+      estadisticasApi.zonaActividad(p),
       estadisticasApi.nuevosMensuales(p),
       estadisticasApi.retencion(p),
-      client.get('/estadisticas/rst-por-zona', { params: p }),
-      client.get('/estadisticas/sistemas-por-zona', { params: p }),
-      client.get('/estadisticas/tendencia-eventos', { params: p }),
+      estadisticasApi.rstPorZona(p),
+      estadisticasApi.sistemasPorZona(p),
+      estadisticasApi.tendenciaEventos(p),
       estadisticasApi.coberturaEstados(p),
       estadisticasApi.operadoresPeriodo(p),
-      client.get('/estadisticas/sistemas-por-evento', { params: p }),
+      estadisticasApi.sistemasPorEvento(p),
     ])
-    const ok = (i: number) =>
-      results[i].status === 'fulfilled' ? (results[i] as PromiseFulfilledResult<any>).value.data : []
+    const ok = <T,>(i: number): T[] =>
+      results[i].status === 'fulfilled' ? (results[i] as unknown as PromiseFulfilledResult<{ data: T[] }>).value.data : []
     setTendencia(ok(0)); setPorSistema(ok(1)); setPorEstado(ok(2))
     setHorario(ok(3));   setTopOps(ok(4));     setZonaAct(ok(5))
     setNuevos(ok(6));    setRetencion(ok(7));  setRstZona(ok(8))
@@ -146,7 +154,7 @@ export default function EstadisticasPage() {
   }
 
   const horarioOption = {
-    tooltip: { trigger: 'axis', formatter: (p: any) => `${p[0].name}:00 hrs — ${p[0].value} contactos` },
+    tooltip: { trigger: 'axis', formatter: (p: EChartsFormatterParam[]) => `${p[0].name}:00 hrs — ${p[0].value} contactos` },
     grid: { left: 8, right: 8, top: 10, bottom: 8, containLabel: true },
     xAxis: { type: 'category', data: horario.map(h => `${h.hora}`) },
     yAxis: { type: 'value' },
@@ -156,17 +164,17 @@ export default function EstadisticasPage() {
       itemStyle: { borderRadius: [3, 3, 0, 0] } }],
   }
 
-  const zonas = [...new Set(zonaAct.map((z: any) => z.zona))]
+  const zonas = [...new Set(zonaAct.map(z => z.zona))]
   const zonaBarOption = {
     tooltip: { trigger: 'axis' },
     grid: { left: 8, right: 8, top: 10, bottom: 8, containLabel: true },
     xAxis: { type: 'category', data: zonas },
     yAxis: [{ type: 'value', name: 'Contactos' }, { type: 'value', name: 'Indicativos', position: 'right' }],
     series: [
-      { name: 'Contactos', type: 'bar', data: zonas.map(z => zonaAct.find((r: any) => r.zona === z)?.total ?? 0),
-        itemStyle: { color: (p: any) => ZONA_COLORS[p.name] ?? '#1677ff', borderRadius: [4, 4, 0, 0] } },
+      { name: 'Contactos', type: 'bar', data: zonas.map(z => zonaAct.find(r => r.zona === z)?.total ?? 0),
+        itemStyle: { color: (p: EChartsFormatterParam) => ZONA_COLORS[p.name] ?? '#1677ff', borderRadius: [4, 4, 0, 0] } },
       { name: 'Indicativos únicos', type: 'line', yAxisIndex: 1, smooth: true,
-        data: zonas.map(z => zonaAct.find((r: any) => r.zona === z)?.indicativos ?? 0),
+        data: zonas.map(z => zonaAct.find(r => r.zona === z)?.indicativos ?? 0),
         itemStyle: { color: '#fa8c16' }, lineStyle: { width: 2 } },
     ],
   }
@@ -210,22 +218,25 @@ export default function EstadisticasPage() {
     ],
   }
 
-  const zonaList = [...new Set(rstZona.map((r: any) => r.zona))].sort()
+  const zonaList = [...new Set(rstZona.map(r => r.zona))].sort()
   const rstValues = [51, 53, 55, 57, 59]
   const rstHeatOption = {
-    tooltip: { formatter: (p: any) => `Zona ${p.value[1]} · RST ${p.value[0]}: ${p.value[2]} contactos` },
+    tooltip: { formatter: (p: EChartsFormatterParam) => {
+      const [rst, zona, total] = p.value as (number | string)[]
+      return `Zona ${zona} · RST ${rst}: ${total} contactos`
+    } },
     grid: { left: 8, right: 80, top: 10, bottom: 8, containLabel: true },
     xAxis: { type: 'category', data: rstValues.map(String) },
     yAxis: { type: 'category', data: zonaList },
-    visualMap: { min: 0, max: Math.max(...rstZona.map((r: any) => r.total), 1), calculable: true,
+    visualMap: { min: 0, max: Math.max(...rstZona.map(r => r.total), 1), calculable: true,
       orient: 'vertical', right: 0, top: 'center',
       inRange: { color: ['#fff7e6', '#fc8452'] } },
-    series: [{ type: 'heatmap', data: rstZona.map((r: any) => [String(r.senal), r.zona, r.total]),
+    series: [{ type: 'heatmap', data: rstZona.map(r => [String(r.senal), r.zona, r.total]),
       label: { show: true, fontSize: 10 } }],
   }
 
-  const sistZonas = [...new Set(sistZona.map((r: any) => r.zona))].sort()
-  const sistSistemas = [...new Set(sistZona.map((r: any) => r.sistema))].sort()
+  const sistZonas = [...new Set(sistZona.map(r => r.zona))].sort()
+  const sistSistemas = [...new Set(sistZona.map(r => r.sistema))].sort()
   const sistZonaOption = {
     tooltip: { trigger: 'axis' },
     legend: { data: sistSistemas, bottom: 0 },
@@ -234,13 +245,13 @@ export default function EstadisticasPage() {
     yAxis: { type: 'value' },
     series: sistSistemas.map((s, i) => ({
       name: s, type: 'bar', stack: 'sz',
-      data: sistZonas.map(z => sistZona.find((r: any) => r.zona === z && r.sistema === s)?.total ?? 0),
+      data: sistZonas.map(z => sistZona.find(r => r.zona === z && r.sistema === s)?.total ?? 0),
       itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] },
     })),
   }
 
-  const evMeses = [...new Set(tendEv.map((r: any) => r.mes))].sort()
-  const evTipos = [...new Set(tendEv.map((r: any) => r.tipo))].sort()
+  const evMeses = [...new Set(tendEv.map(r => r.mes))].sort()
+  const evTipos = [...new Set(tendEv.map(r => r.tipo))].sort()
   const evLineOption = {
     tooltip: { trigger: 'axis' },
     legend: { data: evTipos, bottom: 0 },
@@ -249,7 +260,7 @@ export default function EstadisticasPage() {
     yAxis: { type: 'value' },
     series: evTipos.map((t, i) => ({
       name: t, type: 'line', smooth: true,
-      data: evMeses.map(m => tendEv.find((r: any) => r.mes === m && r.tipo === t)?.total ?? 0),
+      data: evMeses.map(m => tendEv.find(r => r.mes === m && r.tipo === t)?.total ?? 0),
       itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] },
     })),
   }
@@ -263,7 +274,7 @@ export default function EstadisticasPage() {
     yAxis: { type: 'value' },
     series: evTiposFiltrados.map((t: string) => ({
       name: t, type: 'line', smooth: true,
-      data: evMeses.map(m => tendEv.find((r: any) => r.mes === m && r.tipo === t)?.total ?? 0),
+      data: evMeses.map(m => tendEv.find(r => r.mes === m && r.tipo === t)?.total ?? 0),
       itemStyle: { color: CHART_COLORS[evTipos.indexOf(t) % CHART_COLORS.length] },
     })),
   }
@@ -305,7 +316,7 @@ export default function EstadisticasPage() {
 
   const coberturaEstadoBarOption = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
-      formatter: (p: any) => `${p[0].name}: ${p[0].value} contactos` },
+      formatter: (p: EChartsFormatterParam[]) => `${p[0].name}: ${p[0].value} contactos` },
     grid: { left: 140, right: 16, top: 8, bottom: 8, containLabel: false },
     xAxis: { type: 'value' },
     yAxis: {
@@ -514,12 +525,12 @@ export default function EstadisticasPage() {
                     title={<Tooltip title="Ranking de indicativos más activos">
                       🏆 Top 20 indicativos más activos
                     </Tooltip>}>
-                    <Table
+                    <Table<TopIndicativo>
                       dataSource={topOps} rowKey="indicativo" size="small"
                       pagination={false} scroll={{ y: 340 }}
                       locale={{ emptyText: <Empty description="Sin datos en el período" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
                       columns={[
-                        { title: '#', width: 40, render: (_: any, _r: any, i: number) => <Text type="secondary">{i+1}</Text> },
+                        { title: '#', width: 40, render: (_, _r, i) => <Text type="secondary">{i+1}</Text> },
                         { title: 'Indicativo', dataIndex: 'indicativo',
                           render: (v: string) => <Text strong style={{ color: '#1A569E', fontFamily: 'monospace', letterSpacing: 1 }}>{v}</Text> },
                         { title: 'Contactos', dataIndex: 'total', width: 90,
@@ -529,7 +540,7 @@ export default function EstadisticasPage() {
                         { title: 'Zonas', dataIndex: 'zonas', width: 70,
                           render: (v: number) => <Tag color="purple">{v}/5</Tag> },
                         { title: 'Nombre', dataIndex: 'nombre', ellipsis: true,
-                          render: (v: string) => <Text type="secondary" style={{ fontSize: 11 }}>{v ?? '—'}</Text> },
+                          render: (v: string | null) => <Text type="secondary" style={{ fontSize: 11 }}>{v ?? '—'}</Text> },
                       ]}
                     />
                   </Card>
@@ -543,7 +554,7 @@ export default function EstadisticasPage() {
                       ? <>
                           <ReactECharts option={zonaBarOption} style={{ height: 220 }} notMerge />
                           <Row gutter={8} style={{ marginTop: 12 }}>
-                            {zonaAct.map((z: any) => (
+                            {zonaAct.map(z => (
                               <Col key={z.zona} span={Math.floor(24 / Math.max(zonaAct.length, 1))}>
                                 <Card size="small" style={{ textAlign: 'center', borderColor: ZONA_COLORS[z.zona] ?? '#ddd', borderWidth: 2 }}>
                                   <Tag style={{ backgroundColor: ZONA_COLORS[z.zona] ?? '#1677ff', color: '#fff', fontWeight: 700 }}>{z.zona}</Tag>
@@ -624,7 +635,7 @@ export default function EstadisticasPage() {
 
                 {/* Cards de zonas con cobertura de estados */}
                 {coberturaByZona.length > 0 && coberturaByZona.map(z => (
-                  <Col key={z.zona} xs={24} sm={12} lg={Math.floor(24 / Math.max(coberturaByZona.length, 1)) as any}>
+                  <Col key={z.zona} xs={24} sm={12} lg={Math.floor(24 / Math.max(coberturaByZona.length, 1))}>
                     <Card size="small" className="card-shadow"
                       style={{ borderTop: `4px solid ${ZONA_COLORS[z.zona] ?? '#1677ff'}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

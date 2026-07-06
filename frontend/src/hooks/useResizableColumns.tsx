@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef } from 'react'
+import type { HTMLAttributes } from 'react'
 
 const ResizeHandle = ({
   onResize,
@@ -54,7 +55,12 @@ const ResizeHandle = ({
   )
 }
 
-const ResizableTitle = (props: any) => {
+type ResizableTitleProps = HTMLAttributes<HTMLTableCellElement> & {
+  onResize?: (w: number) => void
+  width?: number
+}
+
+const ResizableTitle = (props: ResizableTitleProps) => {
   const { onResize, width, ...restProps } = props
   if (!width || !onResize) return <th {...restProps} />
 
@@ -88,7 +94,7 @@ export function useResizableColumns(initialWidths: number[]) {
   )
 
   const applyWidths = useCallback(
-    (columns: any[]) =>
+    <T extends { width?: number | string }>(columns: readonly T[]): T[] =>
       columns.map((col, i) => ({
         ...col,
         width: widths[i] ?? col.width,
