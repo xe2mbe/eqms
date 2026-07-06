@@ -222,6 +222,44 @@ async def restore(
                 for row in rows:
                     db.execute(stmt, row)
 
+        db.execute(text("SET session_replication_role = 'replica'"))
+
+        # Truncar TODAS las tablas primero, antes de insertar nada. Si se trunca
+        # e inserta tabla por tabla, el CASCADE de truncar una tabla "catalogo"
+        # (ej. zonas) mas tarde en la lista borra en cadena los datos ya
+        # restaurados en tablas que la referencian (ej. reportes.zona_id), sin
+        # volver a insertarlos. Con session_replication_role='replica' los
+        # triggers de FK estan desactivados, asi que el orden de los INSERT
+        # despues no importa.
+        for table in tables:
+            # Truncate — table ya validada contra information_schema arriba.
+            db.execute(text(f'TRUNCATE TABLE "{table}" RESTART IDENTITY CASCADE'))
+
+        for table in tables:
+            td = backup_data[table]
+            cols = td["columns"]
+            rows = td["rows"]
+            # Re-insert — cols ya validadas contra information_schema arriba; solo los
+            # valores (parametrizados) vienen del archivo subido.
+            if rows and cols:
+                col_list = ", ".join(f'"{c}"' for c in cols)
+                placeholders = ", ".join(f":{c}" for c in cols)
+                stmt = text(f'INSERT INTO "{table}" ({col_list}) VALUES ({placeholders})')
+                for row in rows:
+                    db.execute(stmt, row)
+
+        # Insertar con "id" explicito NO avanza la secuencia de auto-incremento
+        # de la tabla (nextval() nunca se llama), asi que sin esto la siguiente
+        # insercion normal de la app (login -> audit_logs, un nuevo reporte,
+        # etc.) colisiona con un id que ya vino del backup restaurado.
+        for table in tables:
+            seq = db.execute(text("SELECT pg_get_serial_sequence(:t, 'id')"), {"t": table}).scalar()
+            if seq:
+                db.execute(
+                    text(f'SELECT setval(:seq, COALESCE((SELECT MAX(id) FROM "{table}"), 1))'),
+                    {"seq": seq},
+                )
+
         db.execute(text("SET session_replication_role = 'origin'"))
         db.commit()
     except Exception as e:

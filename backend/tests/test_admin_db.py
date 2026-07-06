@@ -240,3 +240,52 @@ def test_restore_no_pierde_datos_por_orden_de_truncate_cascade(client, admin_use
             models.PlataformaRS.id == plataforma.id
         ).delete()
         db_session.commit()
+
+
+def test_restore_sincroniza_secuencia_tras_insertar_con_id_explicito(client, admin_user, db_session):
+    """
+    Regresion de un bug real: el restore inserta cada fila con su "id" explicito
+    (para preservar las FK del backup), pero eso NUNCA llama a nextval() sobre la
+    secuencia de auto-incremento de la tabla. Sin sincronizarla despues, la
+    siguiente insercion normal de la app (sin id explicito -- login -> audit_logs,
+    un nuevo reporte, un nuevo usuario, etc.) colisiona con un id que ya vino del
+    backup restaurado. Se reprodujo en vivo: el login fallaba con 500
+    (UniqueViolation en audit_logs) despues de restaurar un backup real.
+    """
+    adm, pw = admin_user
+    token = login(client, adm.username, pw)
+
+    payload = json.dumps({
+        "_meta": {},
+        "radioexperimentadores": {
+            "columns": ["id", "indicativo", "nombre_completo"],
+            "rows": [
+                {"id": 500, "indicativo": "XE1SEQTEST", "nombre_completo": "Prueba Secuencia"},
+            ],
+        },
+    }).encode("utf-8")
+
+    resp = client.post(
+        "/api/admin/db/restore",
+        headers=auth_headers(token),
+        files={"file": ("seq.json", io.BytesIO(payload), "application/json")},
+    )
+    assert resp.status_code == 200, resp.text
+
+    try:
+        # Insercion normal, sin id explicito -- exactamente lo que hace la app
+        # (ej. app/utils/seed.py o cualquier endpoint que cree un registro nuevo).
+        nuevo = models.Radioexperimentador(indicativo="XE2SEQTEST", nombre_completo="Post-restore")
+        db_session.add(nuevo)
+        db_session.commit()
+        db_session.refresh(nuevo)
+
+        assert nuevo.id > 500, (
+            f"la secuencia no avanzo tras el restore: nuevo id={nuevo.id}, "
+            f"deberia ser mayor al id=500 restaurado"
+        )
+    finally:
+        db_session.query(models.Radioexperimentador).filter(
+            models.Radioexperimentador.indicativo.in_(["XE1SEQTEST", "XE2SEQTEST"])
+        ).delete()
+        db_session.commit()
