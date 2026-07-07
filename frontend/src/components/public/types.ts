@@ -1,5 +1,7 @@
 /** Tipos del payload de la página pública (PublicFMRE), compartidos por sus componentes. */
 
+export type UltimoEventoResumen = { tipo: string; ultima: string; estaciones: number; total_qsos: number }
+
 export type Stats = {
   rf: {
     total: number; indicativos: number
@@ -16,8 +18,8 @@ export type Stats = {
     por_estado: { estado: string; total: number }[]
     top_indicativos: { indicativo: string; nombre: string | null; total: number }[]
   }
-  ultimo_evento_rf: { tipo: string; ultima: string; estaciones: number; total_qsos: number } | null
-  ultimo_evento_rs: { tipo: string; ultima: string; estaciones: number; total_qsos: number } | null
+  ultimo_evento_rf: UltimoEventoResumen | null
+  ultimo_evento_rs: UltimoEventoResumen | null
 }
 
 export type EstacionItem = { indicativo: string; nombre: string | null; total: number; ultima: string | null }
