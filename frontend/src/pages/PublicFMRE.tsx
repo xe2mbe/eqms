@@ -12,137 +12,18 @@ import 'dayjs/locale/es'
 import { FMRE_BLUE, FMRE_DARK, FMRE_LIGHT, FMRE_GOLD, SISTEMA_COLORS, PLAT_COLORS } from '@/utils/publicFmreShared'
 import { usePublicRoipStatus } from '@/hooks/usePublicRoipStatus'
 import { AllStarLinkStatusCard, IrlpStatusCard, DmrStatusCard } from '@/components/public/VoipStatusCards'
+import RadioWavesBg from '@/components/public/RadioWavesBg'
+import AnimatedCount from '@/components/public/AnimatedCount'
+import type { Stats, EstacionItem, UltimoEvDetalle, UltimoEvRSDetalle, BusquedaResult } from '@/components/public/types'
+import { getNextBoletinInfo, getBoletinNumForDate } from '@/utils/publicBoletin'
 
 dayjs.locale('es')
 
 const { Title, Text, Paragraph } = Typography
 
-// ─── System logo SVGs ───────────────────────────────────────────────────────
-
-
-// ─── SVG decorations ────────────────────────────────────────────────────────
-
-const RadioWavesBg = () => (
-  <svg width="420" height="420" viewBox="0 0 420 420" fill="none" style={{ opacity: 0.09 }}>
-    <defs>
-      <clipPath id="rwclip">
-        <rect width="420" height="420" />
-      </clipPath>
-    </defs>
-    <g clipPath="url(#rwclip)">
-      {[48, 88, 130, 172, 214, 256, 298, 340, 382].map((r, i) => (
-        <circle key={i} cx="420" cy="210" r={r} stroke="white" strokeWidth="1.6" fill="none" />
-      ))}
-      <circle cx="420" cy="210" r="8" fill="white" opacity="0.5" />
-      <circle cx="420" cy="210" r="3" fill="white" />
-    </g>
-  </svg>
-)
-
 const MORSE = '-.-. --.-   -.. .   -..- . .---- .-.. --'
 
-// ─── Contador animado ────────────────────────────────────────────────────────
-
-function AnimatedCount({ target, suffix = '' }: { target: number; suffix?: string }) {
-  const [val, setVal] = useState(0)
-  const raf = useRef<number>(0)
-  useEffect(() => {
-    let start: number | null = null
-    const duration = 1200
-    const step = (ts: number) => {
-      if (!start) start = ts
-      const progress = Math.min((ts - start) / duration, 1)
-      setVal(Math.floor(progress * target))
-      if (progress < 1) raf.current = requestAnimationFrame(step)
-    }
-    raf.current = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(raf.current)
-  }, [target])
-  return <span>{val.toLocaleString()}{suffix}</span>
-}
-
 // ─── Page ────────────────────────────────────────────────────────────────────
-
-type Stats = {
-  rf: {
-    total: number; indicativos: number
-    por_estado: { estado: string; total: number }[]
-    por_sistema: { sistema: string; nombre: string; total: number }[]
-    tendencia: { mes: string; sistema: string; total: number }[]
-    top_indicativos: { indicativo: string; nombre: string | null; total: number }[]
-    paises: { pais: string; indicativos: number }[]
-  }
-  rs: {
-    total: number; indicativos: number
-    por_plataforma: { plataforma: string; total: number }[]
-    tendencia: { mes: string; plataforma: string; total: number }[]
-    por_estado: { estado: string; total: number }[]
-    top_indicativos: { indicativo: string; nombre: string | null; total: number }[]
-  }
-  ultimo_evento_rf: { tipo: string; ultima: string; estaciones: number; total_qsos: number } | null
-  ultimo_evento_rs: { tipo: string; ultima: string; estaciones: number; total_qsos: number } | null
-}
-
-type EstacionItem = { indicativo: string; nombre: string | null; total: number; ultima: string | null }
-type UltimoEvDetalle   = { evento: string | null; fecha: string | null; participantes: { indicativo: string; nombre: string | null; total: number; sistemas: Record<string, number>; estado: string | null }[] }
-type UltimoEvRSDetalle = { evento: string | null; fecha: string | null; participantes: { indicativo: string; nombre: string | null; total: number; plataformas: Record<string, number>; estado: string | null }[] }
-
-type BusquedaResult = {
-  indicativo: string
-  operador: { nombre: string | null; municipio: string | null; estado: string | null; licencia: string | null } | null
-  rf: {
-    total: number; primera: string | null; ultima: string | null
-    por_evento: { evento: string; total: number }[]
-    por_sistema: { sistema: string; total: number }[]
-    ultimos: { fecha: string | null; evento: string | null; sistema: string | null; zona: string | null; ciudad: string | null; estado: string | null; senal: number | null }[]
-  }
-  rs: {
-    total: number; primera: string | null; ultima: string | null
-    por_plataforma: { plataforma: string; total: number }[]
-    ultimos: { fecha: string | null; plataforma: string | null; ciudad: string | null; estado: string | null; senal: number | null }[]
-  }
-}
-
-// ─── Próximo Boletín Dominical ────────────────────────────────────────────────
-const MX_OFFSET = -6 * 60 * 60 * 1000 // Mexico City = UTC-6 (sin horario de verano desde 2023)
-
-function getNextBoletinInfo() {
-  const now = new Date()
-  const mx = new Date(now.getTime() + MX_OFFSET)
-  const dow = mx.getUTCDay()
-  const minuteOfDay = mx.getUTCHours() * 60 + mx.getUTCMinutes()
-  const isLive         = dow === 0 && minuteOfDay >= 9 * 60     && minuteOfDay < 10 * 60
-  const isBoletinWindow = dow === 0 && minuteOfDay >= 8 * 60 + 30 && minuteOfDay < 10 * 60 + 30
-
-  const targetMx = new Date(mx)
-  targetMx.setUTCHours(9, 0, 0, 0)
-  if (dow !== 0 || minuteOfDay >= 10 * 60)
-    targetMx.setUTCDate(targetMx.getUTCDate() + (dow === 0 ? 7 : 7 - dow))
-
-  const year = targetMx.getUTCFullYear()
-  const jan1dow = new Date(Date.UTC(year, 0, 1)).getUTCDay()
-  const firstSunday = new Date(Date.UTC(year, 0, 1 + (7 - jan1dow) % 7))
-  const boletinNum = Math.round((targetMx.getTime() - firstSunday.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1
-
-  const diff = Math.max(0, targetMx.getTime() - MX_OFFSET - now.getTime())
-  return {
-    days:    Math.floor(diff / 86400000),
-    hours:   Math.floor((diff % 86400000) / 3600000),
-    minutes: Math.floor((diff % 3600000) / 60000),
-    seconds: Math.floor((diff % 60000) / 1000),
-    isLive, isBoletinWindow, boletinNum, year,
-  }
-}
-
-function getBoletinNumForDate(dateStr: string): number {
-  const utc = new Date(dateStr)
-  const mx = new Date(utc.getTime() + MX_OFFSET)
-  const year = mx.getUTCFullYear()
-  const eventDay = new Date(Date.UTC(year, mx.getUTCMonth(), mx.getUTCDate()))
-  const jan1dow = new Date(Date.UTC(year, 0, 1)).getUTCDay()
-  const firstSunday = new Date(Date.UTC(year, 0, 1 + (7 - jan1dow) % 7))
-  return Math.round((eventDay.getTime() - firstSunday.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1
-}
 
 export default function PublicFMREPage() {
   const [stats, setStats] = useState<Stats | null>(null)
