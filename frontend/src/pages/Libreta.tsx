@@ -31,6 +31,8 @@ import RoipStatusWidgets from '@/components/libreta/RoipStatusWidgets'
 import { useRoipMonitor } from '@/hooks/useRoipMonitor'
 import EditarReporteModal from '@/components/libreta/EditarReporteModal'
 import EditarOperadorModal from '@/components/libreta/EditarOperadorModal'
+import PrimeraVezModal from '@/components/libreta/PrimeraVezModal'
+import ReaparicionModal from '@/components/libreta/ReaparicionModal'
 
 const { Title, Text } = Typography
 const { Panel } = Collapse
@@ -165,8 +167,6 @@ export default function LibretaPage() {
   const [primeraVezIndicativo, setPrimeraVezIndicativo] = useState('')
   const [guardandoHam, setGuardandoHam] = useState(false)
   const pendienteRef = useRef<{ indicativo: string; op: Operador | null; pais: string; zona: string; zonaEsNacional: boolean; ultimaAparicion: string | null } | null>(null)
-  const registrarHamBtnRef = useRef<HTMLButtonElement>(null)
-  const continuarCapturaBtnRef = useRef<HTMLButtonElement>(null)
 
   // Modal reaparición
   const [reaparicionModal, setReaparicionModal] = useState(false)
@@ -932,122 +932,15 @@ export default function LibretaPage() {
           style={{ marginTop: 8 }} />
       </Modal>
 
-      {/* Modal: primera vez */}
-      <Modal
-        open={primeraVezModal}
-        closable={false}
-        maskClosable={false}
-        footer={null}
-        width={520}
-        styles={{ body: { padding: 0 } }}
-        afterOpenChange={open => { if (open) registrarHamBtnRef.current?.focus() }}
-      >
-        {/* Cabecera con gradiente */}
-        <div style={{
-          background: 'linear-gradient(135deg, #1A569E 0%, #1677ff 60%, #40a9ff 100%)',
-          borderRadius: '8px 8px 0 0',
-          padding: '32px 32px 24px',
-          textAlign: 'center',
-          color: '#fff',
-        }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 16px',
-            fontSize: 36,
-            border: '3px solid rgba(255,255,255,0.5)',
-          }}>
-            🎙️
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: 3, marginBottom: 4 }}>
-            {primeraVezIndicativo}
-          </div>
-          <div style={{ fontSize: 15, opacity: 0.9, fontWeight: 600 }}>
-            ¡Primera aparición registrada!
-          </div>
-          <div style={{
-            marginTop: 12, fontSize: 13, opacity: 0.8,
-            background: 'rgba(0,0,0,0.15)', borderRadius: 20,
-            padding: '6px 16px', display: 'inline-block',
-          }}>
-            Esta estación no tiene registros previos en el sistema
-          </div>
-        </div>
+      <PrimeraVezModal
+        open={primeraVezModal} indicativo={primeraVezIndicativo} form={nuevoHamForm} saving={guardandoHam}
+        estados={estados} onGuardar={handleGuardarNuevoHam} onOmitir={handleOmitirNuevoHam}
+      />
 
-        {/* Invitación */}
-        <div style={{
-          background: '#fffbe6', borderBottom: '1px solid #ffe58f',
-          padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 10,
-        }}>
-          <span style={{ fontSize: 20 }}>📡</span>
-          <span style={{ fontSize: 13, color: '#614700' }}>
-            <strong>¡Bienvenido a la red FMRE!</strong> Invitamos a <strong>{primeraVezIndicativo}</strong> a
-            seguir reportándose y ser parte activa de nuestra comunidad de radioaficionados.
-          </span>
-        </div>
-
-        {/* Formulario de datos */}
-        <div style={{ padding: '20px 24px 8px' }}>
-          <div style={{ fontSize: 13, color: '#666', marginBottom: 14 }}>
-            Registra los datos del operador para enriquecer el catálogo de HAMs:
-          </div>
-          <Form form={nuevoHamForm} layout="vertical">
-            <Form.Item label="Nombre completo" name="nombre_completo" style={{ marginBottom: 12 }}>
-              <Input prefix={<span>👤</span>} placeholder="Nombre del operador" size="large" />
-            </Form.Item>
-            <Row gutter={12}>
-              <Col xs={24} sm={12}>
-                <Form.Item label="Ciudad / Municipio" name="municipio" style={{ marginBottom: 12 }}>
-                  <Input prefix={<span>🏙️</span>} placeholder="Ciudad" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12}>
-                <Form.Item label="Estado" name="estado" style={{ marginBottom: 12 }}>
-                  <Select placeholder="Estado" showSearch allowClear optionFilterProp="label"
-                    options={estados.map(e => ({ value: e.nombre, label: e.nombre }))} />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </div>
-
-        {/* Footer */}
-        <div style={{
-          padding: '12px 24px 20px',
-          display: 'flex', justifyContent: 'flex-end', gap: 8,
-        }}>
-          <Button onClick={handleOmitirNuevoHam} size="large">
-            Omitir
-          </Button>
-          <Button ref={registrarHamBtnRef} type="primary" icon={<SaveOutlined />} size="large"
-            loading={guardandoHam} onClick={handleGuardarNuevoHam}
-            style={{ background: '#1A569E', borderColor: '#1A569E' }}>
-            Registrar en HAMs
-          </Button>
-        </div>
-      </Modal>
-
-      {/* Modal: reaparición */}
-      <Modal
-        title={<><BellOutlined style={{ color: '#fa8c16', marginRight: 8 }} />Reaparición: {reaparicionIndicativo}</>}
-        open={reaparicionModal} closable={false} maskClosable={false}
-        footer={
-          <Button ref={continuarCapturaBtnRef} type="primary" onClick={handleContinuarReaparicion}>
-            Continuar captura
-          </Button>
-        }
-        width={420}
-        afterOpenChange={open => { if (open) continuarCapturaBtnRef.current?.focus() }}>
-        {reaparicionInfo && (
-          <Alert type="warning" showIcon
-            message={`${reaparicionIndicativo} no ha aparecido en ${reaparicionInfo.dias_sin_aparecer} días`}
-            description={<span>Última aparición: <strong>
-              {reaparicionInfo.ultima_aparicion ? dayjs(reaparicionInfo.ultima_aparicion).format('DD/MM/YYYY') : 'desconocida'}
-            </strong> (umbral: {reaparicionInfo.dias_reaparicion} días)</span>}
-            style={{ marginTop: 8 }} />
-        )}
-      </Modal>
+      <ReaparicionModal
+        open={reaparicionModal} indicativo={reaparicionIndicativo} info={reaparicionInfo}
+        onContinuar={handleContinuarReaparicion}
+      />
 
       {/* Configuración de sesión */}
       {(!sesionActiva || configVisible) && (
