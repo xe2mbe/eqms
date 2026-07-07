@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { Row, Col, Card, Tag, Typography, Divider, Spin, Input, Alert, Table, Popover } from 'antd'
 import {
   WifiOutlined, GlobalOutlined, TeamOutlined, RiseOutlined,
-  StarOutlined, RadarChartOutlined, SearchOutlined, UserOutlined, RightOutlined,
+  RadarChartOutlined, SearchOutlined, UserOutlined, RightOutlined,
 } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import * as echarts from 'echarts'
@@ -14,6 +14,7 @@ import { usePublicRoipStatus } from '@/hooks/usePublicRoipStatus'
 import { AllStarLinkStatusCard, IrlpStatusCard, DmrStatusCard } from '@/components/public/VoipStatusCards'
 import RadioWavesBg from '@/components/public/RadioWavesBg'
 import AnimatedCount from '@/components/public/AnimatedCount'
+import Top10Leaderboard from '@/components/public/Top10Leaderboard'
 import type { Stats, EstacionItem, UltimoEvDetalle, UltimoEvRSDetalle, BusquedaResult } from '@/components/public/types'
 import { getNextBoletinInfo, getBoletinNumForDate } from '@/utils/publicBoletin'
 
@@ -1054,49 +1055,7 @@ export default function PublicFMREPage() {
 
             {/* Top indicativos RF */}
             <Col xs={24} lg={10} style={{ display: 'flex', flexDirection: 'column' }}>
-              <Card title={<span><StarOutlined style={{ color: FMRE_BLUE, marginRight: 8 }} />Top 10 estaciones más activas</span>}
-                    size="small" className="card-shadow" style={{ flex: 1 }}>
-                {isLoading ? <Spin /> : (
-                  <div>
-                    {(() => {
-                      const rfRanks = [...new Set(stats!.rf.top_indicativos.map(o => o.total))].sort((a, b) => b - a);
-                      return stats!.rf.top_indicativos.map((op, i) => {
-                        const rank = rfRanks.indexOf(op.total);
-                        return (
-                      <div key={op.indicativo} style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '6px 0', borderBottom: i < stats!.rf.top_indicativos.length - 1 ? '1px solid #f0f0f0' : undefined,
-                      }}>
-                        {rank === 0 ? (
-                          <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥇</span>
-                        ) : rank === 1 ? (
-                          <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥈</span>
-                        ) : rank === 2 ? (
-                          <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥉</span>
-                        ) : (
-                          <span style={{
-                            width: 24, height: 24, borderRadius: '50%', background: FMRE_LIGHT,
-                            color: '#666', fontWeight: 700, fontSize: 12,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                          }}>{rank + 1}</span>
-                        )}
-                        <span style={{ minWidth: 70 }}>{callSign(op.indicativo)}</span>
-                        <span style={{ color: '#666', fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {op.nombre ?? '—'}
-                        </span>
-                        <Tag color={FMRE_BLUE} style={{ fontWeight: 700, minWidth: 48, textAlign: 'center' }}>
-                          {op.total} QSOs
-                        </Tag>
-                      </div>
-                        );
-                      });
-                    })()}
-                    <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 8, paddingTop: 6, fontSize: 11, color: "#888", lineHeight: 1.4 }}>
-                      <span style={{ marginRight: 4 }}>&#9432;</span> El número indica <strong>QSO o reportes únicos</strong>. Si una estación se reportó en varios sistemas el mismo día, cuenta como uno solo.
-                    </div>
-                  </div>
-                )}
-              </Card>
+              <Top10Leaderboard variant="rf" items={stats?.rf.top_indicativos ?? []} loading={isLoading} onIndicativoClick={buscarIndicativo} />
             </Col>
 
             {/* Participación por estado — barra horizontal */}
@@ -1262,49 +1221,7 @@ export default function PublicFMREPage() {
 
             {/* Top 10 RS */}
             <Col xs={24} lg={10} style={{ display: 'flex', flexDirection: 'column' }}>
-              <Card title={<span><StarOutlined style={{ color: '#0891b2', marginRight: 8 }} />Top 10 estaciones más activas en RS</span>}
-                    size="small" className="card-shadow" style={{ flex: 1 }}>
-                {isLoading ? <Spin /> : (
-                  <div>
-                    {(() => {
-                      const rsRanks = [...new Set(stats!.rs.top_indicativos.map(o => o.total))].sort((a, b) => b - a);
-                      return stats!.rs.top_indicativos.map((op, i) => {
-                        const rank = rsRanks.indexOf(op.total);
-                        return (
-                      <div key={op.indicativo} style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '6px 0', borderBottom: i < stats!.rs.top_indicativos.length - 1 ? '1px solid #f0f0f0' : undefined,
-                      }}>
-                        {rank === 0 ? (
-                          <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥇</span>
-                        ) : rank === 1 ? (
-                          <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥈</span>
-                        ) : rank === 2 ? (
-                          <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>🥉</span>
-                        ) : (
-                          <span style={{
-                            width: 24, height: 24, borderRadius: '50%', background: '#e0f7fa',
-                            color: '#666', fontWeight: 700, fontSize: 12,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                          }}>{rank + 1}</span>
-                        )}
-                        <span style={{ minWidth: 70 }}>{callSign(op.indicativo, '#0891b2')}</span>
-                        <span style={{ color: '#666', fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {op.nombre ?? '—'}
-                        </span>
-                        <Tag color="cyan" style={{ fontWeight: 700, minWidth: 48, textAlign: 'center' }}>
-                          {op.total} QSOs
-                        </Tag>
-                      </div>
-                        );
-                      });
-                    })()}
-                    <div style={{ borderTop: "1px solid #f0f0f0", marginTop: 8, paddingTop: 6, fontSize: 11, color: "#888", lineHeight: 1.4 }}>
-                      <span style={{ marginRight: 4 }}>&#9432;</span> El número indica <strong>QSO o reportes únicos</strong>. Si una estación se reportó en varios sistemas el mismo día, cuenta como uno solo.
-                    </div>
-                  </div>
-                )}
-              </Card>
+              <Top10Leaderboard variant="rs" items={stats?.rs.top_indicativos ?? []} loading={isLoading} onIndicativoClick={buscarIndicativo} />
             </Col>
 
             {/* Participación por estado RS */}
