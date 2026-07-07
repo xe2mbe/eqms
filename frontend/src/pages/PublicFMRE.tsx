@@ -16,12 +16,13 @@ import RadioWavesBg from '@/components/public/RadioWavesBg'
 import AnimatedCount from '@/components/public/AnimatedCount'
 import UltimoEventoBanner from '@/components/public/UltimoEventoBanner'
 import Top10Leaderboard from '@/components/public/Top10Leaderboard'
-import type { Stats, EstacionItem, UltimoEvDetalle, UltimoEvRSDetalle, BusquedaResult } from '@/components/public/types'
+import EstacionesTable from '@/components/public/EstacionesTable'
+import type { Stats, EstacionItem, EstacionIntlItem, UltimoEvDetalle, UltimoEvRSDetalle, BusquedaResult } from '@/components/public/types'
 import { getNextBoletinInfo } from '@/utils/publicBoletin'
 
 dayjs.locale('es')
 
-const { Title, Text, Paragraph } = Typography
+const { Title, Paragraph } = Typography
 
 const MORSE = '-.-. --.-   -.. .   -..- . .---- .-.. --'
 
@@ -54,7 +55,7 @@ export default function PublicFMREPage() {
   const [estacionesRS, setEstacionesRS]           = useState<EstacionItem[] | null>(null)
   const [ultimoEvDetalle, setUltimoEvDetalle]     = useState<UltimoEvDetalle | null>(null)
   const [ultimoEvRSDetalle, setUltimoEvRSDetalle] = useState<UltimoEvRSDetalle | null>(null)
-  const [estacionesIntl, setEstacionesIntl]       = useState<{ indicativo: string; nombre: string | null; pais: string; total: number; ultima: string | null }[] | null>(null)
+  const [estacionesIntl, setEstacionesIntl]       = useState<EstacionIntlItem[] | null>(null)
   const [loadingEstRF, setLoadingEstRF]           = useState(false)
   const [loadingEstRS, setLoadingEstRS]           = useState(false)
   const [loadingEv, setLoadingEv]                 = useState(false)
@@ -1195,79 +1196,21 @@ export default function PublicFMREPage() {
         {/* ── TABLA ESTACIONES INTERNACIONALES ── */}
         {(estacionesIntl || loadingEstIntl) && (
           <div ref={estIntlRef} style={{ marginBottom: 40, scrollMarginTop: 24 }}>
-            <Divider style={{ borderColor: '#d0d7e3' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{ width: 4, height: 28, background: FMRE_BLUE, borderRadius: 2 }} />
-              <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>Estaciones internacionales</Title>
-            </div>
-            {loadingEstIntl ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (
-              <Table
-                dataSource={estacionesIntl ?? []}
-                rowKey="indicativo"
-                size="small"
-                pagination={{ pageSize: 50, showSizeChanger: false }}
-                columns={[
-                  { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => <Text type="secondary">{i + 1}</Text> },
-                  { title: 'País', dataIndex: 'pais', width: 140, render: (v: string) => <Tag color="geekblue">{v}</Tag> },
-                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => callSign(v) },
-                  { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? '—' },
-                  { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const, render: (v: number) => <Tag color="blue">{v.toLocaleString()}</Tag> },
-                  { title: 'Última actividad', dataIndex: 'ultima', width: 130, render: (v: string | null) => v ?? '—' },
-                ]}
-              />
-            )}
+            <EstacionesTable variant="intl" items={estacionesIntl} loading={loadingEstIntl} onIndicativoClick={buscarIndicativo} />
           </div>
         )}
 
         {/* ── TABLA ESTACIONES RF ── */}
         {(estacionesRF || loadingEstRF) && (
           <div ref={estRFRef} style={{ marginBottom: 40, scrollMarginTop: 24 }}>
-            <Divider style={{ borderColor: '#d0d7e3' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{ width: 4, height: 28, background: FMRE_BLUE, borderRadius: 2 }} />
-              <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>Estaciones activas — RF</Title>
-            </div>
-            {loadingEstRF ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (
-              <Table
-                dataSource={estacionesRF ?? []}
-                rowKey="indicativo"
-                size="small"
-                pagination={{ pageSize: 50, showSizeChanger: false }}
-                columns={[
-                  { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => <Text type="secondary">{i + 1}</Text> },
-                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => callSign(v) },
-                  { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? '—' },
-                  { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const, render: (v: number) => <Tag color="blue">{v.toLocaleString()}</Tag> },
-                  { title: 'Última actividad', dataIndex: 'ultima', width: 130, render: (v: string | null) => v ?? '—' },
-                ]}
-              />
-            )}
+            <EstacionesTable variant="rf" items={estacionesRF} loading={loadingEstRF} onIndicativoClick={buscarIndicativo} />
           </div>
         )}
 
         {/* ── TABLA ESTACIONES RS ── */}
         {(estacionesRS || loadingEstRS) && (
           <div ref={estRSRef} style={{ marginBottom: 40, scrollMarginTop: 24 }}>
-            <Divider style={{ borderColor: '#d0d7e3' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{ width: 4, height: 28, background: '#0891b2', borderRadius: 2 }} />
-              <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>Estaciones activas — Redes Sociales</Title>
-            </div>
-            {loadingEstRS ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (
-              <Table
-                dataSource={estacionesRS ?? []}
-                rowKey="indicativo"
-                size="small"
-                pagination={{ pageSize: 50, showSizeChanger: false }}
-                columns={[
-                  { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => <Text type="secondary">{i + 1}</Text> },
-                  { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => callSign(v, '#0891b2') },
-                  { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? '—' },
-                  { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const, render: (v: number) => <Tag color="cyan">{v.toLocaleString()}</Tag> },
-                  { title: 'Última actividad', dataIndex: 'ultima', width: 130, render: (v: string | null) => v ?? '—' },
-                ]}
-              />
-            )}
+            <EstacionesTable variant="rs" items={estacionesRS} loading={loadingEstRS} onIndicativoClick={buscarIndicativo} />
           </div>
         )}
 
