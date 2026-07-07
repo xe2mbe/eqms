@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import {
-  Card, Form, Select, DatePicker, Button, Table,
+  Card, Form, Select, Button, Table,
   Typography, Space, Divider, Input, message, Tooltip, notification,
-  Row, Col, Badge, Popconfirm, Modal, Alert, Spin, Tag,
+  Row, Col, Badge, Popconfirm, Alert, Tag,
 } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import {
   SaveOutlined, DeleteOutlined, PlusOutlined,
   CheckCircleOutlined, WarningOutlined,
-  SettingOutlined, CalendarOutlined,
+  SettingOutlined,
   EditOutlined, UserOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -33,6 +33,8 @@ import EditarOperadorModal from '@/components/libreta/EditarOperadorModal'
 import PrimeraVezModal from '@/components/libreta/PrimeraVezModal'
 import ReaparicionModal from '@/components/libreta/ReaparicionModal'
 import ConfiguracionSesionCard from '@/components/libreta/ConfiguracionSesionCard'
+import SeleccionFechaModal from '@/components/libreta/SeleccionFechaModal'
+import AdvertenciaFechaModal from '@/components/libreta/AdvertenciaFechaModal'
 
 const { Title, Text } = Typography
 
@@ -890,38 +892,20 @@ export default function LibretaPage() {
     <div className="page-container">
       <Title level={4} style={{ margin: '0 0 16px' }}>Libreta</Title>
 
-      {/* Modal: selección de fecha */}
-      <Modal title={<><CalendarOutlined style={{ marginRight: 8 }} />Fecha de captura</>}
-        open={dateModalOpen} closable={false} maskClosable={false}
-        onOk={handleDateConfirm} okText="Continuar"
-        onCancel={() => setDateModalOpen(false)} cancelText="Cancelar"
-        width={340}>
-        <Spin spinning={loadingConfig}>
-          <div style={{ padding: '16px 0' }}>
-            <DatePicker format="DD/MM/YYYY" value={fechaSeleccionada}
-              onChange={v => {
-                if (!v) return
-                setFechaSeleccionada(v)
-                const tipoEvento = sesionForm.getFieldValue('tipo_evento') as string | undefined
-                if (tipoEvento) verificarDiaEvento(v, tipoEvento)
-              }}
-              style={{ width: '100%' }} allowClear={false} />
-          </div>
-        </Spin>
-      </Modal>
+      <SeleccionFechaModal
+        open={dateModalOpen} loading={loadingConfig} fecha={fechaSeleccionada}
+        onFechaChange={v => {
+          setFechaSeleccionada(v)
+          const tipoEvento = sesionForm.getFieldValue('tipo_evento') as string | undefined
+          if (tipoEvento) verificarDiaEvento(v, tipoEvento)
+        }}
+        onConfirm={handleDateConfirm} onCancel={() => setDateModalOpen(false)}
+      />
 
-      {/* Modal: advertencia fecha distinta */}
-      <Modal title={<><WarningOutlined style={{ color: '#fa8c16', marginRight: 8 }} />Fecha diferente al día de hoy</>}
-        open={warnModalOpen} closable={false} maskClosable={false}
-        footer={[
-          <Button key="config" onClick={handleIrAConfig}>Configurar libreta</Button>,
-          <Button key="capture" type="primary" onClick={handleCapturaDirecta}>Capturar registros</Button>,
-        ]} width={420}>
-        <Alert type="warning" showIcon
-          message={`Los registros se guardarán con fecha: ${fechaSeleccionada?.format('DD/MM/YYYY')}`}
-          description="¿Deseas capturar registros con esta fecha o revisar primero la configuración?"
-          style={{ marginTop: 8 }} />
-      </Modal>
+      <AdvertenciaFechaModal
+        open={warnModalOpen} fecha={fechaSeleccionada}
+        onConfigurar={handleIrAConfig} onCapturar={handleCapturaDirecta}
+      />
 
       <PrimeraVezModal
         open={primeraVezModal} indicativo={primeraVezIndicativo} form={nuevoHamForm} saving={guardandoHam}
