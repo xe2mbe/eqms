@@ -15,4 +15,11 @@ export function validarIndicativo(ind: string): boolean {
 
 export const normalizarRST = (val: string) => val.replace(/[^0-9]/g, '').slice(0, 3)
 
+export function validarRST(val: string): boolean {
+  const v = (val || '').trim()
+  if (v.length === 2) return parseInt(v[0]) >= 1 && parseInt(v[0]) <= 5 && parseInt(v[1]) >= 1 && parseInt(v[1]) <= 9
+  if (v.length === 3) return parseInt(v[0]) >= 1 && parseInt(v[0]) <= 5 && parseInt(v[1]) >= 1 && parseInt(v[1]) <= 9 && parseInt(v[2]) >= 1 && parseInt(v[2]) <= 9
+  return false
+}
+
 export const NOMBRES_DIA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
