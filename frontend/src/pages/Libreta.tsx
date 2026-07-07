@@ -17,8 +17,6 @@ import { estadisticasApi } from '@/api/estadisticas'
 import { catalogosApi } from '@/api/catalogos'
 import { operadoresApi, type Operador } from '@/api/operadores'
 import { libretaApi, type CheckIndicativoResult } from '@/api/libreta'
-
-import client from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
 import { useColPrefs } from '@/components/common/ColSettings'
 import type { Evento, Sistema, Estacion, Estado, Zona, Reporte } from '@/types'
@@ -28,19 +26,12 @@ import { validarIndicativo, normalizarRST, NOMBRES_DIA } from '@/utils/libretaSh
 import IndicativoCell from '@/components/libreta/IndicativoCell'
 import FechaNoPermitidaModal from '@/components/libreta/FechaNoPermitidaModal'
 import StatsCardsRow from '@/components/libreta/StatsCardsRow'
+import RoipMonitorPanel from '@/components/libreta/RoipMonitorPanel'
+import RoipStatusWidgets from '@/components/libreta/RoipStatusWidgets'
+import { useRoipMonitor } from '@/hooks/useRoipMonitor'
 
 const { Title, Text } = Typography
 const { Panel } = Collapse
-
-function StatusPill({ label, color, pulse }: { label: string; color: string; pulse?: boolean }) {
-  return (
-    <span style={{
-      background: color, color: '#fff', fontWeight: 700, fontSize: 10,
-      padding: '2px 8px', borderRadius: 10, letterSpacing: 0.4, whiteSpace: 'nowrap',
-      animation: pulse ? 'pulse-red 0.8s ease-in-out infinite' : undefined,
-    }}>● {label}</span>
-  )
-}
 
 function esSWL(ind: string): boolean {
   return ind.trim().toUpperCase() === 'SWL'
@@ -135,18 +126,7 @@ export default function LibretaPage() {
   const [anunciarReaparicion, setAnunciarReaparicion] = useState(false)
   const [zonaSwlDefault, setZonaSwlDefault] = useState<string | undefined>()
 
-  const [nodeConfigForm] = Form.useForm()
-  const [savingNodeConfig, setSavingNodeConfig] = useState(false)
-
-  const [roipMonitorando, setRoipMonitorando] = useState(false)
-  const [roipAvanzado, setRoipAvanzado] = useState(false)
-  const [aslStatus, setAslStatus] = useState<{ online: boolean; cos_keyed: boolean; tx_keyed: boolean; on_air: boolean; connections: number; nodes: { node: string; name: string; url?: string; link?: string; cos_keyed: boolean; tx_keyed: boolean }[] } | null>(null)
-  const [irlpStatus, setIrlpStatus] = useState<{ online: boolean; on_air: boolean; cos: boolean; ptt: boolean; connections: number; nodes: { node: string; name: string; url?: string; warning: boolean }[] } | null>(null)
-  const [nodeCfg, setNodeCfg] = useState({ asl_hub_id: '', asl_boletin_node: '', irlp_reflector_id: '', irlp_boletin_node: '', bm_tgs: '33450,334', bm_api_key: '' })
-  const [dmrStatus, setDmrStatus] = useState<{ connected: boolean; active: boolean; callsign: string; tg: number; tgName: string }>({ connected: false, active: false, callsign: '', tg: 0, tgName: '' })
-  const [dmrWsDbg, setDmrWsDbg] = useState<string>('')
-  const [dmrRestDbg, setDmrRestDbg] = useState<string>('')
-  const dmrSocketRef = useRef<any>(null)
+  const roip = useRoipMonitor()
 
   const [inputRst, setInputRst] = useState('59')
   const [inputSistema, setInputSistema] = useState<string | undefined>()
@@ -260,144 +240,11 @@ export default function LibretaPage() {
           if (cfg.anunciar_primera_vez) setAnunciarPrimeraVez(true)
           if (cfg.anunciar_reaparicion) setAnunciarReaparicion(true)
           if (cfg.zona_swl_default) setZonaSwlDefault(cfg.zona_swl_default)
-          setNodeCfg({
-            asl_hub_id: cfg.asl_hub_id ?? '',
-            asl_boletin_node: cfg.asl_boletin_node ?? '',
-            irlp_reflector_id: cfg.irlp_reflector_id ?? '',
-            irlp_boletin_node: cfg.irlp_boletin_node ?? '',
-            bm_tgs: cfg.bm_tgs ?? '33450,334',
-            bm_api_key: cfg.bm_api_key ?? '',
-          })
-          if (cfg.roip_monitorando) setRoipMonitorando(true)
-          if (cfg.roip_avanzado) setRoipAvanzado(true)
-          nodeConfigForm.setFieldsValue({
-            asl_hub_id: cfg.asl_hub_id,
-            asl_host: cfg.asl_host,
-            asl_port: cfg.asl_port,
-            asl_boletin_node: cfg.asl_boletin_node,
-            irlp_reflector_id: cfg.irlp_reflector_id,
-            irlp_ref_url: cfg.irlp_ref_url,
-            irlp_user: cfg.irlp_user,
-            irlp_password: cfg.irlp_password,
-            irlp_boletin_node: cfg.irlp_boletin_node,
-            irlp_host: cfg.irlp_host,
-            irlp_port: cfg.irlp_port,
-            bm_tgs: cfg.bm_tgs ?? '33450,334',
-            bm_api_key: cfg.bm_api_key ?? '',
-          })
+          roip.hydrateFromConfig(cfg)
         }
       }).finally(() => setLoadingConfig(false))
     })
   }, [])
-
-  // ── Polling monitoreo RoIP ────────────────────────────────────────────────
-  useEffect(() => {
-    if (!roipMonitorando) { setAslStatus(null); setIrlpStatus(null); return }
-    const poll = () => {
-      client.get('/public/node-status').then(r => setAslStatus(r.data)).catch(() => setAslStatus(null))
-      client.get('/public/irlp-status').then(r => setIrlpStatus(r.data)).catch(() => setIrlpStatus(null))
-    }
-    poll()
-    const t = setInterval(poll, 5_000)
-    return () => clearInterval(t)
-  }, [roipMonitorando])
-
-  // ── WebSocket nativo DMR / Brandmeister (EIO=3 / socket.io v3) ──────────
-  useEffect(() => {
-    if (!roipMonitorando) {
-      const ws = dmrSocketRef.current as WebSocket | null
-      if (ws) { dmrSocketRef.current = null; ws.close() }
-      setDmrStatus({ connected: false, active: false, callsign: '', tg: 0, tgName: '' })
-      return
-    }
-    // aceptar coma o punto como separadores (el form a veces guarda con punto)
-    const tgs = (nodeCfg.bm_tgs || '33450,334')
-      .split(/[,.]/)
-      .map((s: string) => s.trim())
-      .filter((s: string) => /^\d+$/.test(s))
-
-    const connect = () => {
-      const ws = new WebSocket('wss://api.brandmeister.network/lh/socket.io/?EIO=3&transport=websocket')
-      dmrSocketRef.current = ws
-
-      ws.onmessage = (e: MessageEvent) => {
-        const raw = String(e.data)
-        if (raw === '2') { ws.send('3'); return }
-        if (raw.startsWith('0')) return
-        if (raw === '40') {
-          setDmrStatus(d => ({ ...d, connected: true }))
-          setDmrWsDbg('OK — escuchando')
-          return
-        }
-        if (raw.startsWith('44')) {
-          setDmrWsDbg(`err: ${raw.slice(0, 80)}`)
-          return
-        }
-        if (raw.startsWith('42')) {
-          const ci = raw.startsWith('42/') ? raw.indexOf(',') : 1
-          const payload = raw.startsWith('42/') ? raw.slice(ci + 1) : raw.slice(2)
-          try {
-            const parsed = JSON.parse(payload)
-            const [eventName, p] = Array.isArray(parsed) ? parsed : [String(parsed), null]
-            setDmrWsDbg(`EVT[${eventName}] ${JSON.stringify(p).slice(0, 80)}`)
-            // Aceptar cualquier evento con datos de transmisión DMR
-            if (p && typeof p === 'object') {
-              const srcCall = p.SourceCall || p.Callsign || ''
-              const destId  = p.DestinationID ?? p.ToTalkgroupID ?? 0
-              const destName = p.DestinationName || p.ToTalkgroupName || ''
-              if (srcCall) {
-                const tgNums = tgs.map((t: string) => parseInt(t))
-                const isMonitored = tgNums.length === 0 || tgNums.includes(destId)
-                if (isMonitored) {
-                  if (p.Stop == 0 || p.Stop == null) {
-                    setDmrStatus(d => ({ ...d, active: true, callsign: srcCall, tg: destId, tgName: destName }))
-                  } else {
-                    setDmrStatus(d => ({ ...d, active: false, callsign: '', tg: 0, tgName: '' }))
-                  }
-                }
-              }
-            }
-          } catch (_) { setDmrWsDbg(`raw: ${raw.slice(0, 120)}`) }
-          return
-        }
-      }
-
-      ws.onclose = () => {
-        setDmrStatus(d => ({ ...d, connected: false, active: false }))
-        if (dmrSocketRef.current === ws) setTimeout(connect, 5000)
-      }
-    }
-
-    connect()
-    return () => {
-      const ws = dmrSocketRef.current as WebSocket | null
-      if (ws) { dmrSocketRef.current = null; ws.close() }
-    }
-  }, [roipMonitorando, nodeCfg.bm_tgs])
-
-  // ── REST polling DMR activity (BM API proxy) ──────────────────────────────
-  useEffect(() => {
-    if (!roipMonitorando || !nodeCfg.bm_api_key) return
-    const poll = async () => {
-      try {
-        const { data } = await client.get('/libreta/dmr-lastheard')
-        if (data.active) {
-          setDmrStatus(d => ({ ...d, active: true, callsign: data.callsign, tg: data.tg, tgName: data.tg_name }))
-          setDmrRestDbg(`TX: ${data.callsign} · TG ${data.tg}`)
-        } else if (data.error === 'no_api_key') {
-          setDmrRestDbg('sin API key')
-        } else {
-          setDmrStatus(d => ({ ...d, active: false, callsign: '', tg: 0, tgName: '' }))
-          setDmrRestDbg(data.dbg ?? 'IDLE')
-        }
-      } catch (err: unknown) {
-        setDmrRestDbg(`err: ${String(err).slice(0, 60)}`)
-      }
-    }
-    poll()
-    const t = setInterval(poll, 7_000)
-    return () => clearInterval(t)
-  }, [roipMonitorando, nodeCfg.bm_api_key])
 
   // ── Resumen de reportes guardados ────────────────────────────────────────
   const fetchResumen = useCallback(async (cfg: typeof sesionConfig) => {
@@ -607,42 +454,6 @@ export default function LibretaPage() {
     })
     setSesionActiva(true); setConfigVisible(false); setFilas([])
     setTimeout(() => inputRef.current?.focus(), 100)
-  }
-
-  const guardarNodeConfig = async () => {
-    setSavingNodeConfig(true)
-    try {
-      const vals = nodeConfigForm.getFieldsValue()
-      await libretaApi.saveConfig({
-        asl_hub_id: vals.asl_hub_id,
-        asl_host: vals.asl_host,
-        asl_port: vals.asl_port,
-        asl_boletin_node: vals.asl_boletin_node,
-        irlp_reflector_id: vals.irlp_reflector_id,
-        irlp_ref_url: vals.irlp_ref_url,
-        irlp_user: vals.irlp_user,
-        irlp_password: vals.irlp_password,
-        irlp_boletin_node: vals.irlp_boletin_node,
-        irlp_host: vals.irlp_host,
-        irlp_port: vals.irlp_port,
-        bm_tgs: vals.bm_tgs,
-        bm_api_key: vals.bm_api_key,
-      })
-      setNodeCfg(prev => ({
-        ...prev,
-        asl_hub_id: vals.asl_hub_id ?? '',
-        asl_boletin_node: vals.asl_boletin_node ?? '',
-        irlp_reflector_id: vals.irlp_reflector_id ?? '',
-        irlp_boletin_node: vals.irlp_boletin_node ?? '',
-        bm_tgs: vals.bm_tgs ?? '33450,334',
-        bm_api_key: vals.bm_api_key ?? '',
-      }))
-      message.success('Configuración de nodos guardada')
-    } catch {
-      message.error('Error al guardar configuración de nodos')
-    } finally {
-      setSavingNodeConfig(false)
-    }
   }
 
   const iniciarSesion = async () => {
@@ -1365,273 +1176,7 @@ export default function LibretaPage() {
 
               <Panel header={<strong>Monitoreo Sistemas RoIP</strong>} key="nodos"
                 extra={<SettingOutlined style={{ color: '#1677ff' }} />}>
-
-                {/* Toggle de monitoreo */}
-                <Space align="center" style={{ marginBottom: 12 }}>
-                  <Text strong style={{ fontSize: 13 }}>Monitoreo Sistemas RoIP</Text>
-                  <Switch checked={roipMonitorando} onChange={v => {
-                    setRoipMonitorando(v)
-                    if (!v) setRoipAvanzado(false)
-                    libretaApi.saveConfig({ roip_monitorando: v, roip_avanzado: v ? roipAvanzado : false })
-                  }} />
-                  {roipMonitorando && (
-                    <>
-                      <Text type="secondary" style={{ fontSize: 11 }}>actualizando cada 5 s</Text>
-                      <Text strong style={{ fontSize: 13, marginLeft: 8 }}>Avanzado</Text>
-                      <Switch checked={roipAvanzado} onChange={v => {
-                        setRoipAvanzado(v)
-                        libretaApi.saveConfig({ roip_avanzado: v })
-                      }} />
-                    </>
-                  )}
-                </Space>
-
-                {roipMonitorando && (<>
-
-                  {/* Indicadores de estado */}
-                  <Row gutter={12} style={{ marginBottom: 12 }}>
-
-                    {/* ── Hub ASL ── */}
-                    <Col xs={24} sm={8} style={{ marginBottom: 8 }}>
-                      <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8, padding: '10px 14px' }}>
-                        {/* Fila 1: título + ONLINE/OFFLINE */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: '#389e0d' }}>
-                            Hub ASL: #{nodeCfg.asl_hub_id || '—'}
-                          </span>
-                          {!aslStatus
-                            ? <StatusPill label="..." color="#d9d9d9" />
-                            : aslStatus.online
-                              ? <StatusPill label="ONLINE" color="#52c41a" />
-                              : <StatusPill label="OFFLINE" color="#ff4d4f" />
-                          }
-                        </div>
-                        {/* Fila 2: dot boletín + número + actividad (solo si conectado) */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{
-                            width: 10, height: 10, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
-                            background: !aslStatus || !aslStatus.online ? '#8c8c8c' : aslStatus.on_air ? '#52c41a' : '#8c8c8c',
-                            boxShadow: aslStatus?.on_air ? '0 0 0 3px rgba(82,196,26,0.3)' : 'none',
-                          }} />
-                          <span style={{ fontSize: 11, color: '#595959', fontWeight: 600 }}>
-                            Nodo Boletín {nodeCfg.asl_boletin_node || '—'}
-                          </span>
-                          {aslStatus?.online && aslStatus?.on_air && (
-                            aslStatus.tx_keyed
-                              ? <StatusPill label="TX ACTIVO" color="#ff4d4f" pulse />
-                              : aslStatus.cos_keyed
-                                ? <StatusPill label="RX ACTIVO" color="#52c41a" />
-                                : <StatusPill label="IDLE" color="#595959" />
-                          )}
-                        </div>
-                        {/* Lista de nodos conectados al Hub */}
-                        {roipAvanzado && aslStatus?.online && !!aslStatus.nodes?.length && (
-                          <div style={{ marginTop: 8, borderTop: '1px solid #d9f7be', paddingTop: 6, maxHeight: 140, overflowY: 'auto' }}>
-                            {(aslStatus.nodes as any[]).map(n => (
-                              <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0', fontSize: 11 }}>
-                                <span style={{
-                                  width: 7, height: 7, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
-                                  background: n.tx_keyed ? '#ff4d4f' : n.cos_keyed ? '#52c41a' : '#389e0d',
-                                }} />
-                                <span style={{ color: '#389e0d', fontWeight: 700 }}>#{n.node}</span>
-                                {n.name && <span style={{ color: '#8c8c8c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.name}</span>}
-                                {n.tx_keyed && <StatusPill label="TX" color="#ff4d4f" pulse />}
-                                {!n.tx_keyed && n.cos_keyed && <StatusPill label="RX" color="#52c41a" />}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </Col>
-
-                    {/* ── Reflector IRLP ── */}
-                    <Col xs={24} sm={8} style={{ marginBottom: 8 }}>
-                      <div style={{ background: '#e6f7ff', border: '1px solid #91caff', borderRadius: 8, padding: '10px 14px' }}>
-                        {/* Fila 1: título + ONLINE/OFFLINE */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: '#0891b2' }}>
-                            Reflector IRLP: #{nodeCfg.irlp_reflector_id || '—'}
-                          </span>
-                          {!irlpStatus
-                            ? <StatusPill label="..." color="#d9d9d9" />
-                            : irlpStatus.online
-                              ? <StatusPill label="ONLINE" color="#52c41a" />
-                              : <StatusPill label="OFFLINE" color="#ff4d4f" />
-                          }
-                        </div>
-                        {/* Fila 2: dot nodo boletín + actividad (solo si conectado) */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{
-                            width: 10, height: 10, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
-                            background: !irlpStatus || !irlpStatus.online ? '#8c8c8c' : irlpStatus.on_air ? '#52c41a' : '#8c8c8c',
-                            boxShadow: irlpStatus?.on_air ? '0 0 0 3px rgba(82,196,26,0.3)' : 'none',
-                          }} />
-                          <span style={{ fontSize: 11, color: '#595959', fontWeight: 600 }}>
-                            Nodo Boletín {nodeCfg.irlp_boletin_node || '—'}
-                          </span>
-                          {irlpStatus?.online && irlpStatus?.on_air && (
-                            irlpStatus.ptt
-                              ? <StatusPill label="TX ACTIVO" color="#ff4d4f" pulse />
-                              : irlpStatus.cos
-                                ? <StatusPill label="RX ACTIVO" color="#52c41a" />
-                                : <StatusPill label="IDLE" color="#595959" />
-                          )}
-                        </div>
-                        {/* Lista de nodos en el Reflector */}
-                        {roipAvanzado && irlpStatus?.online && !!irlpStatus.nodes?.length && (
-                          <div style={{ marginTop: 8, borderTop: '1px solid #bae0ff', paddingTop: 6, maxHeight: 140, overflowY: 'auto' }}>
-                            {(irlpStatus.nodes as any[]).map(n => (
-                              <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0', fontSize: 11 }}>
-                                <span style={{
-                                  width: 7, height: 7, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
-                                  background: n.warning ? '#faad14' : '#52c41a',
-                                }} />
-                                <span style={{ color: '#0891b2', fontWeight: 700 }}>#{n.node}</span>
-                                {n.name && <span style={{ color: '#8c8c8c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.name}</span>}
-                                {n.warning && <StatusPill label="!" color="#faad14" />}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </Col>
-
-                    {/* ── DMR / Brandmeister ── */}
-                    <Col xs={24} sm={8} style={{ marginBottom: 8 }}>
-                      <div style={{ background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 8, padding: '10px 14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed' }}>DMR Brandmeister</span>
-                          {!dmrStatus.connected
-                            ? <StatusPill label="Conectando…" color="#d9d9d9" />
-                            : <StatusPill label="ONLINE" color="#7c3aed" />
-                          }
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{
-                            width: 10, height: 10, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
-                            background: dmrStatus.active ? '#ff4d4f' : dmrStatus.connected ? '#7c3aed' : '#8c8c8c',
-                            boxShadow: dmrStatus.active ? '0 0 0 3px rgba(255,77,79,0.3)' : dmrStatus.connected ? '0 0 0 3px rgba(124,58,237,0.2)' : 'none',
-                            animation: dmrStatus.active ? 'pulse-red 0.8s ease-in-out infinite' : 'none',
-                          }} />
-                          {dmrStatus.connected && (
-                            dmrStatus.active
-                              ? <StatusPill label="TX ACTIVO" color="#ff4d4f" pulse />
-                              : <StatusPill label="IDLE" color="#595959" />
-                          )}
-                        </div>
-                        {dmrStatus.active && dmrStatus.callsign && (
-                          <div style={{ marginTop: 8, borderTop: '1px solid #ddd6fe', paddingTop: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
-                            <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, display: 'inline-block', background: '#ff4d4f' }} />
-                            <span style={{ color: '#7c3aed', fontWeight: 700 }}>{dmrStatus.callsign}</span>
-                            <span style={{ color: '#8c8c8c' }}>TG {dmrStatus.tg}{dmrStatus.tgName ? ` · ${dmrStatus.tgName}` : ''}</span>
-                          </div>
-                        )}
-                        {(dmrWsDbg || dmrRestDbg) && (
-                          <div style={{ marginTop: 6, fontSize: 10, color: '#888', fontFamily: 'monospace', wordBreak: 'break-all', borderTop: '1px dashed #e9d5ff', paddingTop: 4 }}>
-                            {dmrWsDbg && <div>WS: {dmrWsDbg}</div>}
-                            {dmrRestDbg && <div>REST: {dmrRestDbg}</div>}
-                          </div>
-                        )}
-                      </div>
-                    </Col>
-
-                  </Row>
-
-                  <Divider style={{ margin: '4px 0 10px' }} />
-
-                  {/* Parámetros de configuración */}
-                  <Form form={nodeConfigForm} layout="vertical" size="small"
-                    onValuesChange={(changed) => {
-                      if (changed.bm_tgs !== undefined) setNodeCfg(prev => ({ ...prev, bm_tgs: changed.bm_tgs }))
-                      if (changed.bm_api_key !== undefined) setNodeCfg(prev => ({ ...prev, bm_api_key: changed.bm_api_key }))
-                      if (changed.asl_hub_id !== undefined) setNodeCfg(prev => ({ ...prev, asl_hub_id: changed.asl_hub_id }))
-                      if (changed.asl_boletin_node !== undefined) setNodeCfg(prev => ({ ...prev, asl_boletin_node: changed.asl_boletin_node }))
-                      if (changed.irlp_reflector_id !== undefined) setNodeCfg(prev => ({ ...prev, irlp_reflector_id: changed.irlp_reflector_id }))
-                      if (changed.irlp_boletin_node !== undefined) setNodeCfg(prev => ({ ...prev, irlp_boletin_node: changed.irlp_boletin_node }))
-                    }}>
-                    <Divider orientation="left" plain style={{ fontSize: 12, color: '#389e0d', margin: '0 0 8px' }}>AllStarLink (AllScan)</Divider>
-                    <Row gutter={12}>
-                      <Col xs={8} sm={4}>
-                        <Form.Item label="# Hub" name="asl_hub_id">
-                          <Input placeholder="299081" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={16} sm={14}>
-                        <Form.Item label="IP / URL del Hub" name="asl_host">
-                          <Input placeholder="stn8422.ip.irlp.net" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={8} sm={3}>
-                        <Form.Item label="Puerto" name="asl_port">
-                          <Input placeholder="8081" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={8} sm={3}>
-                        <Form.Item label="Nodo Boletín" name="asl_boletin_node">
-                          <Input placeholder="299080" />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Divider orientation="left" plain style={{ fontSize: 12, color: '#0891b2', margin: '4px 0 8px' }}>IRLP</Divider>
-                    <Row gutter={12}>
-                      <Col xs={8} sm={4}>
-                        <Form.Item label="# Reflector" name="irlp_reflector_id">
-                          <Input placeholder="0077" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={16} sm={20}>
-                        <Form.Item label="URL página del Reflector" name="irlp_ref_url">
-                          <Input placeholder="http://85.8.149.218/Chan_Zero_Node_Numbers.html" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={12} sm={5}>
-                        <Form.Item label="Usuario CGI" name="irlp_user">
-                          <Input placeholder="xe2mbe" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={12} sm={5}>
-                        <Form.Item label="Contraseña CGI" name="irlp_password">
-                          <Input.Password placeholder="••••••" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={8} sm={4}>
-                        <Form.Item label="# Nodo Boletín" name="irlp_boletin_node">
-                          <Input placeholder="8422" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={16} sm={7}>
-                        <Form.Item label="IP / URL Nodo Boletín" name="irlp_host">
-                          <Input placeholder="stn8422.ip.irlp.net" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={8} sm={3}>
-                        <Form.Item label="Puerto CGI" name="irlp_port">
-                          <Input placeholder="8080" />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Divider orientation="left" plain style={{ fontSize: 12, color: '#7c3aed', margin: '4px 0 8px' }}>DMR / Brandmeister</Divider>
-                    <Row gutter={12}>
-                      <Col xs={24} sm={8}>
-                        <Form.Item label="TalkGroups a monitorear" name="bm_tgs" extra="Separados por coma — ej: 33450,334">
-                          <Input placeholder="33450,334" />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} sm={16}>
-                        <Form.Item label="BM API Key" name="bm_api_key" extra="JWT token de tu perfil en brandmeister.network">
-                          <Input.Password placeholder="eyJ0eXAi..." />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Button
-                      type="primary" size="small" icon={<SaveOutlined />}
-                      loading={savingNodeConfig}
-                      onClick={guardarNodeConfig}
-                    >
-                      Guardar configuración de nodos
-                    </Button>
-                  </Form>
-                </>)}
+                <RoipMonitorPanel roip={roip} />
               </Panel>
 
             </Collapse>
@@ -1657,103 +1202,7 @@ export default function LibretaPage() {
       )}
 
       {/* Widgets RoIP */}
-      {roipMonitorando && (
-        <Row gutter={8} style={{ marginBottom: 8 }}>
-          <Col xs={24} sm={8} style={{ marginBottom: 4 }}>
-            <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6, padding: '4px 10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#389e0d' }}>Hub ASL: #{nodeCfg.asl_hub_id || '—'}</span>
-                {!aslStatus ? <StatusPill label="..." color="#d9d9d9" />
-                  : aslStatus.online ? <StatusPill label="ONLINE" color="#52c41a" />
-                  : <StatusPill label="OFFLINE" color="#ff4d4f" />}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
-                  background: !aslStatus || !aslStatus.online ? '#8c8c8c' : aslStatus.on_air ? '#52c41a' : '#8c8c8c',
-                  boxShadow: aslStatus?.on_air ? '0 0 0 2px rgba(82,196,26,0.3)' : 'none' }} />
-                <span style={{ fontSize: 10, color: '#595959', fontWeight: 600 }}>Nodo Boletín {nodeCfg.asl_boletin_node || '—'}</span>
-                {aslStatus?.online && aslStatus?.on_air && (aslStatus.tx_keyed
-                  ? <StatusPill label="TX ACTIVO" color="#ff4d4f" pulse />
-                  : aslStatus.cos_keyed ? <StatusPill label="RX ACTIVO" color="#52c41a" />
-                  : <StatusPill label="IDLE" color="#595959" />)}
-              </div>
-              {roipAvanzado && aslStatus?.online && !!aslStatus.nodes?.length && (
-                <div style={{ marginTop: 4, borderTop: '1px solid #d9f7be', paddingTop: 3, maxHeight: 100, overflowY: 'auto' }}>
-                  {aslStatus.nodes.map(n => (
-                    <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '1px 0', fontSize: 10 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
-                        background: n.tx_keyed ? '#ff4d4f' : n.cos_keyed ? '#52c41a' : '#389e0d' }} />
-                      <span style={{ color: '#389e0d', fontWeight: 700 }}>#{n.node}</span>
-                      {n.name && <span style={{ color: '#8c8c8c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.name}</span>}
-                      {n.tx_keyed && <StatusPill label="TX" color="#ff4d4f" pulse />}
-                      {!n.tx_keyed && n.cos_keyed && <StatusPill label="RX" color="#52c41a" />}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </Col>
-          <Col xs={24} sm={8} style={{ marginBottom: 4 }}>
-            <div style={{ background: '#e6f7ff', border: '1px solid #91caff', borderRadius: 6, padding: '4px 10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#0891b2' }}>Reflector IRLP: #{nodeCfg.irlp_reflector_id || '—'}</span>
-                {!irlpStatus ? <StatusPill label="..." color="#d9d9d9" />
-                  : irlpStatus.online ? <StatusPill label="ONLINE" color="#52c41a" />
-                  : <StatusPill label="OFFLINE" color="#ff4d4f" />}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
-                  background: !irlpStatus || !irlpStatus.online ? '#8c8c8c' : irlpStatus.on_air ? '#52c41a' : '#8c8c8c',
-                  boxShadow: irlpStatus?.on_air ? '0 0 0 2px rgba(82,196,26,0.3)' : 'none' }} />
-                <span style={{ fontSize: 10, color: '#595959', fontWeight: 600 }}>Nodo Boletín {nodeCfg.irlp_boletin_node || '—'}</span>
-                {irlpStatus?.online && irlpStatus?.on_air && (irlpStatus.ptt
-                  ? <StatusPill label="TX ACTIVO" color="#ff4d4f" pulse />
-                  : irlpStatus.cos ? <StatusPill label="RX ACTIVO" color="#52c41a" />
-                  : <StatusPill label="IDLE" color="#595959" />)}
-              </div>
-              {roipAvanzado && irlpStatus?.online && !!irlpStatus.nodes?.length && (
-                <div style={{ marginTop: 4, borderTop: '1px solid #bae0ff', paddingTop: 3, maxHeight: 100, overflowY: 'auto' }}>
-                  {irlpStatus.nodes.map(n => (
-                    <div key={n.node} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '1px 0', fontSize: 10 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
-                        background: n.warning ? '#faad14' : '#52c41a' }} />
-                      <span style={{ color: '#0891b2', fontWeight: 700 }}>#{n.node}</span>
-                      {n.name && <span style={{ color: '#8c8c8c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.name}</span>}
-                      {n.warning && <StatusPill label="!" color="#faad14" />}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </Col>
-          <Col xs={24} sm={8} style={{ marginBottom: 4 }}>
-            <div style={{ background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 6, padding: '4px 10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed' }}>DMR Brandmeister</span>
-                {!dmrStatus.connected
-                  ? <StatusPill label="Conectando…" color="#d9d9d9" />
-                  : <StatusPill label="ONLINE" color="#7c3aed" />}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
-                  background: dmrStatus.active ? '#ff4d4f' : dmrStatus.connected ? '#7c3aed' : '#8c8c8c',
-                  animation: dmrStatus.active ? 'pulse-red 0.8s ease-in-out infinite' : 'none' }} />
-                <span style={{ fontSize: 10, color: '#595959', fontWeight: 600 }}>TGs: {nodeCfg.bm_tgs || '—'}</span>
-                {dmrStatus.connected && (dmrStatus.active
-                  ? <StatusPill label="TX ACTIVO" color="#ff4d4f" pulse />
-                  : <StatusPill label="IDLE" color="#595959" />)}
-              </div>
-              {dmrStatus.active && dmrStatus.callsign && (
-                <div style={{ marginTop: 3, borderTop: '1px solid #ddd6fe', paddingTop: 3, display: 'flex', alignItems: 'center', gap: 5, fontSize: 10 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, display: 'inline-block', background: '#ff4d4f' }} />
-                  <span style={{ color: '#7c3aed', fontWeight: 700 }}>{dmrStatus.callsign}</span>
-                  <span style={{ color: '#8c8c8c' }}>TG {dmrStatus.tg}{dmrStatus.tgName ? ` · ${dmrStatus.tgName}` : ''}</span>
-                </div>
-              )}
-            </div>
-          </Col>
-        </Row>
-      )}
+      {roip.roipMonitorando && <RoipStatusWidgets roip={roip} />}
 
       {/* Panel de captura */}
       {sesionActiva && (
