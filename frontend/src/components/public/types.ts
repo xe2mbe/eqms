@@ -23,6 +23,7 @@ export type Stats = {
 }
 
 export type EstacionItem = { indicativo: string; nombre: string | null; total: number; ultima: string | null }
+export type EstacionIntlItem = EstacionItem & { pais: string }
 export type UltimoEvDetalle   = { evento: string | null; fecha: string | null; participantes: { indicativo: string; nombre: string | null; total: number; sistemas: Record<string, number>; estado: string | null }[] }
 export type UltimoEvRSDetalle = { evento: string | null; fecha: string | null; participantes: { indicativo: string; nombre: string | null; total: number; plataformas: Record<string, number>; estado: string | null }[] }
 
