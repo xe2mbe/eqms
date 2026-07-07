@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import {
-  Card, Form, Select, AutoComplete, DatePicker, Button, Table,
+  Card, Form, Select, DatePicker, Button, Table,
   Typography, Space, Divider, Input, message, Tooltip, notification,
-  Row, Col, Badge, Popconfirm, Checkbox, Modal, Alert, Spin, Collapse, Tag, Switch,
+  Row, Col, Badge, Popconfirm, Checkbox, Modal, Alert, Spin, Collapse, Tag,
 } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import {
@@ -29,6 +29,8 @@ import StatsCardsRow from '@/components/libreta/StatsCardsRow'
 import RoipMonitorPanel from '@/components/libreta/RoipMonitorPanel'
 import RoipStatusWidgets from '@/components/libreta/RoipStatusWidgets'
 import { useRoipMonitor } from '@/hooks/useRoipMonitor'
+import EditarReporteModal from '@/components/libreta/EditarReporteModal'
+import EditarOperadorModal from '@/components/libreta/EditarOperadorModal'
 
 const { Title, Text } = Typography
 const { Panel } = Collapse
@@ -1524,154 +1526,17 @@ export default function LibretaPage() {
         </Card>
       )}
 
-      {/* Modal: editar reporte */}
-      <Modal
-        title={<><EditOutlined style={{ marginRight: 8 }} />Editar Reporte — {editReporteRecord?.indicativo}</>}
-        open={editReporteModal}
-        onOk={handleSaveReporte}
-        onCancel={() => setEditReporteModal(false)}
-        okText="Guardar" cancelText="Cancelar"
-        confirmLoading={savingReporte}
-        width={480}
-      >
-        <Form form={editReporteForm} layout="vertical" style={{ marginTop: 16 }}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="Indicativo" name="indicativo">
-                <Input disabled />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Operador" name="operador">
-                <Input placeholder="Nombre del operador" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Ciudad" name="ciudad">
-                <Input placeholder="Ciudad" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Estado" name="estado">
-                <Select placeholder="Estado" allowClear showSearch optionFilterProp="label"
-                  options={estados.map(e => ({ value: e.nombre, label: e.nombre }))} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Zona" name="zona_id">
-                <Select placeholder="Zona" allowClear
-                  labelRender={({ value }) => {
-                    const z = zonas.find(z => z.id === value)
-                    if (!z) return <span>{String(value)}</span>
-                    const c = z.color ?? '#1677ff'
-                    return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{z.codigo}</Tag>
-                  }}
-                  options={zonas.map(z => {
-                    const c = z.color ?? '#1677ff'
-                    return {
-                      value: z.id,
-                      label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{z.codigo}</Tag>,
-                    }
-                  })} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Sistema" name="sistema_id">
-                <Select placeholder="Sistema" allowClear
-                  labelRender={({ value }) => {
-                    const s = sistemas.find(s => s.id === value)
-                    if (!s) return <span>{String(value)}</span>
-                    const c = s.color ?? '#1677ff'
-                    return <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{s.codigo}</Tag>
-                  }}
-                  options={sistemas.map(s => {
-                    const c = s.color ?? '#1677ff'
-                    return {
-                      value: s.id,
-                      label: <Tag style={{ backgroundColor: c, borderColor: c, color: '#fff', fontWeight: 600, margin: 0 }}>{s.codigo}</Tag>,
-                    }
-                  })} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="RST" name="senal">
-                <Input style={{ width: 80, textAlign: 'center', fontWeight: 700 }} maxLength={3} />
-              </Form.Item>
-            </Col>
-            <Col span={24}>
-              <Form.Item label="Observaciones" name="observaciones">
-                <Input.TextArea rows={2} placeholder="Observaciones" />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-      </Modal>
+      <EditarReporteModal
+        open={editReporteModal} record={editReporteRecord} form={editReporteForm} saving={savingReporte}
+        estados={estados} zonas={zonas} sistemas={sistemas}
+        onSave={handleSaveReporte} onCancel={() => setEditReporteModal(false)}
+      />
 
-      {/* Modal: editar operador (click en indicativo) */}
-      <Modal
-        title={<><UserOutlined style={{ marginRight: 8 }} />Editar Radioexperimentador — {editOpIndicativo}</>}
-        open={editOpModal}
-        onOk={handleSaveOp}
-        onCancel={() => setEditOpModal(false)}
-        okText="Guardar" cancelText="Cancelar"
-        confirmLoading={savingOp}
-        width={560}
-      >
-        <Spin spinning={loadingOp}>
-          <Form form={editOpForm} layout="vertical" style={{ marginTop: 16 }}>
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item label="Indicativo" name="indicativo">
-                  <Input disabled style={{ fontWeight: 700, color: '#1A569E' }} />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="Nombre completo" name="nombre_completo">
-                  <Input placeholder="Nombre del operador" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="Ciudad / Municipio" name="municipio">
-                  <Input placeholder="Ciudad" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="Estado" name="estado">
-                  <Select placeholder="Estado" allowClear showSearch optionFilterProp="label"
-                    options={estados.map(e => ({ value: e.nombre, label: e.nombre }))} />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="País" name="pais">
-                  <AutoComplete
-                    placeholder="México"
-                    allowClear
-                    options={paises.map(p => ({ value: p }))}
-                    filterOption={(input, opt) =>
-                      (opt?.value ?? '').toLowerCase().includes(input.toLowerCase())
-                    }
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="Tipo de licencia" name="tipo_licencia">
-                  <Input placeholder="Ej: Novato, General, Extra" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="Tipo HAM" name="tipo_ham">
-                  <Input placeholder="Ej: Fijo, Móvil" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item label="Activo" name="activo" valuePropName="checked">
-                  <Switch checkedChildren="Sí" unCheckedChildren="No" />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Form>
-        </Spin>
-      </Modal>
+      <EditarOperadorModal
+        open={editOpModal} indicativo={editOpIndicativo} form={editOpForm} saving={savingOp} loading={loadingOp}
+        estados={estados} paises={paises}
+        onSave={handleSaveOp} onCancel={() => setEditOpModal(false)}
+      />
 
       <FechaNoPermitidaModal diaEventoModal={diaEventoModal} onClose={() => setDiaEventoModal(null)} />
     </div>
