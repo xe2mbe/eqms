@@ -7,30 +7,15 @@ import {
 import ReactECharts from 'echarts-for-react'
 import * as echarts from 'echarts'
 import axios from 'axios'
-import { io, Socket } from 'socket.io-client'
 import dayjs from 'dayjs'
 import 'dayjs/locale/es'
+import { FMRE_BLUE, FMRE_DARK, FMRE_LIGHT, FMRE_GOLD, SISTEMA_COLORS, PLAT_COLORS } from '@/utils/publicFmreShared'
+import { usePublicRoipStatus } from '@/hooks/usePublicRoipStatus'
+import { AllStarLinkStatusCard, IrlpStatusCard, DmrStatusCard } from '@/components/public/VoipStatusCards'
 
 dayjs.locale('es')
 
 const { Title, Text, Paragraph } = Typography
-
-const FMRE_BLUE   = '#1A569E'
-const FMRE_DARK   = '#0D2E5F'
-const FMRE_LIGHT  = '#E8F0FA'
-const FMRE_GOLD   = '#D4A017'
-
-const SISTEMA_COLORS: Record<string, string> = {
-  HF: '#1A569E', ASL: '#52c41a', IRLP: '#fa8c16',
-  DMR: '#7c3aed', FUSION: '#eb2f96', DSTAR: '#13c2c2',
-  P25: '#f5222d', M17: '#fadb14', ECHOLINK: '#a0d911',
-}
-
-const PLAT_COLORS: Record<string, string> = {
-  Facebook: '#1877F2', 'Facebook - Radioaficionados XE': '#4267B2',
-  Zello: '#FF6B00', Instagram: '#E1306C', Telegram: '#0088CC',
-  YouTube: '#FF0000', 'Twitter / X': '#1DA1F2',
-}
 
 // ─── System logo SVGs ───────────────────────────────────────────────────────
 
@@ -166,18 +151,7 @@ export default function PublicFMREPage() {
   const [boletinInfo, setBoletinInfo] = useState(getNextBoletinInfo)
   const voipStatusRef = useRef<HTMLDivElement>(null)
   const [voipStatusVisible, setVoipStatusVisible] = useState(false)
-  const [nodeStatus, setNodeStatus] = useState<{
-    online: boolean; on_air: boolean; cos_keyed: boolean; tx_keyed: boolean; connections: number;
-    nodes: { node: string; name: string; url: string | null; keyed: boolean; direction: string }[]
-  } | null>(null)
-  const [irlpStatus, setIrlpStatus] = useState<{
-    online: boolean; on_air: boolean; cos: boolean; ptt: boolean; connections: number;
-    nodes: { node: string; name: string; url: string; warning?: boolean }[]
-  } | null>(null)
-  const [dmrStatus, setDmrStatus] = useState<{
-    connected: boolean; active: boolean; callsign: string; tg: number; tgName: string;
-  }>({ connected: false, active: false, callsign: '', tg: 0, tgName: '' })
-  const dmrSocketRef = useRef<Socket | null>(null)
+  const { nodeStatus, irlpStatus, dmrStatus } = usePublicRoipStatus()
 
   // Búsqueda por indicativo
   const [busqueda, setBusqueda] = useState('')
@@ -345,55 +319,6 @@ export default function PublicFMREPage() {
     return () => clearInterval(t)
   }, [])
 
-  useEffect(() => {
-    const fetchNode = () =>
-      axios.get('/api/public/node-status')
-        .then(r => setNodeStatus(r.data))
-        .catch(() => {})
-    fetchNode()
-    const t = setInterval(fetchNode, 5_000)
-    return () => clearInterval(t)
-  }, [])
-
-  useEffect(() => {
-    const fetchIrlp = () =>
-      axios.get('/api/public/irlp-status')
-        .then(r => setIrlpStatus(r.data))
-        .catch(() => {})
-    fetchIrlp()
-    const t = setInterval(fetchIrlp, 5_000)
-    return () => clearInterval(t)
-  }, [])
-
-  useEffect(() => {
-    const socket = io('https://api.brandmeister.network', {
-      path: '/lh/socket.io',
-      transports: ['websocket'],
-      reconnectionDelay: 5000,
-    })
-    socket.on('connect', () => {
-      setDmrStatus(d => ({ ...d, connected: true }))
-      axios.get('/api/public/node-config').then(r => {
-        const raw: string = r.data?.bm_tgs ?? '33450,334'
-        raw.split(',').map(s => s.trim()).filter(Boolean)
-          .forEach(tg => socket.emit('subscribe', `dst_${tg}`))
-      }).catch(() => {
-        ['33450', '334'].forEach(tg => socket.emit('subscribe', `dst_${tg}`))
-      })
-    })
-    socket.on('disconnect', () => {
-      setDmrStatus(d => ({ ...d, connected: false, active: false }))
-    })
-    socket.on('mqtt', (p: { DestinationID: number; DestinationName: string; SourceCall: string; Stop: number }) => {
-      if (p.Stop === 0) {
-        setDmrStatus(d => ({ ...d, active: true, callsign: p.SourceCall, tg: p.DestinationID, tgName: p.DestinationName }))
-      } else {
-        setDmrStatus(d => ({ ...d, active: false }))
-      }
-    })
-    dmrSocketRef.current = socket
-    return () => { socket.disconnect() }
-  }, [])
 
   const tendenciaOption = !stats ? {} : (() => {
     const meses = [...new Set(stats.rf.tendencia.map(t => t.mes))].sort()
@@ -654,162 +579,15 @@ export default function PublicFMREPage() {
             </div>
 
             {boletinInfo.isBoletinWindow && <>
-            {/* Barra de estado AllStar Link */}
-            <div style={{ marginBottom: 10 }}>
-              <span style={{ color: FMRE_GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>RED ALLSTAR LINK</span>
-            </div>
-            <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
-                    background: nodeStatus == null ? '#888' : nodeStatus.online ? '#52c41a' : '#ff4d4f',
-                    boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
-                    animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
-                  }} />
-                  <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Hub 299081</span>
-                </div>
-                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
-                  {nodeStatus == null
-                    ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
-                    : !nodeStatus.on_air
-                      ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● OFF AIR</span>
-                      : <><span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● ON AIR</span>
-                        {nodeStatus.tx_keyed
-                          ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                          : nodeStatus.cos_keyed
-                            ? <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
-                            : <span style={{ background: '#595959', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● IDLE</span>
-                        }</>
-                  }
-                </div>
+              <div style={{ marginBottom: 10 }}>
+                <AllStarLinkStatusCard nodeStatus={nodeStatus} />
               </div>
-
-              <div style={{ marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8 }}>
-                <div style={{ color: '#8ab4e0', fontSize: 11, marginBottom: 6 }}>
-                  <span style={{ color: FMRE_GOLD, fontWeight: 700 }}>{nodeStatus?.connections ?? '…'}</span> nodos conectados
-                </div>
-                {(nodeStatus?.nodes ?? []).length === 0
-                  ? <span style={{ color: '#555', fontSize: 12 }}>Sin nodos conectados</span>
-                  : (nodeStatus?.nodes ?? []).map(n => (
-                    <div key={n.node} style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '4px 0 4px 6px',
-                      borderBottom: '1px solid rgba(255,255,255,0.06)',
-                      borderLeft: n.node === '299080' ? '2px solid #D4A017' : '2px solid transparent',
-                      background: n.node === '299080' ? 'rgba(212,160,23,0.1)' : undefined,
-                    }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                        background: n.keyed ? '#ff4d4f' : '#52c41a',
-                        boxShadow: n.keyed ? '0 0 0 2px rgba(255,77,79,.2)' : '0 0 0 2px rgba(82,196,26,.2)',
-                      }} />
-                      <span style={{ fontWeight: 700, color: FMRE_GOLD, minWidth: 52, fontSize: 12 }}>{n.node}</span>
-                      {n.url
-                        ? <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
-                        : <span style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</span>
-                      }
-                      {n.node === '299080' && <Tag style={{ margin: '0 4px 0 0', fontSize: 9, flexShrink: 0 }} color="gold">Origen del boletín</Tag>}
-                      <Tag style={{ margin: 0, fontSize: 10 }} color={n.keyed ? 'red' : 'default'}>
-                        {n.keyed ? 'TX' : n.direction || 'RX'}
-                      </Tag>
-                    </div>
-                  ))
-                }
+              <div style={{ marginTop: 10, marginBottom: 4 }}>
+                <IrlpStatusCard irlpStatus={irlpStatus} />
               </div>
-            </div>
-
-            {/* Barra de estado IRLP */}
-            <div style={{ marginTop: 10, marginBottom: 4 }}>
-              <span style={{ color: '#06b6d4', fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>RED IRLP</span>
-            </div>
-            <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 10, padding: '10px 20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
-                    background: irlpStatus == null ? '#888' : irlpStatus.online ? '#52c41a' : '#ff4d4f',
-                    boxShadow: irlpStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
-                    animation: irlpStatus?.online ? 'pulse 2s infinite' : 'none',
-                  }} />
-                  <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Reflector 0077</span>
-                </div>
-
-                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
-                  {irlpStatus == null
-                    ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
-                    : !irlpStatus.on_air
-                      ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● OFF AIR</span>
-                      : <><span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● ON AIR</span>
-                        {irlpStatus.ptt
-                          ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                          : irlpStatus.cos
-                            ? <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
-                            : <span style={{ background: '#595959', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● IDLE</span>
-                        }</>
-                  }
-                </div>
+              <div style={{ marginTop: 10, marginBottom: 4 }}>
+                <DmrStatusCard dmrStatus={dmrStatus} />
               </div>
-
-              <div style={{ marginTop: 8, borderTop: '1px solid rgba(6,182,212,0.2)', paddingTop: 8 }}>
-                <div style={{ color: '#8ab4e0', fontSize: 11, marginBottom: 6 }}>
-                  <span style={{ color: '#06b6d4', fontWeight: 700 }}>{irlpStatus?.connections ?? '…'}</span> nodos conectados
-                </div>
-                {(irlpStatus?.nodes ?? []).length === 0
-                  ? <span style={{ color: '#555', fontSize: 12 }}>Sin nodos conectados</span>
-                  : (irlpStatus?.nodes ?? []).map(n => (
-                    <div key={n.node} style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '4px 0 4px 6px',
-                      borderBottom: '1px solid rgba(6,182,212,0.1)',
-                      borderLeft: n.node === '8422' ? '2px solid #D4A017' : '2px solid transparent',
-                      background: n.node === '8422' ? 'rgba(212,160,23,0.1)' : undefined,
-                      opacity: n.warning ? 0.6 : 1,
-                    }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                        background: n.warning ? '#faad14' : n.node === '8422' ? '#52c41a' : '#06b6d4',
-                      }} />
-                      <span style={{ fontWeight: 700, color: '#06b6d4', minWidth: 46, fontSize: 12 }}>{n.node}</span>
-                      <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: n.warning ? '#8c8c8c' : '#a0c4e8', flex: 1 }}>{n.name}</a>
-                      {n.node === '8422' && <Tag style={{ margin: '0 4px 0 0', fontSize: 9, flexShrink: 0 }} color="gold">Origen del boletín</Tag>}
-                      {n.warning && <Tag style={{ margin: 0, fontSize: 9, flexShrink: 0 }} color="warning">⚠ Sin heartbeat</Tag>}
-                    </div>
-                  ))
-                }
-              </div>
-            </div>
-
-            {/* Barra de estado DMR */}
-            <div style={{ marginTop: 10, marginBottom: 4 }}>
-              <span style={{ color: '#a78bfa', fontSize: 10, fontWeight: 700, letterSpacing: 2 }}>RED DMR — BRANDMEISTER</span>
-            </div>
-            <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: 10, padding: '10px 20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
-                    background: dmrStatus.connected ? '#7c3aed' : '#555',
-                    boxShadow: dmrStatus.connected ? '0 0 0 3px rgba(124,58,237,0.25)' : 'none',
-                    animation: dmrStatus.connected ? 'pulse 2s infinite' : 'none',
-                  }} />
-                  <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>TG FMRE 33450 · TG México 334</span>
-                </div>
-                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {!dmrStatus.connected
-                    ? <span style={{ color: '#888', fontSize: 12 }}>Conectando…</span>
-                    : dmrStatus.active
-                      ? <>
-                          <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                          <span style={{ color: '#a78bfa', fontSize: 12, fontWeight: 700 }}>{dmrStatus.callsign}</span>
-                          <span style={{ color: '#8ab4e0', fontSize: 11 }}>TG {dmrStatus.tg}{dmrStatus.tgName ? ` · ${dmrStatus.tgName}` : ''}</span>
-                        </>
-                      : <span style={{ background: '#595959', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● IDLE</span>
-                  }
-                </div>
-              </div>
-            </div>
             </>}
           </div>
 
@@ -1147,160 +925,9 @@ export default function PublicFMREPage() {
               <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.15)' }} />
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-
-              {/* AllStar Link */}
-              <div>
-                <div style={{ color: FMRE_GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>RED ALLSTAR LINK</div>
-                <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
-                        background: nodeStatus == null ? '#888' : nodeStatus.online ? '#52c41a' : '#ff4d4f',
-                        boxShadow: nodeStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
-                        animation: nodeStatus?.online ? 'pulse 2s infinite' : 'none',
-                      }} />
-                      <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Hub 299081</span>
-                    </div>
-                    <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
-                      {nodeStatus == null
-                        ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
-                        : !nodeStatus.on_air
-                          ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● OFF AIR</span>
-                          : <><span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● ON AIR</span>
-                            {nodeStatus.tx_keyed
-                              ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                              : nodeStatus.cos_keyed
-                                ? <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
-                                : <span style={{ background: '#595959', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● IDLE</span>
-                            }</>
-                      }
-                    </div>
-                  </div>
-                  <div style={{ marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8 }}>
-                    <div style={{ color: '#8ab4e0', fontSize: 11, marginBottom: 6 }}>
-                      <span style={{ color: FMRE_GOLD, fontWeight: 700 }}>{nodeStatus?.connections ?? '…'}</span> nodos conectados
-                    </div>
-                    {(nodeStatus?.nodes ?? []).length === 0
-                      ? <span style={{ color: '#555', fontSize: 12 }}>Sin nodos conectados</span>
-                      : (nodeStatus?.nodes ?? []).map(n => (
-                        <div key={n.node} style={{
-                          display: 'flex', alignItems: 'center', gap: 8,
-                          padding: '4px 0 4px 6px',
-                          borderBottom: '1px solid rgba(255,255,255,0.06)',
-                          borderLeft: n.node === '299080' ? '2px solid #D4A017' : '2px solid transparent',
-                          background: n.node === '299080' ? 'rgba(212,160,23,0.1)' : undefined,
-                        }}>
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                            background: n.keyed ? '#ff4d4f' : '#52c41a',
-                            boxShadow: n.keyed ? '0 0 0 2px rgba(255,77,79,.2)' : '0 0 0 2px rgba(82,196,26,.2)',
-                          }} />
-                          <span style={{ fontWeight: 700, color: FMRE_GOLD, minWidth: 52, fontSize: 12 }}>{n.node}</span>
-                          {n.url
-                            ? <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</a>
-                            : <span style={{ fontSize: 12, color: '#a0c4e8', flex: 1 }}>{n.name}</span>
-                          }
-                          {n.node === '299080' && <Tag style={{ margin: '0 4px 0 0', fontSize: 9, flexShrink: 0 }} color="gold">Origen del boletín</Tag>}
-                          <Tag style={{ margin: 0, fontSize: 10 }} color={n.keyed ? 'red' : 'default'}>
-                            {n.keyed ? 'TX' : n.direction || 'RX'}
-                          </Tag>
-                        </div>
-                      ))
-                    }
-                  </div>
-                </div>
-              </div>
-
-              {/* IRLP */}
-              <div>
-                <div style={{ color: '#06b6d4', fontSize: 10, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>RED IRLP</div>
-                <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 10, padding: '10px 20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
-                        background: irlpStatus == null ? '#888' : irlpStatus.online ? '#52c41a' : '#ff4d4f',
-                        boxShadow: irlpStatus?.online ? '0 0 0 3px rgba(82,196,26,0.25)' : 'none',
-                        animation: irlpStatus?.online ? 'pulse 2s infinite' : 'none',
-                      }} />
-                      <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>Reflector 0077</span>
-                    </div>
-                    <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 12, color: '#8ab4e0' }}>Boletín Dominical</span>
-                      {irlpStatus == null
-                        ? <span style={{ color: '#888', fontSize: 12 }}>…</span>
-                        : !irlpStatus.on_air
-                          ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● OFF AIR</span>
-                          : <><span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● ON AIR</span>
-                            {irlpStatus.ptt
-                              ? <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                              : irlpStatus.cos
-                                ? <span style={{ background: '#52c41a', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● RX ACTIVO</span>
-                                : <span style={{ background: '#595959', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● IDLE</span>
-                            }</>
-                      }
-                    </div>
-                  </div>
-                  <div style={{ marginTop: 10, borderTop: '1px solid rgba(6,182,212,0.2)', paddingTop: 8 }}>
-                    <div style={{ color: '#8ab4e0', fontSize: 11, marginBottom: 6 }}>
-                      <span style={{ color: '#06b6d4', fontWeight: 700 }}>{irlpStatus?.connections ?? '…'}</span> nodos conectados
-                    </div>
-                    {(irlpStatus?.nodes ?? []).length === 0
-                      ? <span style={{ color: '#555', fontSize: 12 }}>Sin nodos conectados</span>
-                      : (irlpStatus?.nodes ?? []).map(n => (
-                        <div key={n.node} style={{
-                          display: 'flex', alignItems: 'center', gap: 8,
-                          padding: '4px 0 4px 6px',
-                          borderBottom: '1px solid rgba(6,182,212,0.1)',
-                          borderLeft: n.node === '8422' ? '2px solid #D4A017' : '2px solid transparent',
-                          background: n.node === '8422' ? 'rgba(212,160,23,0.1)' : undefined,
-                          opacity: n.warning ? 0.6 : 1,
-                        }}>
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                            background: n.warning ? '#faad14' : n.node === '8422' ? '#52c41a' : '#06b6d4',
-                          }} />
-                          <span style={{ fontWeight: 700, color: '#06b6d4', minWidth: 46, fontSize: 12 }}>{n.node}</span>
-                          <a href={n.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: n.warning ? '#8c8c8c' : '#a0c4e8', flex: 1 }}>{n.name}</a>
-                          {n.node === '8422' && <Tag style={{ margin: '0 4px 0 0', fontSize: 9, flexShrink: 0 }} color="gold">Origen del boletín</Tag>}
-                          {n.warning && <Tag style={{ margin: 0, fontSize: 9, flexShrink: 0 }} color="warning">⚠ Sin heartbeat</Tag>}
-                        </div>
-                      ))
-                    }
-                  </div>
-                </div>
-              </div>
-
-              {/* DMR / Brandmeister */}
-              <div>
-                <div style={{ color: '#a78bfa', fontSize: 10, fontWeight: 700, letterSpacing: 2, marginBottom: 6 }}>RED DMR — BRANDMEISTER</div>
-                <div style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: 10, padding: '10px 20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block',
-                        background: dmrStatus.connected ? '#7c3aed' : '#555',
-                        boxShadow: dmrStatus.connected ? '0 0 0 3px rgba(124,58,237,0.25)' : 'none',
-                        animation: dmrStatus.connected ? 'pulse 2s infinite' : 'none',
-                      }} />
-                      <span style={{ color: '#c0d4e8', fontSize: 12, fontWeight: 600 }}>TG FMRE 33450 · TG México 334</span>
-                    </div>
-                    <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>|</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {!dmrStatus.connected
-                        ? <span style={{ color: '#888', fontSize: 12 }}>Conectando…</span>
-                        : dmrStatus.active
-                          ? <>
-                              <span style={{ background: '#ff4d4f', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5, animation: 'pulse-red 0.8s ease-in-out infinite' }}>● TX ACTIVO</span>
-                              <span style={{ color: '#a78bfa', fontSize: 12, fontWeight: 700 }}>{dmrStatus.callsign}</span>
-                              <span style={{ color: '#8ab4e0', fontSize: 11 }}>TG {dmrStatus.tg}{dmrStatus.tgName ? ` · ${dmrStatus.tgName}` : ''}</span>
-                            </>
-                          : <span style={{ background: '#595959', color: 'white', fontWeight: 700, fontSize: 11, padding: '2px 10px', borderRadius: 12, letterSpacing: 0.5 }}>● IDLE</span>
-                      }
-                    </div>
-                  </div>
-                </div>
-              </div>
-
+              <AllStarLinkStatusCard nodeStatus={nodeStatus} />
+              <IrlpStatusCard irlpStatus={irlpStatus} />
+              <DmrStatusCard dmrStatus={dmrStatus} />
             </div>
           </div>}
         </div>
