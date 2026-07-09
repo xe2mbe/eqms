@@ -14,6 +14,7 @@ export interface LibretaConfig {
   bm_tgs?: string | null
   roip_monitorando?: boolean
   roip_avanzado?: boolean
+  roip_usar_global?: boolean
   asl_hub_id?: string | null
   asl_host?: string | null
   asl_port?: string | null
@@ -44,10 +45,25 @@ export interface NuevoHam {
   estado?: string
 }
 
+/** Config global de nodos RoIP sin credenciales — ver schemas.NodeConfigLibreta en el backend. */
+export interface NodeConfigGlobal {
+  asl_hub_id: string
+  asl_host: string
+  asl_port: string
+  asl_boletin_node: string
+  irlp_reflector_id: string
+  irlp_ref_url: string
+  irlp_boletin_node: string
+  irlp_host: string
+  irlp_port: string
+  bm_tgs: string
+}
+
 export const libretaApi = {
   getConfig: () => client.get<LibretaConfig>('/libreta/config'),
   saveConfig: (data: LibretaConfig) => client.put<LibretaConfig>('/libreta/config', data),
   checkIndicativo: (indicativo: string) =>
     client.get<CheckIndicativoResult>(`/libreta/check/${indicativo}`),
   nuevoHam: (data: NuevoHam) => client.post('/libreta/nuevo-ham', data),
+  getGlobalNodeConfig: () => client.get<NodeConfigGlobal>('/libreta/config/global'),
 }

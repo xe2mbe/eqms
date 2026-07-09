@@ -250,6 +250,7 @@ class LibretaConfigUsuario(Base):
     # RoIP monitoring preferences
     roip_monitorando = Column(Boolean, default=False)
     roip_avanzado = Column(Boolean, default=False)
+    roip_usar_global = Column(Boolean, default=False)
     asl_hub_id = Column(String(20), nullable=True)
     asl_host = Column(String(200), nullable=True)
     asl_port = Column(String(10), nullable=True)

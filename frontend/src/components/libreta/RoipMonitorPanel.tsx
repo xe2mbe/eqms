@@ -1,4 +1,4 @@
-import { Row, Col, Space, Typography, Switch, Divider, Form, Input, Button } from 'antd'
+import { Row, Col, Space, Typography, Switch, Divider, Form, Input, Button, Alert } from 'antd'
 import { SaveOutlined } from '@ant-design/icons'
 import StatusPill from './StatusPill'
 import type { RoipMonitor } from '@/hooks/useRoipMonitor'
@@ -17,15 +17,15 @@ interface RoipMonitorPanelProps {
  */
 export default function RoipMonitorPanel({ roip }: RoipMonitorPanelProps) {
   const {
-    roipMonitorando, roipAvanzado, aslStatus, irlpStatus, nodeCfg, dmrStatus, dmrWsDbg, dmrRestDbg,
+    roipMonitorando, roipAvanzado, roipUsarGlobal, globalNodeCfg, aslStatus, irlpStatus, nodeCfg, dmrStatus, dmrWsDbg, dmrRestDbg,
     nodeConfigForm, savingNodeConfig,
-    toggleMonitorando, toggleAvanzado, guardarNodeConfig, onNodeConfigFormChange,
+    toggleMonitorando, toggleAvanzado, toggleUsarGlobal, guardarNodeConfig, onNodeConfigFormChange,
   } = roip
 
   return (
     <>
       {/* Toggle de monitoreo */}
-      <Space align="center" style={{ marginBottom: 12 }}>
+      <Space align="center" style={{ marginBottom: 12 }} wrap>
         <Text strong style={{ fontSize: 13 }}>Monitoreo Sistemas RoIP</Text>
         <Switch checked={roipMonitorando} onChange={toggleMonitorando} />
         {roipMonitorando && (
@@ -33,6 +33,8 @@ export default function RoipMonitorPanel({ roip }: RoipMonitorPanelProps) {
             <Text type="secondary" style={{ fontSize: 11 }}>actualizando cada 5 s</Text>
             <Text strong style={{ fontSize: 13, marginLeft: 8 }}>Avanzado</Text>
             <Switch checked={roipAvanzado} onChange={toggleAvanzado} />
+            <Text strong style={{ fontSize: 13, marginLeft: 8 }}>Usar Monitoreo Global</Text>
+            <Switch checked={roipUsarGlobal} onChange={toggleUsarGlobal} />
           </>
         )}
       </Space>
@@ -191,90 +193,169 @@ export default function RoipMonitorPanel({ roip }: RoipMonitorPanelProps) {
         <Divider style={{ margin: '4px 0 10px' }} />
 
         {/* Parámetros de configuración */}
-        <Form form={nodeConfigForm} layout="vertical" size="small"
-          onValuesChange={onNodeConfigFormChange}>
-          <Divider orientation="left" plain style={{ fontSize: 12, color: '#389e0d', margin: '0 0 8px' }}>AllStarLink (AllScan)</Divider>
-          <Row gutter={12}>
-            <Col xs={8} sm={4}>
-              <Form.Item label="# Hub" name="asl_hub_id">
-                <Input placeholder="299081" />
-              </Form.Item>
-            </Col>
-            <Col xs={16} sm={14}>
-              <Form.Item label="IP / URL del Hub" name="asl_host">
-                <Input placeholder="stn8422.ip.irlp.net" />
-              </Form.Item>
-            </Col>
-            <Col xs={8} sm={3}>
-              <Form.Item label="Puerto" name="asl_port">
-                <Input placeholder="8081" />
-              </Form.Item>
-            </Col>
-            <Col xs={8} sm={3}>
-              <Form.Item label="Nodo Boletín" name="asl_boletin_node">
-                <Input placeholder="299080" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Divider orientation="left" plain style={{ fontSize: 12, color: '#0891b2', margin: '4px 0 8px' }}>IRLP</Divider>
-          <Row gutter={12}>
-            <Col xs={8} sm={4}>
-              <Form.Item label="# Reflector" name="irlp_reflector_id">
-                <Input placeholder="0077" />
-              </Form.Item>
-            </Col>
-            <Col xs={16} sm={20}>
-              <Form.Item label="URL página del Reflector" name="irlp_ref_url">
-                <Input placeholder="http://85.8.149.218/Chan_Zero_Node_Numbers.html" />
-              </Form.Item>
-            </Col>
-            <Col xs={12} sm={5}>
-              <Form.Item label="Usuario CGI" name="irlp_user">
-                <Input placeholder="xe2mbe" />
-              </Form.Item>
-            </Col>
-            <Col xs={12} sm={5}>
-              <Form.Item label="Contraseña CGI" name="irlp_password">
-                <Input.Password placeholder="••••••" />
-              </Form.Item>
-            </Col>
-            <Col xs={8} sm={4}>
-              <Form.Item label="# Nodo Boletín" name="irlp_boletin_node">
-                <Input placeholder="8422" />
-              </Form.Item>
-            </Col>
-            <Col xs={16} sm={7}>
-              <Form.Item label="IP / URL Nodo Boletín" name="irlp_host">
-                <Input placeholder="stn8422.ip.irlp.net" />
-              </Form.Item>
-            </Col>
-            <Col xs={8} sm={3}>
-              <Form.Item label="Puerto CGI" name="irlp_port">
-                <Input placeholder="8080" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Divider orientation="left" plain style={{ fontSize: 12, color: '#7c3aed', margin: '4px 0 8px' }}>DMR / Brandmeister</Divider>
-          <Row gutter={12}>
-            <Col xs={24} sm={8}>
-              <Form.Item label="TalkGroups a monitorear" name="bm_tgs" extra="Separados por coma — ej: 33450,334">
-                <Input placeholder="33450,334" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={16}>
-              <Form.Item label="BM API Key" name="bm_api_key" extra="JWT token de tu perfil en brandmeister.network">
-                <Input.Password placeholder="eyJ0eXAi..." />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Button
-            type="primary" size="small" icon={<SaveOutlined />}
-            loading={savingNodeConfig}
-            onClick={guardarNodeConfig}
-          >
-            Guardar configuración de nodos
-          </Button>
-        </Form>
+        {roipUsarGlobal ? (
+          <div>
+            <Alert
+              type="info" showIcon style={{ marginBottom: 12 }}
+              message="Usando la configuración global del dashboard público."
+              description='Estos valores los administra un admin desde Configuración → Dashboard Público. No son editables aquí, y las credenciales (usuario/contraseña CGI, API Key de Brandmeister) no se muestran. Para usar tus propios parámetros, desactiva "Usar Monitoreo Global".'
+            />
+            <Divider orientation="left" plain style={{ fontSize: 12, color: '#389e0d', margin: '0 0 8px' }}>AllStarLink (AllScan)</Divider>
+            <Row gutter={12}>
+              <Col xs={8} sm={4}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}># Hub</Text>
+                  <Input size="small" disabled value={globalNodeCfg?.asl_hub_id} />
+                </div>
+              </Col>
+              <Col xs={16} sm={14}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>IP / URL del Hub</Text>
+                  <Input size="small" disabled value={globalNodeCfg?.asl_host} />
+                </div>
+              </Col>
+              <Col xs={8} sm={3}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Puerto</Text>
+                  <Input size="small" disabled value={globalNodeCfg?.asl_port} />
+                </div>
+              </Col>
+              <Col xs={8} sm={3}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Nodo Boletín</Text>
+                  <Input size="small" disabled value={globalNodeCfg?.asl_boletin_node} />
+                </div>
+              </Col>
+            </Row>
+            <Divider orientation="left" plain style={{ fontSize: 12, color: '#0891b2', margin: '4px 0 8px' }}>IRLP</Divider>
+            <Row gutter={12}>
+              <Col xs={8} sm={4}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}># Reflector</Text>
+                  <Input size="small" disabled value={globalNodeCfg?.irlp_reflector_id} />
+                </div>
+              </Col>
+              <Col xs={16} sm={20}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>URL página del Reflector</Text>
+                  <Input size="small" disabled value={globalNodeCfg?.irlp_ref_url} />
+                </div>
+              </Col>
+              <Col xs={8} sm={4}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}># Nodo Boletín</Text>
+                  <Input size="small" disabled value={globalNodeCfg?.irlp_boletin_node} />
+                </div>
+              </Col>
+              <Col xs={16} sm={10}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>IP / URL Nodo Boletín</Text>
+                  <Input size="small" disabled value={globalNodeCfg?.irlp_host} />
+                </div>
+              </Col>
+              <Col xs={8} sm={4}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>Puerto CGI</Text>
+                  <Input size="small" disabled value={globalNodeCfg?.irlp_port} />
+                </div>
+              </Col>
+            </Row>
+            <Divider orientation="left" plain style={{ fontSize: 12, color: '#7c3aed', margin: '4px 0 8px' }}>DMR / Brandmeister</Divider>
+            <Row gutter={12}>
+              <Col xs={24} sm={8}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>TalkGroups monitoreados</Text>
+                  <Input size="small" disabled value={globalNodeCfg?.bm_tgs} />
+                </div>
+              </Col>
+            </Row>
+          </div>
+        ) : (
+          <Form form={nodeConfigForm} layout="vertical" size="small"
+            onValuesChange={onNodeConfigFormChange}>
+            <Divider orientation="left" plain style={{ fontSize: 12, color: '#389e0d', margin: '0 0 8px' }}>AllStarLink (AllScan)</Divider>
+            <Row gutter={12}>
+              <Col xs={8} sm={4}>
+                <Form.Item label="# Hub" name="asl_hub_id">
+                  <Input placeholder="299081" />
+                </Form.Item>
+              </Col>
+              <Col xs={16} sm={14}>
+                <Form.Item label="IP / URL del Hub" name="asl_host">
+                  <Input placeholder="stn8422.ip.irlp.net" />
+                </Form.Item>
+              </Col>
+              <Col xs={8} sm={3}>
+                <Form.Item label="Puerto" name="asl_port">
+                  <Input placeholder="8081" />
+                </Form.Item>
+              </Col>
+              <Col xs={8} sm={3}>
+                <Form.Item label="Nodo Boletín" name="asl_boletin_node">
+                  <Input placeholder="299080" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Divider orientation="left" plain style={{ fontSize: 12, color: '#0891b2', margin: '4px 0 8px' }}>IRLP</Divider>
+            <Row gutter={12}>
+              <Col xs={8} sm={4}>
+                <Form.Item label="# Reflector" name="irlp_reflector_id">
+                  <Input placeholder="0077" />
+                </Form.Item>
+              </Col>
+              <Col xs={16} sm={20}>
+                <Form.Item label="URL página del Reflector" name="irlp_ref_url">
+                  <Input placeholder="http://85.8.149.218/Chan_Zero_Node_Numbers.html" />
+                </Form.Item>
+              </Col>
+              <Col xs={12} sm={5}>
+                <Form.Item label="Usuario CGI" name="irlp_user">
+                  <Input placeholder="xe2mbe" />
+                </Form.Item>
+              </Col>
+              <Col xs={12} sm={5}>
+                <Form.Item label="Contraseña CGI" name="irlp_password">
+                  <Input.Password placeholder="••••••" />
+                </Form.Item>
+              </Col>
+              <Col xs={8} sm={4}>
+                <Form.Item label="# Nodo Boletín" name="irlp_boletin_node">
+                  <Input placeholder="8422" />
+                </Form.Item>
+              </Col>
+              <Col xs={16} sm={7}>
+                <Form.Item label="IP / URL Nodo Boletín" name="irlp_host">
+                  <Input placeholder="stn8422.ip.irlp.net" />
+                </Form.Item>
+              </Col>
+              <Col xs={8} sm={3}>
+                <Form.Item label="Puerto CGI" name="irlp_port">
+                  <Input placeholder="8080" />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Divider orientation="left" plain style={{ fontSize: 12, color: '#7c3aed', margin: '4px 0 8px' }}>DMR / Brandmeister</Divider>
+            <Row gutter={12}>
+              <Col xs={24} sm={8}>
+                <Form.Item label="TalkGroups a monitorear" name="bm_tgs" extra="Separados por coma — ej: 33450,334">
+                  <Input placeholder="33450,334" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={16}>
+                <Form.Item label="BM API Key" name="bm_api_key" extra="JWT token de tu perfil en brandmeister.network">
+                  <Input.Password placeholder="eyJ0eXAi..." />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Button
+              type="primary" size="small" icon={<SaveOutlined />}
+              loading={savingNodeConfig}
+              onClick={guardarNodeConfig}
+            >
+              Guardar configuración de nodos
+            </Button>
+          </Form>
+        )}
       </>)}
     </>
   )
