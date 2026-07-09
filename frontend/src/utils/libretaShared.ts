@@ -1,3 +1,5 @@
+import type { Estado, Zona } from '@/types'
+
 /**
  * Validación de indicativo (ITU). Formato: prefijo (1-3 alfanuméricos, al
  * menos una letra) + 1 dígito + sufijo (1-3 letras). Ej válidos: XE2MBE,
@@ -23,3 +25,17 @@ export function validarRST(val: string): boolean {
 }
 
 export const NOMBRES_DIA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+
+/**
+ * Deriva el código de zona del catálogo a partir del nombre de un estado,
+ * o undefined si el estado no existe en catálogo o no tiene zona asignada.
+ * Compartido por Libreta (RF) y LibretaRS.
+ */
+export function deriveZonaFromEstado(estadoVal: string, estados: Estado[], zonas: Zona[]): string | undefined {
+  const estDB = estados.find(e => e.nombre === estadoVal)
+  if (estDB?.zona) {
+    const zonaDB = zonas.find(z => z.codigo === estDB.zona)
+    if (zonaDB) return zonaDB.codigo
+  }
+  return undefined
+}

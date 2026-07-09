@@ -20,7 +20,9 @@ import { libretaRSApi, type EstadisticaRSPayload, type ReporteRSPayload } from '
 import type { PlataformaRS, MetricaRS, EstadisticaRSRecord, ReporteRS, Evento, Zona, Estado, Estacion } from '@/types'
 import { useColPrefs } from '@/components/common/ColSettings'
 import { useAuthStore } from '@/store/authStore'
-import { validarIndicativo, normalizarRST } from '@/utils/libretaShared'
+import { useZonaHelpers } from '@/hooks/useZonaHelpers'
+import { useVerificarDiaEvento, useOcurrenciaEvento } from '@/hooks/useEventoRecurrente'
+import { validarIndicativo, normalizarRST, deriveZonaFromEstado } from '@/utils/libretaShared'
 import IndicativoCell from '@/components/libreta/IndicativoCell'
 import FechaNoPermitidaModal from '@/components/libreta/FechaNoPermitidaModal'
 import StatsCardsRow from '@/components/libreta/StatsCardsRow'
@@ -130,39 +132,11 @@ export default function LibretaRSPage() {
   const [editReporteRecord, setEditReporteRecord] = useState<ReporteRS | null>(null)
   const [editReporteForm] = Form.useForm()
 
-  // ── Colores por zona ──
-  const zonaColorMap = useMemo(() => {
-    const m: Record<string, string> = {}
-    zonas.forEach(z => { m[z.codigo] = z.color || '#999' })
-    return m
-  }, [zonas])
-  const zonaColor = (codigo: string) => zonaColorMap[codigo] || '#999'
+  const { zonaColor, zonaExtranjero } = useZonaHelpers(zonas)
 
-  const zonaExtranjero = useMemo(
-    () => zonas.find(z => z.codigo.toLowerCase().includes('ext') || z.nombre.toLowerCase().includes('extranj'))?.codigo || 'Extranjero',
-    [zonas]
-  )
+  const verificarDiaEvento = useVerificarDiaEvento(eventos, setDiaEventoModal)
 
-  const verificarDiaEvento = useCallback((fecha: dayjs.Dayjs, tipoEvento: string): boolean => {
-    const evento = eventos.find(e => e.tipo === tipoEvento)
-    if (!evento?.recurrente || !evento.dias_semana?.length) return true
-    if (evento.dias_semana.includes(fecha.day())) return true
-    setDiaEventoModal({ fecha, tipoEvento, diasConfig: evento.dias_semana })
-    return false
-  }, [eventos])
-
-  const ocurrenciaEvento = useMemo<{ numero: number; dia: number } | null>(() => {
-    if (!sesionEvento) return null
-    const evento = eventos.find(e => e.tipo === sesionEvento)
-    if (!evento?.recurrente || !evento.dias_semana?.length) return null
-    const dia = sesionFecha.day()
-    if (!evento.dias_semana.includes(dia)) return null
-    const inicioAnio = sesionFecha.startOf('year')
-    const diasHastaFecha = sesionFecha.diff(inicioAnio, 'day')
-    const diasHastaPrimero = (dia - inicioAnio.day() + 7) % 7
-    const numero = Math.floor((diasHastaFecha - diasHastaPrimero) / 7) + 1
-    return { numero, dia }
-  }, [sesionFecha, sesionEvento, eventos])
+  const ocurrenciaEvento = useOcurrenciaEvento(sesionFecha, sesionEvento, eventos)
 
   useEffect(() => {
     catalogosApi.plataformasRS().then(({ data }) => setPlataformas(data))
@@ -323,13 +297,7 @@ export default function LibretaRSPage() {
 
     // Derivar zona desde estado si se conoce
     const estadoVal = op?.estado || ''
-    if (estadoVal && prefix?.zona_codigo) {
-      const estDB = estados.find(e => e.nombre === estadoVal)
-      if (estDB?.zona) {
-        const zonaDB = zonas.find(z => z.codigo === estDB.zona)
-        if (zonaDB) zona = zonaDB.codigo
-      }
-    }
+    if (estadoVal && prefix?.zona_codigo) zona = deriveZonaFromEstado(estadoVal, estados, zonas) ?? zona
 
     const fila: FilaRS = {
       key: `${cs}-${Date.now()}`,
@@ -368,13 +336,7 @@ export default function LibretaRSPage() {
       zona = zonaDB ? zonaDB.codigo : zonaExtranjero
     }
     const estadoVal = op?.estado || ''
-    if (estadoVal) {
-      const estDB = estados.find(e => e.nombre === estadoVal)
-      if (estDB?.zona) {
-        const zonaDB = zonas.find(z => z.codigo === estDB.zona)
-        if (zonaDB) zona = zonaDB.codigo
-      }
-    }
+    if (estadoVal) zona = deriveZonaFromEstado(estadoVal, estados, zonas) ?? zona
 
     setFilas(prev => prev.map(f => f.key === key ? {
       ...f,
@@ -617,11 +579,8 @@ export default function LibretaRSPage() {
           options={estados.map(e => ({ value: e.nombre, label: e.nombre }))}
           onChange={val => {
             actualizarFila(row.key, 'estado', val || '')
-            const est = estados.find(e => e.nombre === val)
-            if (est?.zona) {
-              const zonaDB = zonas.find(z => z.codigo === est.zona)
-              if (zonaDB) actualizarFila(row.key, 'zona', zonaDB.codigo)
-            }
+            const zonaCodigo = deriveZonaFromEstado(val || '', estados, zonas)
+            if (zonaCodigo) actualizarFila(row.key, 'zona', zonaCodigo)
           }} />
       ),
     },
