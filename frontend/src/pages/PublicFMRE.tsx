@@ -210,163 +210,31 @@ export default function PublicFMREPage() {
   }, [])
 
 
-  const tendenciaOption = !stats ? {} : (() => {
-    const meses = [...new Set(stats.rf.tendencia.map(t => t.mes))].sort()
-    const sistemas = [...new Set(stats.rf.tendencia.map(t => t.sistema))].sort()
-    const totales = meses.map(mes =>
-      sistemas.reduce((sum, sis) => sum + (stats.rf.tendencia.find(t => t.mes === mes && t.sistema === sis)?.total ?? 0), 0)
-    )
-    return {
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-      legend: { data: sistemas, top: 4, textStyle: { fontSize: 10 }, itemWidth: 12, itemHeight: 8 },
-      grid: { left: 8, right: 8, top: 44, bottom: 4, containLabel: true },
-      xAxis: {
-        type: 'category',
-        data: meses.map(m => dayjs(m).format('MMM YY')),
-        axisLabel: { color: '#666', fontSize: 11 },
-      },
-      yAxis: { type: 'value', axisLabel: { color: '#666', fontSize: 11 } },
-      series: [
-        ...sistemas.map(sis => ({
-          name: sis,
-          type: 'bar',
-          stack: 'total',
-          data: meses.map(mes => stats.rf.tendencia.find(t => t.mes === mes && t.sistema === sis)?.total ?? 0),
-          itemStyle: { color: SISTEMA_COLORS[sis] ?? '#999' },
-        })),
-        {
-          type: 'bar' as const, stack: 'total', silent: true,
-          itemStyle: { color: 'transparent' },
-          emphasis: { disabled: true },
-          label: {
-            show: true, position: 'top' as const,
-            formatter: (p: any) => totales[p.dataIndex] > 0 ? totales[p.dataIndex].toLocaleString() : '',
-            color: '#444', fontSize: 10, fontWeight: 700,
-          },
-          data: totales.map(() => 0),
-        },
-      ],
-    }
-  })()
+  const tendenciaOption = !stats ? {} : buildTendenciaOption(
+    stats.rf.tendencia.map(t => ({ mes: t.mes, categoria: t.sistema, total: t.total })),
+    SISTEMA_COLORS,
+  )
 
-  const sistemaOption = !stats ? {} : {
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    series: [{
-      type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'],
-      data: stats.rf.por_sistema.map(s => ({
-        name: s.sistema, value: s.total,
-        itemStyle: { color: SISTEMA_COLORS[s.sistema] ?? FMRE_BLUE },
-      })),
-      label: { show: false },
-    }],
-  }
+  const sistemaOption = !stats ? {} : buildCategoriaPieOption(
+    stats.rf.por_sistema.map(s => ({ categoria: s.sistema, total: s.total })),
+    SISTEMA_COLORS,
+    FMRE_BLUE,
+  )
 
-  const tendenciaRSOption = !stats ? {} : (() => {
-    const meses = [...new Set(stats.rs.tendencia.map(t => t.mes))].sort()
-    const plataformas = [...new Set(stats.rs.tendencia.map(t => t.plataforma))].sort()
-    const totalesRS = meses.map(mes =>
-      plataformas.reduce((sum, plat) => sum + (stats.rs.tendencia.find(t => t.mes === mes && t.plataforma === plat)?.total ?? 0), 0)
-    )
-    return {
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-      legend: { data: plataformas, top: 4, textStyle: { fontSize: 10 }, itemWidth: 12, itemHeight: 8 },
-      grid: { left: 8, right: 8, top: 44, bottom: 4, containLabel: true },
-      xAxis: {
-        type: 'category',
-        data: meses.map(m => dayjs(m).format('MMM YY')),
-        axisLabel: { color: '#666', fontSize: 11 },
-      },
-      yAxis: { type: 'value', axisLabel: { color: '#666', fontSize: 11 } },
-      series: [
-        ...plataformas.map(plat => ({
-          name: plat,
-          type: 'bar',
-          stack: 'total',
-          data: meses.map(mes => stats.rs.tendencia.find(t => t.mes === mes && t.plataforma === plat)?.total ?? 0),
-          itemStyle: { color: PLAT_COLORS[plat] ?? '#999' },
-        })),
-        {
-          type: 'bar' as const, stack: 'total', silent: true,
-          itemStyle: { color: 'transparent' },
-          emphasis: { disabled: true },
-          label: {
-            show: true, position: 'top' as const,
-            formatter: (p: any) => totalesRS[p.dataIndex] > 0 ? totalesRS[p.dataIndex].toLocaleString() : '',
-            color: '#444', fontSize: 10, fontWeight: 700,
-          },
-          data: totalesRS.map(() => 0),
-        },
-      ],
-    }
-  })()
+  const tendenciaRSOption = !stats ? {} : buildTendenciaOption(
+    stats.rs.tendencia.map(t => ({ mes: t.mes, categoria: t.plataforma, total: t.total })),
+    PLAT_COLORS,
+  )
 
-  const plataformaPieOption = !stats ? {} : {
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    series: [{
-      type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'],
-      data: stats.rs.por_plataforma.map(p => ({
-        name: p.plataforma, value: p.total,
-        itemStyle: { color: PLAT_COLORS[p.plataforma] ?? '#0891b2' },
-      })),
-      label: { show: false },
-    }],
-  }
+  const plataformaPieOption = !stats ? {} : buildCategoriaPieOption(
+    stats.rs.por_plataforma.map(p => ({ categoria: p.plataforma, total: p.total })),
+    PLAT_COLORS,
+    '#0891b2',
+  )
 
-  const mapaRSOption = !stats || !mapReady ? {} : (() => {
-    const total = stats.rs.por_estado.reduce((s, e) => s + e.total, 0)
-    return {
-      tooltip: {
-        trigger: 'item',
-        formatter: (p: any) => p.value
-          ? `<b>${p.name}</b><br/>${p.value.toLocaleString()} reportes<br/><span style="color:#888">${(p.value / total * 100).toFixed(1)}% del total</span>`
-          : p.name,
-      },
-      visualMap: {
-        min: 0, max: Math.max(...stats.rs.por_estado.map(e => e.total), 1),
-        inRange: { color: ['#e0f7fa', '#0891b2'] },
-        show: false,
-      },
-      series: [{
-        type: 'map', map: 'Mexico', roam: false,
-        emphasis: { label: { show: true }, itemStyle: { areaColor: FMRE_GOLD } },
-        data: stats.rs.por_estado.map(e => ({ name: e.estado, value: e.total })),
-        nameMap: {
-          'Baja California': 'Baja California',
-          'Baja California Sur': 'Baja California Sur',
-          'Ciudad de México': 'Ciudad De México',
-          'Estado De México': 'México',
-        },
-      }],
-    }
-  })()
+  const mapaRSOption = !stats || !mapReady ? {} : buildMapaOption(stats.rs.por_estado, ['#e0f7fa', '#0891b2'], FMRE_GOLD)
 
-  const mapaOption = !stats || !mapReady ? {} : (() => {
-    const total = stats.rf.por_estado.reduce((s, e) => s + e.total, 0)
-    return {
-      tooltip: {
-        trigger: 'item',
-        formatter: (p: any) => p.value
-          ? `<b>${p.name}</b><br/>${p.value.toLocaleString()} reportes<br/><span style="color:#888">${(p.value / total * 100).toFixed(1)}% del total</span>`
-          : p.name,
-      },
-      visualMap: {
-        min: 0, max: Math.max(...stats.rf.por_estado.map(e => e.total), 1),
-        inRange: { color: ['#FFF8E1', FMRE_GOLD] },
-        show: false,
-      },
-      series: [{
-        type: 'map', map: 'Mexico', roam: false,
-        emphasis: { label: { show: true }, itemStyle: { areaColor: FMRE_GOLD } },
-        data: stats.rf.por_estado.map(e => ({ name: e.estado, value: e.total })),
-        nameMap: {
-          'Baja California': 'Baja California',
-          'Baja California Sur': 'Baja California Sur',
-          'Ciudad de México': 'Ciudad De México',
-          'Estado De México': 'México',
-        },
-      }],
-    }
-  })()
+  const mapaOption = !stats || !mapReady ? {} : buildMapaOption(stats.rf.por_estado, ['#FFF8E1', FMRE_GOLD], FMRE_GOLD)
 
   const countryFlag = (code: string) => {
     if (!code || code.length !== 2) return '🌐'
