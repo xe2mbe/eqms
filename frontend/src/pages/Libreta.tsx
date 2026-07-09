@@ -7,7 +7,6 @@ import {
 import { ReloadOutlined } from '@ant-design/icons'
 import {
   SaveOutlined, DeleteOutlined, PlusOutlined,
-  CheckCircleOutlined, WarningOutlined,
   SettingOutlined,
   EditOutlined, UserOutlined,
 } from '@ant-design/icons'
@@ -25,7 +24,7 @@ import { useZonaHelpers } from '@/hooks/useZonaHelpers'
 import { useVerificarDiaEvento, useOcurrenciaEvento } from '@/hooks/useEventoRecurrente'
 import SystemStatusWidget from '@/components/common/SystemStatusWidget'
 import { validarIndicativo, normalizarRST, validarRST, NOMBRES_DIA, deriveZonaFromEstado } from '@/utils/libretaShared'
-import IndicativoCell from '@/components/libreta/IndicativoCell'
+import { statusColumn, indicativoColumn, nombreColumn, ciudadColumn, estadoColumn, zonaColumn } from '@/components/libreta/captureColumns'
 import FechaNoPermitidaModal from '@/components/libreta/FechaNoPermitidaModal'
 import StatsCardsRow from '@/components/libreta/StatsCardsRow'
 import RoipStatusWidgets from '@/components/libreta/RoipStatusWidgets'
@@ -703,82 +702,16 @@ export default function LibretaPage() {
   const { applyWidths, components } = useResizableColumns(INITIAL_WIDTHS)
 
   const baseColumns = [
-    {
-      title: '', dataIndex: 'status', width: 32,
-      render: (v: FilaLibreta['status']) => (
-        <Tooltip title={v === 'ok' ? 'En catálogo' : 'No encontrado en catálogo'}>
-          {v === 'ok'
-            ? <CheckCircleOutlined style={{ color: '#52c41a' }} />
-            : <WarningOutlined style={{ color: '#fa8c16' }} />}
-        </Tooltip>
-      ),
-    },
-    {
-      title: 'Indicativo', dataIndex: 'indicativo', width: 140,
-      render: (v: string, row: FilaLibreta) => (
-        <Space size={0}>
-          <IndicativoCell value={v} rowKey={row.key} onCommit={onCommitIndicativo} />
-          <Tooltip title="Re-buscar datos del indicativo">
-            <Button
-              size="small" type="text" icon={<ReloadOutlined />}
-              onClick={() => { if (validarIndicativo(row.indicativo)) relookupFila(row.key, row.indicativo) }}
-              style={{ color: '#8c8c8c', padding: '0 4px' }}
-            />
-          </Tooltip>
-        </Space>
-      ),
-    },
-    {
-      title: 'Nombre', dataIndex: 'nombre_completo', width: 180,
-      render: (v: string, row: FilaLibreta) => (
-        <Input size="small" value={v} variant="borderless" placeholder="Nombre"
-          onChange={e => actualizarFila(row.key, 'nombre_completo', e.target.value)} />
-      ),
-    },
-    {
-      title: 'Ciudad', dataIndex: 'municipio', width: 130,
-      render: (v: string, row: FilaLibreta) => (
-        <Input size="small" value={v} variant="borderless" placeholder="Ciudad"
-          onChange={e => actualizarFila(row.key, 'municipio', e.target.value)} />
-      ),
-    },
-    {
-      title: 'Estado', dataIndex: 'estado', width: 160,
-      render: (v: string, row: FilaLibreta) => (
-        <Select size="small" value={v || undefined} placeholder="Estado"
-          showSearch allowClear optionFilterProp="label" style={{ width: '100%' }}
-          options={estados.map(e => ({ value: e.nombre, label: e.nombre }))}
-          onChange={val => {
-            actualizarFila(row.key, 'estado', val)
-            const zonaCodigo = deriveZonaFromEstado(val, estados, zonas)
-            if (zonaCodigo) actualizarFila(row.key, 'zona', zonaCodigo)
-          }} />
-      ),
-    },
-    {
-      title: 'Zona', dataIndex: 'zona', width: 100,
-      render: (v: string, row: FilaLibreta) => {
-        const color = zonaColor(v)
-        return (
-          <Select size="small" value={v} style={{ width: '100%' }}
-            onChange={val => actualizarFila(row.key, 'zona', val)}
-            labelRender={({ value }) => (
-              <span style={{ color, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>{value}</span>
-            )}
-            optionRender={option => {
-              const c = zonaColor(option.value as string)
-              return (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: c, flexShrink: 0 }} />
-                  <span style={{ fontWeight: 600, color: c }}>{option.value}</span>
-                </span>
-              )
-            }}
-            options={zonas.map(z => ({ value: z.codigo }))}
-          />
-        )
-      },
-    },
+    statusColumn<FilaLibreta>(),
+    indicativoColumn<FilaLibreta>(140, onCommitIndicativo, relookupFila),
+    nombreColumn<FilaLibreta>((key, val) => actualizarFila(key, 'nombre_completo', val)),
+    ciudadColumn<FilaLibreta>((key, val) => actualizarFila(key, 'municipio', val)),
+    estadoColumn<FilaLibreta>(estados, (key, val) => {
+      actualizarFila(key, 'estado', val)
+      const zonaCodigo = deriveZonaFromEstado(val ?? '', estados, zonas)
+      if (zonaCodigo) actualizarFila(key, 'zona', zonaCodigo)
+    }),
+    zonaColumn<FilaLibreta>(zonas, zonaColor, (key, val) => actualizarFila(key, 'zona', val), { showDot: true }),
     {
       title: 'País', dataIndex: 'pais', width: 130,
       render: (v: string, row: FilaLibreta) => (

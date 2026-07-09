@@ -2,12 +2,12 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import {
   Card, Form, Select, DatePicker, Button, Table, Typography,
   Space, InputNumber, Input, message, Popconfirm, Modal, notification,
-  Row, Col, Divider, Tag, Tooltip, Badge, Alert,
+  Row, Col, Divider, Tag, Badge, Alert,
 } from 'antd'
 import type { InputRef } from 'antd'
 import {
   SaveOutlined, DeleteOutlined, EditOutlined, ReloadOutlined,
-  CheckCircleOutlined, WarningOutlined, CalendarOutlined, PlusOutlined,
+  WarningOutlined, CalendarOutlined, PlusOutlined,
   LikeOutlined, MessageOutlined, ShareAltOutlined, PlayCircleOutlined,
   TeamOutlined, EyeOutlined, HeartOutlined, StarOutlined, BarChartOutlined,
   TagOutlined,
@@ -23,7 +23,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useZonaHelpers } from '@/hooks/useZonaHelpers'
 import { useVerificarDiaEvento, useOcurrenciaEvento } from '@/hooks/useEventoRecurrente'
 import { validarIndicativo, normalizarRST, deriveZonaFromEstado } from '@/utils/libretaShared'
-import IndicativoCell from '@/components/libreta/IndicativoCell'
+import { statusColumn, indicativoColumn, nombreColumn, ciudadColumn, estadoColumn, zonaColumn } from '@/components/libreta/captureColumns'
 import FechaNoPermitidaModal from '@/components/libreta/FechaNoPermitidaModal'
 import StatsCardsRow from '@/components/libreta/StatsCardsRow'
 
@@ -525,31 +525,8 @@ export default function LibretaRSPage() {
 
   // ── Columnas libreta captura ──
   const libroColumns = [
-    {
-      title: '', dataIndex: 'status', width: 32,
-      render: (v: FilaRS['status']) => (
-        <Tooltip title={v === 'ok' ? 'En catálogo' : 'No encontrado en catálogo'}>
-          {v === 'ok'
-            ? <CheckCircleOutlined style={{ color: '#52c41a' }} />
-            : <WarningOutlined style={{ color: '#fa8c16' }} />}
-        </Tooltip>
-      ),
-    },
-    {
-      title: 'Indicativo', dataIndex: 'indicativo', width: 150,
-      render: (v: string, row: FilaRS) => (
-        <Space size={0}>
-          <IndicativoCell value={v} rowKey={row.key} onCommit={onCommitIndicativo} />
-          <Tooltip title="Re-buscar datos del indicativo">
-            <Button
-              size="small" type="text" icon={<ReloadOutlined />}
-              onClick={() => { if (validarIndicativo(row.indicativo)) relookupFila(row.key, row.indicativo) }}
-              style={{ color: '#8c8c8c', padding: '0 4px' }}
-            />
-          </Tooltip>
-        </Space>
-      ),
-    },
+    statusColumn<FilaRS>(),
+    indicativoColumn<FilaRS>(150, onCommitIndicativo, relookupFila),
     {
       title: 'RST', dataIndex: 'rst', width: 70,
       render: (v: string, row: FilaRS) => (
@@ -557,52 +534,14 @@ export default function LibretaRSPage() {
           onChange={e => actualizarFila(row.key, 'rst', normalizarRST(e.target.value))} />
       ),
     },
-    {
-      title: 'Nombre', dataIndex: 'nombre_completo', width: 180,
-      render: (v: string, row: FilaRS) => (
-        <Input size="small" value={v} variant="borderless" placeholder="Nombre"
-          onChange={e => actualizarFila(row.key, 'nombre_completo', e.target.value)} />
-      ),
-    },
-    {
-      title: 'Ciudad', dataIndex: 'municipio', width: 130,
-      render: (v: string, row: FilaRS) => (
-        <Input size="small" value={v} variant="borderless" placeholder="Ciudad"
-          onChange={e => actualizarFila(row.key, 'municipio', e.target.value)} />
-      ),
-    },
-    {
-      title: 'Estado', dataIndex: 'estado', width: 160,
-      render: (v: string, row: FilaRS) => (
-        <Select size="small" value={v || undefined} placeholder="Estado"
-          showSearch allowClear optionFilterProp="label" style={{ width: '100%' }}
-          options={estados.map(e => ({ value: e.nombre, label: e.nombre }))}
-          onChange={val => {
-            actualizarFila(row.key, 'estado', val || '')
-            const zonaCodigo = deriveZonaFromEstado(val || '', estados, zonas)
-            if (zonaCodigo) actualizarFila(row.key, 'zona', zonaCodigo)
-          }} />
-      ),
-    },
-    {
-      title: 'Zona', dataIndex: 'zona', width: 100,
-      render: (v: string, row: FilaRS) => {
-        const color = zonaColor(v)
-        return (
-          <Select size="small" value={v} style={{ width: '100%' }}
-            onChange={val => actualizarFila(row.key, 'zona', val)}
-            labelRender={({ value }) => (
-              <span style={{ color, fontWeight: 700, fontSize: 12, letterSpacing: 1 }}>{value as string}</span>
-            )}
-            optionRender={option => {
-              const c = zonaColor(option.value as string)
-              return <span style={{ color: c, fontWeight: 700 }}>{option.value as string}</span>
-            }}
-            options={zonas.filter(z => z.is_active).map(z => ({ value: z.codigo, label: z.codigo }))}
-          />
-        )
-      },
-    },
+    nombreColumn<FilaRS>((key, val) => actualizarFila(key, 'nombre_completo', val)),
+    ciudadColumn<FilaRS>((key, val) => actualizarFila(key, 'municipio', val)),
+    estadoColumn<FilaRS>(estados, (key, val) => {
+      actualizarFila(key, 'estado', val || '')
+      const zonaCodigo = deriveZonaFromEstado(val || '', estados, zonas)
+      if (zonaCodigo) actualizarFila(key, 'zona', zonaCodigo)
+    }),
+    zonaColumn<FilaRS>(zonas, zonaColor, (key, val) => actualizarFila(key, 'zona', val), { filterActive: true, optionFontWeight: 700 }),
     {
       title: 'País', dataIndex: 'pais', width: 110,
       render: (v: string, row: FilaRS) => (
