@@ -21,8 +21,10 @@ import { useAuthStore } from '@/store/authStore'
 import { useColPrefs } from '@/components/common/ColSettings'
 import type { Evento, Sistema, Estacion, Estado, Zona, Reporte } from '@/types'
 import { useResizableColumns } from '@/hooks/useResizableColumns'
+import { useZonaHelpers } from '@/hooks/useZonaHelpers'
+import { useVerificarDiaEvento, useOcurrenciaEvento } from '@/hooks/useEventoRecurrente'
 import SystemStatusWidget from '@/components/common/SystemStatusWidget'
-import { validarIndicativo, normalizarRST, validarRST, NOMBRES_DIA } from '@/utils/libretaShared'
+import { validarIndicativo, normalizarRST, validarRST, NOMBRES_DIA, deriveZonaFromEstado } from '@/utils/libretaShared'
 import IndicativoCell from '@/components/libreta/IndicativoCell'
 import FechaNoPermitidaModal from '@/components/libreta/FechaNoPermitidaModal'
 import StatsCardsRow from '@/components/libreta/StatsCardsRow'
@@ -97,20 +99,7 @@ export default function LibretaPage() {
   const [zonas, setZonas] = useState<Zona[]>([])
   const [paises, setPaises] = useState<string[]>([])
 
-  // Color por zona, calculado desde la BD
-  const zonaColorMap = useMemo(() => {
-    const m: Record<string, string> = {}
-    zonas.forEach(z => { m[z.codigo] = z.color || '#999' })
-    return m
-  }, [zonas])
-
-  const zonaColor = (codigo: string) => zonaColorMap[codigo] || '#999'
-
-  // Zona "Extranjero" del catálogo
-  const zonaExtranjero = useMemo(
-    () => zonas.find(z => z.codigo.toLowerCase().includes('ext') || z.nombre.toLowerCase().includes('extranj'))?.codigo || 'Extranjero',
-    [zonas]
-  )
+  const { zonaColor, zonaExtranjero } = useZonaHelpers(zonas)
 
   const [sesionActiva, setSesionActiva] = useState(false)
   const [considerarSwl, setConsiderarSwl] = useState(false)
@@ -187,28 +176,10 @@ export default function LibretaPage() {
   const [loadingOp, setLoadingOp] = useState(false)
 
   // Número de ocurrencia del día en el año (ej. 20 → "Domingo #20 del año")
-  const ocurrenciaEvento = useMemo<{ numero: number; dia: number } | null>(() => {
-    if (!sesionConfig) return null
-    const evento = eventos.find(e => e.tipo === sesionConfig.tipo_evento)
-    if (!evento?.recurrente || !evento.dias_semana?.length) return null
-    const fecha = dayjs(sesionConfig.fecha)
-    const dia = fecha.day()
-    if (!evento.dias_semana.includes(dia)) return null
-    const inicioAnio = fecha.startOf('year')
-    const diasHastaFecha = fecha.diff(inicioAnio, 'day')
-    const diasHastaPrimero = (dia - inicioAnio.day() + 7) % 7
-    const numero = Math.floor((diasHastaFecha - diasHastaPrimero) / 7) + 1
-    return { numero, dia }
-  }, [sesionConfig, eventos])
+  const ocurrenciaEvento = useOcurrenciaEvento(sesionConfig?.fecha, sesionConfig?.tipo_evento, eventos)
 
   // ── Validación día de evento recurrente ──────────────────────────────────
-  const verificarDiaEvento = useCallback((fecha: dayjs.Dayjs, tipoEvento: string): boolean => {
-    const evento = eventos.find(e => e.tipo === tipoEvento)
-    if (!evento?.recurrente || !evento.dias_semana?.length) return true
-    if (evento.dias_semana.includes(fecha.day())) return true
-    setDiaEventoModal({ fecha, tipoEvento, diasConfig: evento.dias_semana })
-    return false
-  }, [eventos])
+  const verificarDiaEvento = useVerificarDiaEvento(eventos, setDiaEventoModal)
 
   // ── Cargar catálogos + config ─────────────────────────────────────────────
   useEffect(() => {
@@ -567,19 +538,9 @@ export default function LibretaPage() {
     let zona = zonaEstimada
     if (swl) {
       zona = sesionConfig.zona_swl_default || zonaEstimada
-      if (estadoVal) {
-        const estDB = estados.find(e => e.nombre === estadoVal)
-        if (estDB?.zona) {
-          const zonaDB = zonas.find(z => z.codigo === estDB.zona)
-          if (zonaDB) zona = zonaDB.codigo
-        }
-      }
+      if (estadoVal) zona = deriveZonaFromEstado(estadoVal, estados, zonas) ?? zona
     } else if (zonaEsNacional && estadoVal) {
-      const estDB = estados.find(e => e.nombre === estadoVal)
-      if (estDB?.zona) {
-        const zonaDB = zonas.find(z => z.codigo === estDB.zona)
-        if (zonaDB) zona = zonaDB.codigo
-      }
+      zona = deriveZonaFromEstado(estadoVal, estados, zonas) ?? zona
     }
 
     const fila: FilaLibreta = {
@@ -681,13 +642,7 @@ export default function LibretaPage() {
       || (considerarSwl && sesionConfig ? sesionConfig.ciudad_default || '' : '')
 
     if (swl && sesionConfig?.zona_swl_default) zona = sesionConfig.zona_swl_default
-    if ((zonaEsNacional || swl) && estadoVal) {
-      const estDB = estados.find(e => e.nombre === estadoVal)
-      if (estDB?.zona) {
-        const zonaDB = zonas.find(z => z.codigo === estDB.zona)
-        if (zonaDB) zona = zonaDB.codigo
-      }
-    }
+    if ((zonaEsNacional || swl) && estadoVal) zona = deriveZonaFromEstado(estadoVal, estados, zonas) ?? zona
 
     setFilas(prev => prev.map(f => f.key === key ? {
       ...f,
@@ -795,11 +750,8 @@ export default function LibretaPage() {
           options={estados.map(e => ({ value: e.nombre, label: e.nombre }))}
           onChange={val => {
             actualizarFila(row.key, 'estado', val)
-            const est = estados.find(e => e.nombre === val)
-            if (est?.zona) {
-              const zonaDB = zonas.find(z => z.codigo === est.zona)
-              if (zonaDB) actualizarFila(row.key, 'zona', zonaDB.codigo)
-            }
+            const zonaCodigo = deriveZonaFromEstado(val, estados, zonas)
+            if (zonaCodigo) actualizarFila(row.key, 'zona', zonaCodigo)
           }} />
       ),
     },
