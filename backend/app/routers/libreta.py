@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import json
 import logging
 import re
 
@@ -60,6 +61,28 @@ def save_libreta_config(
     db.commit()
     db.refresh(cfg)
     return cfg
+
+
+def _get_global_node_config(db: Session) -> schemas.NodeConfigLibreta:
+    """Lee la config global de nodos (misma clave que usa public_stats.py y
+    configuracion.py) y la devuelve sin credenciales."""
+    row = db.query(models.ConfiguracionSistema).filter_by(clave="node_config").first()
+    if row and row.valor:
+        try:
+            return schemas.NodeConfigLibreta(**json.loads(row.valor))
+        except Exception:
+            pass
+    return schemas.NodeConfigLibreta()
+
+
+@router.get("/config/global", response_model=schemas.NodeConfigLibreta)
+def get_global_node_config(
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(get_current_user),
+):
+    """Config global de nodos RoIP (sin credenciales), para cualquier usuario
+    autenticado que quiera usar 'Monitoreo Global' en vez de su propia config."""
+    return _get_global_node_config(db)
 
 
 # ─── Verificar indicativo (primera vez / reaparición) ────────────────────────

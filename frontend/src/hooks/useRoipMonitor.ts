@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Form, message } from 'antd'
 import client from '@/api/client'
-import { libretaApi } from '@/api/libreta'
+import { libretaApi, type NodeConfigGlobal } from '@/api/libreta'
 
 export interface AslStatus {
   online: boolean
@@ -50,6 +50,8 @@ export function useRoipMonitor() {
 
   const [roipMonitorando, setRoipMonitorando] = useState(false)
   const [roipAvanzado, setRoipAvanzado] = useState(false)
+  const [roipUsarGlobal, setRoipUsarGlobal] = useState(false)
+  const [globalNodeCfg, setGlobalNodeCfg] = useState<NodeConfigGlobal | null>(null)
   const [aslStatus, setAslStatus] = useState<AslStatus | null>(null)
   const [irlpStatus, setIrlpStatus] = useState<IrlpStatus | null>(null)
   const [nodeCfg, setNodeCfg] = useState<NodeCfg>({
@@ -181,6 +183,46 @@ export function useRoipMonitor() {
     libretaApi.saveConfig({ roip_avanzado: v })
   }
 
+  /** Trae la config global (sin credenciales) y la aplica a nodeCfg para mostrar/usar. */
+  const fetchAndApplyGlobal = async () => {
+    try {
+      const { data } = await libretaApi.getGlobalNodeConfig()
+      setGlobalNodeCfg(data)
+      setNodeCfg(prev => ({
+        ...prev,
+        asl_hub_id: data.asl_hub_id,
+        asl_boletin_node: data.asl_boletin_node,
+        irlp_reflector_id: data.irlp_reflector_id,
+        irlp_boletin_node: data.irlp_boletin_node,
+        bm_tgs: data.bm_tgs,
+        bm_api_key: '', // el modo global nunca expone credenciales
+      }))
+    } catch {
+      setGlobalNodeCfg(null)
+    }
+  }
+
+  const toggleUsarGlobal = (v: boolean) => {
+    setRoipUsarGlobal(v)
+    libretaApi.saveConfig({ roip_usar_global: v })
+    if (v) {
+      fetchAndApplyGlobal()
+    } else {
+      setGlobalNodeCfg(null)
+      // Restaurar los valores propios del usuario (siguen en el form, aunque no estuviera montado)
+      const vals = nodeConfigForm.getFieldsValue()
+      setNodeCfg(prev => ({
+        ...prev,
+        asl_hub_id: vals.asl_hub_id ?? '',
+        asl_boletin_node: vals.asl_boletin_node ?? '',
+        irlp_reflector_id: vals.irlp_reflector_id ?? '',
+        irlp_boletin_node: vals.irlp_boletin_node ?? '',
+        bm_tgs: vals.bm_tgs ?? '33450,334',
+        bm_api_key: vals.bm_api_key ?? '',
+      }))
+    }
+  }
+
   const guardarNodeConfig = async () => {
     setSavingNodeConfig(true)
     try {
@@ -229,6 +271,10 @@ export function useRoipMonitor() {
     })
     if (cfg.roip_monitorando) setRoipMonitorando(true)
     if (cfg.roip_avanzado) setRoipAvanzado(true)
+    if (cfg.roip_usar_global) {
+      setRoipUsarGlobal(true)
+      fetchAndApplyGlobal()
+    }
     nodeConfigForm.setFieldsValue({
       asl_hub_id: cfg.asl_hub_id,
       asl_host: cfg.asl_host,
@@ -256,9 +302,9 @@ export function useRoipMonitor() {
   }
 
   return {
-    roipMonitorando, roipAvanzado, aslStatus, irlpStatus, nodeCfg, dmrStatus, dmrWsDbg, dmrRestDbg,
+    roipMonitorando, roipAvanzado, roipUsarGlobal, globalNodeCfg, aslStatus, irlpStatus, nodeCfg, dmrStatus, dmrWsDbg, dmrRestDbg,
     nodeConfigForm, savingNodeConfig,
-    toggleMonitorando, toggleAvanzado, guardarNodeConfig, hydrateFromConfig, onNodeConfigFormChange,
+    toggleMonitorando, toggleAvanzado, toggleUsarGlobal, guardarNodeConfig, hydrateFromConfig, onNodeConfigFormChange,
   }
 }
 

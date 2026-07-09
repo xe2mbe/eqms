@@ -183,6 +183,7 @@ async def lifespan(app: FastAPI):
         conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS bm_tgs VARCHAR(200)"))
         conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS roip_monitorando BOOLEAN DEFAULT FALSE"))
         conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS roip_avanzado BOOLEAN DEFAULT FALSE"))
+        conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS roip_usar_global BOOLEAN DEFAULT FALSE"))
         conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS asl_hub_id VARCHAR(20)"))
         conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS asl_host VARCHAR(200)"))
         conn.execute(text("ALTER TABLE libreta_config_usuario ADD COLUMN IF NOT EXISTS asl_port VARCHAR(10)"))
