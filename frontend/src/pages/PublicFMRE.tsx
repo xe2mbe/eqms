@@ -21,6 +21,7 @@ import BusquedaOperador from '@/components/public/BusquedaOperador'
 import UltimoEventoDetalle from '@/components/public/UltimoEventoDetalle'
 import type { Stats, EstacionItem, EstacionIntlItem, UltimoEvDetalle, UltimoEvRSDetalle, BusquedaResult } from '@/components/public/types'
 import { getNextBoletinInfo } from '@/utils/publicBoletin'
+import { buildTendenciaOption, buildCategoriaPieOption, buildMapaOption } from '@/utils/publicFmreCharts'
 
 dayjs.locale('es')
 
