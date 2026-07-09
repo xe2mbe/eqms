@@ -28,6 +28,7 @@ _NODE_CONFIG_DEFAULTS = {
     "irlp_host":         "stn8422.ip.irlp.net",
     "irlp_port":         "8080",
     "bm_tgs":            "33450,334",
+    "bm_api_key":        "",
 }
 _node_config_cache: dict = {"cfg": None, "ts": datetime.min}
 
@@ -172,7 +173,7 @@ async def _fetch_irlp_reflector(cfg: dict) -> list:
             resp = await client.get(cfg["irlp_ref_url"])
             html = resp.text
         node_re = re.compile(
-            r'\d+\s+\w+ \d+ \d+:\d+\s+stn(\d+)\s+-.*?-\s+\d+\s+(\w+)\s+(.+?)(?:\s*\n|$)'
+            r'\d+\s+\w+\s+\d+\s+\d+:\d+\s+stn(\d+)\s+-.*?-\s+\d+\s+(\w+)\s+(.+?)(?:\s*\n|$)'
         )
         nodes = []
         for m in node_re.finditer(html):
