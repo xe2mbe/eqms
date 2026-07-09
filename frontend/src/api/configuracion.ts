@@ -37,6 +37,7 @@ export interface NodeConfig {
   irlp_host: string
   irlp_port: string
   bm_tgs: string
+  bm_api_key: string
 }
 
 export const configuracionApi = {

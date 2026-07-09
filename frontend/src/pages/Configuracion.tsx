@@ -10,10 +10,10 @@ import {
   GlobalOutlined, SendOutlined, SaveOutlined,
   CheckCircleOutlined, CloseCircleOutlined, BellOutlined,
   DownloadOutlined, UploadOutlined, TableOutlined,
-  SyncOutlined, ReloadOutlined, LockOutlined,
+  SyncOutlined, ReloadOutlined, LockOutlined, WifiOutlined,
 } from '@ant-design/icons'
 import type { RcFile } from 'antd/es/upload'
-import { configuracionApi, type SmtpConfig, type SistemaInfoConfig, type EmailBienvenidaConfig } from '@/api/configuracion'
+import { configuracionApi, type SmtpConfig, type SistemaInfoConfig, type EmailBienvenidaConfig, type NodeConfig } from '@/api/configuracion'
 import client from '@/api/client'
 
 const { Title, Text } = Typography
@@ -827,6 +827,120 @@ function TabRedesSociales() {
   )
 }
 
+// ─── Tab: Dashboard Público ────────────────────────────────────────────────────
+
+function TabDashboardPublico() {
+  const [form] = Form.useForm<NodeConfig>()
+  const [guardando, setGuardando] = useState(false)
+
+  useEffect(() => {
+    configuracionApi.getNodeConfig().then(r => form.setFieldsValue(r.data))
+  }, [form])
+
+  const guardar = async () => {
+    const values = await form.validateFields()
+    setGuardando(true)
+    try {
+      await configuracionApi.saveNodeConfig(values)
+      Modal.success({ title: 'Guardado', content: 'Configuración del dashboard público guardada.' })
+    } catch (e: any) {
+      Modal.error({ title: 'Error', content: e?.response?.data?.detail || 'No se pudo guardar.' })
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <Form form={form} layout="vertical" size="small">
+      <Alert
+        type="info"
+        showIcon
+        message="Parámetros de conexión a AllStarLink, IRLP y DMR (Brandmeister) que alimentan las tarjetas de estado del dashboard público (/actividad). Los mismos valores también se usan como respaldo para el monitoreo RoIP dentro de Libreta RF."
+        style={{ marginBottom: 16 }}
+      />
+      <Divider orientation="left" plain style={{ fontSize: 12, color: '#389e0d', margin: '0 0 8px' }}>AllStarLink (AllScan)</Divider>
+      <Row gutter={12}>
+        <Col xs={8} sm={4}>
+          <Form.Item label="# Hub" name="asl_hub_id">
+            <Input placeholder="299081" />
+          </Form.Item>
+        </Col>
+        <Col xs={16} sm={14}>
+          <Form.Item label="IP / URL del Hub" name="asl_host">
+            <Input placeholder="stn8422.ip.irlp.net" />
+          </Form.Item>
+        </Col>
+        <Col xs={8} sm={3}>
+          <Form.Item label="Puerto" name="asl_port">
+            <Input placeholder="8081" />
+          </Form.Item>
+        </Col>
+        <Col xs={8} sm={3}>
+          <Form.Item label="Nodo Boletín" name="asl_boletin_node">
+            <Input placeholder="299080" />
+          </Form.Item>
+        </Col>
+      </Row>
+      <Divider orientation="left" plain style={{ fontSize: 12, color: '#0891b2', margin: '4px 0 8px' }}>IRLP</Divider>
+      <Row gutter={12}>
+        <Col xs={8} sm={4}>
+          <Form.Item label="# Reflector" name="irlp_reflector_id">
+            <Input placeholder="0077" />
+          </Form.Item>
+        </Col>
+        <Col xs={16} sm={20}>
+          <Form.Item label="URL página del Reflector" name="irlp_ref_url">
+            <Input placeholder="http://85.8.149.218/Chan_Zero_Node_Numbers.html" />
+          </Form.Item>
+        </Col>
+        <Col xs={12} sm={5}>
+          <Form.Item label="Usuario CGI" name="irlp_user">
+            <Input placeholder="xe2mbe" />
+          </Form.Item>
+        </Col>
+        <Col xs={12} sm={5}>
+          <Form.Item label="Contraseña CGI" name="irlp_password">
+            <Input.Password placeholder="••••••" />
+          </Form.Item>
+        </Col>
+        <Col xs={8} sm={4}>
+          <Form.Item label="# Nodo Boletín" name="irlp_boletin_node">
+            <Input placeholder="8422" />
+          </Form.Item>
+        </Col>
+        <Col xs={16} sm={7}>
+          <Form.Item label="IP / URL Nodo Boletín" name="irlp_host">
+            <Input placeholder="stn8422.ip.irlp.net" />
+          </Form.Item>
+        </Col>
+        <Col xs={8} sm={3}>
+          <Form.Item label="Puerto CGI" name="irlp_port">
+            <Input placeholder="8080" />
+          </Form.Item>
+        </Col>
+      </Row>
+      <Divider orientation="left" plain style={{ fontSize: 12, color: '#7c3aed', margin: '4px 0 8px' }}>DMR / Brandmeister</Divider>
+      <Row gutter={12}>
+        <Col xs={24} sm={8}>
+          <Form.Item label="TalkGroups a monitorear" name="bm_tgs" extra="Separados por coma — ej: 33450,334">
+            <Input placeholder="33450,334" />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={16}>
+          <Form.Item label="BM API Key" name="bm_api_key" extra="JWT token de la cuenta de brandmeister.network usada por el dashboard público">
+            <Input.Password placeholder="eyJ0eXAi..." />
+          </Form.Item>
+        </Col>
+      </Row>
+      <Divider />
+      <Button type="primary" icon={<SaveOutlined />} loading={guardando} onClick={guardar}
+        style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}>
+        Guardar
+      </Button>
+    </Form>
+  )
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function ConfiguracionPage() {
@@ -864,6 +978,11 @@ export default function ConfiguracionPage() {
               key: 'redes',
               label: <span><GlobalOutlined /> Redes Sociales</span>,
               children: <TabRedesSociales />,
+            },
+            {
+              key: 'dashboard-publico',
+              label: <span><WifiOutlined /> Dashboard Público</span>,
+              children: <TabDashboardPublico />,
             },
           ]}
         />

@@ -480,6 +480,7 @@ class NodeConfig(BaseModel):
     irlp_port: str = "8080"
     # DMR / Brandmeister
     bm_tgs: str = "33450,334"
+    bm_api_key: str = ""
 
 class ReenviarCorreoRequest(BaseModel):
     password_inicial: str = ""
