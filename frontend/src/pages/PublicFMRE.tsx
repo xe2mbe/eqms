@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { Row, Col, Card, Tag, Typography, Divider, Spin, Table, Popover } from 'antd'
+import { Row, Col, Card, Tag, Typography, Divider, Spin } from 'antd'
 import {
   WifiOutlined, GlobalOutlined, TeamOutlined, RiseOutlined,
   RadarChartOutlined,
@@ -18,6 +18,7 @@ import UltimoEventoBanner from '@/components/public/UltimoEventoBanner'
 import Top10Leaderboard from '@/components/public/Top10Leaderboard'
 import EstacionesTable from '@/components/public/EstacionesTable'
 import BusquedaOperador from '@/components/public/BusquedaOperador'
+import UltimoEventoDetalle from '@/components/public/UltimoEventoDetalle'
 import type { Stats, EstacionItem, EstacionIntlItem, UltimoEvDetalle, UltimoEvRSDetalle, BusquedaResult } from '@/components/public/types'
 import { getNextBoletinInfo } from '@/utils/publicBoletin'
 
@@ -157,18 +158,6 @@ export default function PublicFMREPage() {
       setBuscando(false)
     }
   }
-
-  const callSign = (v: string, color = FMRE_BLUE) => (
-    <strong
-      style={{ color, cursor: 'pointer', textDecoration: 'none' }}
-      onClick={() => buscarIndicativo(v)}
-      onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-      onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
-      title={`Ver historial de ${v}`}
-    >
-      {v}
-    </strong>
-  )
 
   const fetchStats = useCallback(() => {
     axios.get('/api/public/stats').then(r => {
@@ -954,238 +943,30 @@ export default function PublicFMREPage() {
         {/* ── ÚLTIMO EVENTO RF DETALLE ── */}
         {(ultimoEvDetalle || loadingEv) && (
           <div ref={evRef} style={{ marginBottom: 40, scrollMarginTop: 24 }}>
-            <Divider style={{ borderColor: '#d0d7e3' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{ width: 4, height: 28, background: FMRE_GOLD, borderRadius: 2 }} />
-              <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>
-                RF · {ultimoEvDetalle?.evento ?? 'Último evento'} — {ultimoEvDetalle?.fecha ?? ''}
-              </Title>
-            </div>
-            {loadingEv ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (() => {
-              const participantes = ultimoEvDetalle?.participantes ?? []
-
-              // Agrupar por estado para el mapa
-              const porEstado = participantes.reduce((acc, p) => {
-                if (p.estado) acc[p.estado] = (acc[p.estado] ?? 0) + 1
-                return acc
-              }, {} as Record<string, number>)
-              const maxEstado = Math.max(...Object.values(porEstado), 1)
-
-              // Agrupar por sistema para el pie
-              const porSistema = participantes.reduce((acc, p) => {
-                Object.entries(p.sistemas).forEach(([s, n]) => { acc[s] = (acc[s] ?? 0) + n })
-                return acc
-              }, {} as Record<string, number>)
-
-              const totalQSOsEv = Object.values(porSistema).reduce((s, n) => s + n, 0)
-              const totalEstadoEv = Object.values(porEstado).reduce((s, n) => s + n, 0)
-              const eventoMapOption = !mapReady ? {} : {
-                tooltip: {
-                  trigger: 'item',
-                  formatter: (p: any) => p.value
-                    ? `<b>${p.name}</b><br/>${p.value} estación${p.value > 1 ? 'es' : ''}<br/><span style="color:#888">${(p.value / totalEstadoEv * 100).toFixed(1)}% del total</span>`
-                    : p.name,
-                },
-                visualMap: {
-                  min: 0, max: maxEstado,
-                  inRange: { color: ['#FFF9C4', FMRE_GOLD] },
-                  show: false,
-                },
-                series: [{
-                  type: 'map', map: 'Mexico', roam: false,
-                  emphasis: { label: { show: true }, itemStyle: { areaColor: FMRE_BLUE } },
-                  data: Object.entries(porEstado).map(([estado, count]) => ({ name: estado, value: count })),
-                  nameMap: {
-                    'Ciudad de México': 'Ciudad De México',
-                    'Estado De México': 'México',
-                  },
-                }],
-              }
-
-              return (
-                <>
-                  {/* Mapa + resumen sistemas */}
-                  <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-                    <Col xs={24} lg={14}>
-                      <Card size="small" title={<span><GlobalOutlined style={{ color: FMRE_GOLD, marginRight: 8 }} />Cobertura geográfica del evento</span>} className="card-shadow">
-                        {mapReady
-                          ? <ReactECharts option={eventoMapOption} style={{ height: 300 }} />
-                          : <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>}
-                      </Card>
-                    </Col>
-                    <Col xs={24} lg={10}>
-                      <Card size="small" title={<span><WifiOutlined style={{ color: FMRE_GOLD, marginRight: 8 }} />Reportes por sistema</span>} className="card-shadow" style={{ height: '100%' }}>
-                        <ReactECharts
-                          option={{
-                            title: { text: totalQSOsEv.toLocaleString(), subtext: 'QSOs', left: '50%', top: '40%', textAlign: 'center', textStyle: { fontSize: 16, fontWeight: 'bold', color: FMRE_DARK }, subtextStyle: { fontSize: 11, color: '#888' } },
-                            tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-                            series: [{
-                              type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'],
-                              data: Object.entries(porSistema).map(([s, n]) => ({
-                                name: s, value: n,
-                                itemStyle: { color: SISTEMA_COLORS[s] ?? '#999' },
-                              })),
-                              label: { formatter: '{b}: {c}', fontSize: 11 },
-                            }],
-                          }}
-                          style={{ height: 300 }}
-                        />
-                      </Card>
-                    </Col>
-                  </Row>
-
-                  {/* Tabla de participantes */}
-                  <Table
-                    dataSource={participantes}
-                    rowKey="indicativo"
-                    size="small"
-                    pagination={{ pageSize: 50, showSizeChanger: false, showTotal: (t) => `${t} estaciones` }}
-                    columns={[
-                      { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => (
-                        <span style={{ fontWeight: 700, color: i < 3 ? FMRE_GOLD : '#8c8c8c' }}>{i + 1}</span>
-                      )},
-                      { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => callSign(v) },
-                      { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? <span style={{ color: '#bbb', fontStyle: 'italic' }}>Sin registro</span> },
-                      { title: 'Estado', dataIndex: 'estado', width: 120, ellipsis: true, render: (v: string | null) => v ?? '—' },
-                      { title: 'QSOs', dataIndex: 'total', width: 90, align: 'right' as const,
-                        render: (v: number, r: { sistemas: Record<string, number> }) => (
-                          <Popover trigger="click" title="Desglose por sistema"
-                            content={
-                              <div style={{ minWidth: 140 }}>
-                                {Object.entries(r.sistemas).map(([s, n]) => (
-                                  <div key={s} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '2px 0' }}>
-                                    <Tag color={SISTEMA_COLORS[s] ?? '#666'} style={{ margin: 0 }}>{s}</Tag>
-                                    <strong>{n}</strong>
-                                  </div>
-                                ))}
-                              </div>
-                            }
-                          >
-                            <Tag color="gold" style={{ cursor: 'pointer', fontWeight: 700 }}>{v.toLocaleString()} ▾</Tag>
-                          </Popover>
-                        )},
-                    ]}
-                  />
-                </>
-              )
-            })()}
+            <UltimoEventoDetalle
+              variant="rf"
+              loading={loadingEv}
+              evento={ultimoEvDetalle?.evento}
+              fecha={ultimoEvDetalle?.fecha}
+              participantes={(ultimoEvDetalle?.participantes ?? []).map(p => ({ ...p, categorias: p.sistemas }))}
+              mapReady={mapReady}
+              onIndicativoClick={buscarIndicativo}
+            />
           </div>
         )}
 
         {/* ── ÚLTIMO EVENTO RS DETALLE ── */}
         {(ultimoEvRSDetalle || loadingEvRS) && (
           <div ref={evRSRef} style={{ marginBottom: 40, scrollMarginTop: 24 }}>
-            <Divider style={{ borderColor: '#d0d7e3' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{ width: 4, height: 28, background: '#0891b2', borderRadius: 2 }} />
-              <Title level={3} style={{ margin: 0, color: FMRE_DARK }}>
-                RS · {ultimoEvRSDetalle?.evento ?? 'Último evento'} — {ultimoEvRSDetalle?.fecha ?? ''}
-              </Title>
-            </div>
-            {loadingEvRS ? <div style={{ textAlign: 'center', padding: 40 }}><Spin size="large" /></div> : (() => {
-              const participantes = ultimoEvRSDetalle?.participantes ?? []
-
-              const porEstadoRS = participantes.reduce((acc, p) => {
-                if (p.estado) acc[p.estado] = (acc[p.estado] ?? 0) + 1
-                return acc
-              }, {} as Record<string, number>)
-              const maxEstadoRS = Math.max(...Object.values(porEstadoRS), 1)
-
-              const porPlataforma = participantes.reduce((acc, p) => {
-                Object.entries(p.plataformas).forEach(([pl, n]) => { acc[pl] = (acc[pl] ?? 0) + n })
-                return acc
-              }, {} as Record<string, number>)
-
-              const totalReportesEv = Object.values(porPlataforma).reduce((s, n) => s + n, 0)
-              const totalEstadoEvRS = Object.values(porEstadoRS).reduce((s, n) => s + n, 0)
-              const eventoRSMapOption = !mapReady ? {} : {
-                tooltip: {
-                  trigger: 'item',
-                  formatter: (p: any) => p.value
-                    ? `<b>${p.name}</b><br/>${p.value} estación${p.value > 1 ? 'es' : ''}<br/><span style="color:#888">${(p.value / totalEstadoEvRS * 100).toFixed(1)}% del total</span>`
-                    : p.name,
-                },
-                visualMap: {
-                  min: 0, max: maxEstadoRS,
-                  inRange: { color: ['#e0f7fa', '#0891b2'] },
-                  show: false,
-                },
-                series: [{
-                  type: 'map', map: 'Mexico', roam: false,
-                  emphasis: { label: { show: true }, itemStyle: { areaColor: FMRE_GOLD } },
-                  data: Object.entries(porEstadoRS).map(([estado, count]) => ({ name: estado, value: count })),
-                  nameMap: {
-                    'Ciudad de México': 'Ciudad De México',
-                    'Estado De México': 'México',
-                  },
-                }],
-              }
-
-              return (
-                <>
-                  <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-                    <Col xs={24} lg={14}>
-                      <Card size="small" title={<span><GlobalOutlined style={{ color: '#0891b2', marginRight: 8 }} />Cobertura geográfica del evento</span>} className="card-shadow">
-                        {mapReady
-                          ? <ReactECharts option={eventoRSMapOption} style={{ height: 300 }} />
-                          : <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>}
-                      </Card>
-                    </Col>
-                    <Col xs={24} lg={10}>
-                      <Card size="small" title={<span><GlobalOutlined style={{ color: '#0891b2', marginRight: 8 }} />Reportes por plataforma</span>} className="card-shadow" style={{ height: '100%' }}>
-                        <ReactECharts
-                          option={{
-                            title: { text: totalReportesEv.toLocaleString(), subtext: 'Reportes', left: '50%', top: '40%', textAlign: 'center', textStyle: { fontSize: 16, fontWeight: 'bold', color: '#0891b2' }, subtextStyle: { fontSize: 11, color: '#888' } },
-                            tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-                            series: [{
-                              type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'],
-                              data: Object.entries(porPlataforma).map(([p, n]) => ({
-                                name: p, value: n,
-                                itemStyle: { color: PLAT_COLORS[p] ?? '#0891b2' },
-                              })),
-                              label: { formatter: '{b}: {c}', fontSize: 11 },
-                            }],
-                          }}
-                          style={{ height: 300 }}
-                        />
-                      </Card>
-                    </Col>
-                  </Row>
-
-                  <Table
-                    dataSource={participantes}
-                    rowKey="indicativo"
-                    size="small"
-                    pagination={{ pageSize: 50, showSizeChanger: false, showTotal: (t) => `${t} estaciones` }}
-                    columns={[
-                      { title: '#', width: 52, render: (_v: unknown, _r: unknown, i: number) => (
-                        <span style={{ fontWeight: 700, color: i < 3 ? '#0891b2' : '#8c8c8c' }}>{i + 1}</span>
-                      )},
-                      { title: 'Indicativo', dataIndex: 'indicativo', render: (v: string) => callSign(v, '#0891b2') },
-                      { title: 'Nombre', dataIndex: 'nombre', ellipsis: true, render: (v: string | null) => v ?? <span style={{ color: '#bbb', fontStyle: 'italic' }}>Sin registro</span> },
-                      { title: 'Estado', dataIndex: 'estado', width: 120, ellipsis: true, render: (v: string | null) => v ?? '—' },
-                      { title: 'Reportes', dataIndex: 'total', width: 90, align: 'right' as const,
-                        render: (v: number, r: { plataformas: Record<string, number> }) => (
-                          <Popover trigger="click" title="Desglose por plataforma"
-                            content={
-                              <div style={{ minWidth: 160 }}>
-                                {Object.entries(r.plataformas).map(([p, n]) => (
-                                  <div key={p} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '2px 0' }}>
-                                    <Tag color={PLAT_COLORS[p] ?? '#0891b2'} style={{ margin: 0 }}>{p}</Tag>
-                                    <strong>{n}</strong>
-                                  </div>
-                                ))}
-                              </div>
-                            }
-                          >
-                            <Tag color="cyan" style={{ cursor: 'pointer', fontWeight: 700 }}>{v.toLocaleString()} ▾</Tag>
-                          </Popover>
-                        )},
-                    ]}
-                  />
-                </>
-              )
-            })()}
+            <UltimoEventoDetalle
+              variant="rs"
+              loading={loadingEvRS}
+              evento={ultimoEvRSDetalle?.evento}
+              fecha={ultimoEvRSDetalle?.fecha}
+              participantes={(ultimoEvRSDetalle?.participantes ?? []).map(p => ({ ...p, categorias: p.plataformas }))}
+              mapReady={mapReady}
+              onIndicativoClick={buscarIndicativo}
+            />
           </div>
         )}
 
