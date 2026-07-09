@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
 from app.auth import get_current_user
+from app.routers.public_stats import _fetch_node_status, _fetch_irlp_status
 
 router = APIRouter()
 logger = logging.getLogger("qms")
@@ -83,6 +84,65 @@ def get_global_node_config(
     """Config global de nodos RoIP (sin credenciales), para cualquier usuario
     autenticado que quiera usar 'Monitoreo Global' en vez de su propia config."""
     return _get_global_node_config(db)
+
+
+def _cfg_from_libreta_config(cfg: models.LibretaConfigUsuario | None) -> dict:
+    """Arma un dict de config de nodos (misma forma que _load_node_config) a
+    partir de la fila LibretaConfigUsuario del usuario actual, para reusar
+    _fetch_node_status/_fetch_irlp_status con SU propio host/puerto en vez del
+    global."""
+    return {
+        "asl_hub_id": (cfg.asl_hub_id if cfg else "") or "",
+        "asl_host": (cfg.asl_host if cfg else "") or "",
+        "asl_port": (cfg.asl_port if cfg else "") or "8081",
+        "asl_boletin_node": (cfg.asl_boletin_node if cfg else "") or "",
+        "irlp_reflector_id": (cfg.irlp_reflector_id if cfg else "") or "",
+        "irlp_ref_url": (cfg.irlp_ref_url if cfg else "") or "",
+        "irlp_user": (cfg.irlp_user if cfg else "") or "",
+        "irlp_password": (cfg.irlp_password if cfg else "") or "",
+        "irlp_boletin_node": (cfg.irlp_boletin_node if cfg else "") or "",
+        "irlp_host": (cfg.irlp_host if cfg else "") or "",
+        "irlp_port": (cfg.irlp_port if cfg else "") or "8080",
+    }
+
+
+@router.get("/node-status")
+async def libreta_node_status(
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Estado en vivo del Hub ASL configurado POR EL USUARIO (no el global) --
+    usado por RoipMonitorPanel cuando 'Usar Monitoreo Global' está apagado."""
+    row = (
+        db.query(models.LibretaConfigUsuario)
+        .filter(models.LibretaConfigUsuario.usuario_id == current_user.id)
+        .first()
+    )
+    cfg = _cfg_from_libreta_config(row)
+    if not cfg["asl_host"]:
+        return {"online": False, "configured": False, "on_air": False, "cos_keyed": False, "tx_keyed": False, "connections": 0, "nodes": []}
+    result = await _fetch_node_status(cfg)
+    return {**result, "configured": True}
+
+
+@router.get("/irlp-status")
+async def libreta_irlp_status(
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """Estado en vivo del Reflector IRLP configurado POR EL USUARIO (no el
+    global) -- usado por RoipMonitorPanel cuando 'Usar Monitoreo Global' está
+    apagado."""
+    row = (
+        db.query(models.LibretaConfigUsuario)
+        .filter(models.LibretaConfigUsuario.usuario_id == current_user.id)
+        .first()
+    )
+    cfg = _cfg_from_libreta_config(row)
+    if not cfg["irlp_host"] and not cfg["irlp_ref_url"]:
+        return {"online": False, "configured": False, "on_air": False, "cos": False, "ptt": False, "connections": 0, "nodes": []}
+    result = await _fetch_irlp_status(cfg)
+    return {**result, "configured": True}
 
 
 # ─── Verificar indicativo (primera vez / reaparición) ────────────────────────

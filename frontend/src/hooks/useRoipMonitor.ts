@@ -10,6 +10,8 @@ export interface AslStatus {
   on_air: boolean
   connections: number
   nodes: { node: string; name: string; url?: string; link?: string; cos_keyed: boolean; tx_keyed: boolean }[]
+  /** false cuando el usuario no ha configurado su propio host (modo no-global); ausente/true = configurado. */
+  configured?: boolean
 }
 
 export interface IrlpStatus {
@@ -19,6 +21,8 @@ export interface IrlpStatus {
   ptt: boolean
   connections: number
   nodes: { node: string; name: string; url?: string; warning: boolean }[]
+  /** false cuando el usuario no ha configurado su propio host (modo no-global); ausente/true = configurado. */
+  configured?: boolean
 }
 
 export interface DmrStatus {
@@ -64,16 +68,22 @@ export function useRoipMonitor() {
   const dmrSocketRef = useRef<any>(null)
 
   // ── Polling monitoreo RoIP ────────────────────────────────────────────────
+  // En modo global usa los endpoints públicos (infraestructura del admin); en
+  // modo personal usa los endpoints autenticados que revisan el host/puerto
+  // que el propio usuario haya guardado (y responden configured:false si no
+  // configuró nada, en vez de reportar el estado de otra infraestructura).
   useEffect(() => {
     if (!roipMonitorando) { setAslStatus(null); setIrlpStatus(null); return }
+    const aslUrl = roipUsarGlobal ? '/public/node-status' : '/libreta/node-status'
+    const irlpUrl = roipUsarGlobal ? '/public/irlp-status' : '/libreta/irlp-status'
     const poll = () => {
-      client.get('/public/node-status').then(r => setAslStatus(r.data)).catch(() => setAslStatus(null))
-      client.get('/public/irlp-status').then(r => setIrlpStatus(r.data)).catch(() => setIrlpStatus(null))
+      client.get(aslUrl).then(r => setAslStatus(r.data)).catch(() => setAslStatus(null))
+      client.get(irlpUrl).then(r => setIrlpStatus(r.data)).catch(() => setIrlpStatus(null))
     }
     poll()
     const t = setInterval(poll, 5_000)
     return () => clearInterval(t)
-  }, [roipMonitorando])
+  }, [roipMonitorando, roipUsarGlobal])
 
   // ── WebSocket nativo DMR / Brandmeister (EIO=3 / socket.io v3) ──────────
   useEffect(() => {

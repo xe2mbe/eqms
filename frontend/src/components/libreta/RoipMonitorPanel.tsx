@@ -54,9 +54,11 @@ export default function RoipMonitorPanel({ roip }: RoipMonitorPanelProps) {
                 </span>
                 {!aslStatus
                   ? <StatusPill label="..." color="#d9d9d9" />
-                  : aslStatus.online
-                    ? <StatusPill label="ONLINE" color="#52c41a" />
-                    : <StatusPill label="OFFLINE" color="#ff4d4f" />
+                  : aslStatus.configured === false
+                    ? <StatusPill label="SIN CONFIGURAR" color="#d9d9d9" />
+                    : aslStatus.online
+                      ? <StatusPill label="ONLINE" color="#52c41a" />
+                      : <StatusPill label="OFFLINE" color="#ff4d4f" />
                 }
               </div>
               {/* Fila 2: dot boletín + número + actividad (solo si conectado) */}
@@ -107,9 +109,11 @@ export default function RoipMonitorPanel({ roip }: RoipMonitorPanelProps) {
                 </span>
                 {!irlpStatus
                   ? <StatusPill label="..." color="#d9d9d9" />
-                  : irlpStatus.online
-                    ? <StatusPill label="ONLINE" color="#52c41a" />
-                    : <StatusPill label="OFFLINE" color="#ff4d4f" />
+                  : irlpStatus.configured === false
+                    ? <StatusPill label="SIN CONFIGURAR" color="#d9d9d9" />
+                    : irlpStatus.online
+                      ? <StatusPill label="ONLINE" color="#52c41a" />
+                      : <StatusPill label="OFFLINE" color="#ff4d4f" />
                 }
               </div>
               {/* Fila 2: dot nodo boletín + actividad (solo si conectado) */}
