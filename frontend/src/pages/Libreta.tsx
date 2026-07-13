@@ -1127,7 +1127,7 @@ export default function LibretaPage() {
                 dataSource={resumen}
                 rowKey="id"
                 size="small"
-                pagination={{ pageSize: 20, showTotal: t => `${t} registros`, size: 'small' }}
+                pagination={{ defaultPageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: t => `${t} registros`, size: 'small' }}
                 loading={loadingResumen}
                 scroll={{ x: 'max-content' }}
                 rowSelection={{
